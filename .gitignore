@@ -1,0 +1,22 @@
+# --- sbt / Scala build output ---
+target/
+project/target/
+project/project/
+.bloop/
+.bsp/
+.metals/
+metals.sbt
+
+# --- IDE ---
+.idea/
+*.iml
+
+# --- JVM crash / profiling artifacts ---
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+*.jfr
+
+# --- OS noise ---
+.DS_Store
+Thumbs.db
