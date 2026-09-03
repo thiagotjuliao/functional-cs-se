@@ -115,3 +115,10 @@ functional-cs-se/
   * *Implementation:* Engineering a structural `Resource` abstraction (or embedding a `bracket` lifecycle engine directly into your `IO`) to enforce deterministic setup and tear-down actions.
 * **Module 12: Tagless Final Algebras & Low-Level Binary Codecs (Weeks 19-20)**
   * *Theory:* The Tagless Final pattern (Functional Inversion of Control). Extreme network serialization optimizations via pure typeclass-driven transformations without runtime reflection overhead.
+  * *Implementation:* Decoupling business logic from transport mechanisms using context bounds. Building manual binary encoders and decoders (*Codecs*) that map custom entities directly into raw Byte Arrays using precise bitwise logic (`&`, `|`, `>>`).
+* **🎯 Graded Exercise Set (Week 21):**
+  * *Easy:* Engineering a continuous, infinite reactive Stream of Prime Numbers or Fibonacci records evaluated entirely on demand.
+  * *Medium:* Testing a robust logging system that guarantees a target file descriptor is securely closed even if the input streaming fiber encounters a fatal exception halfway through.
+  * *Hard (Module 12 Specific):* Implement a pure type-level `Codec` combinator using Scala 3 `Match Types` that automatically synthesizes binary encoders for fixed-size tuples without relying on reflection or third-party macros.
+* **🚀 Mini-Projeto 4: Fully Reactive Stream-Based HTTP Server from Scratch (Week 22)**
+  * *Description:* The ultimate capstone project merging every concept learned in this course. Utilizing native Java Non-Blocking Sockets (Java NIO Sockets) running in a pure functional wrapper, you will build an **asynchronous, stream-oriented HTTP Server** completely from scratch (similar to a micro-scale fusion of *FS2* and *Http4s*). The server will sustain concurrent incoming client traffic, stream responses using your manual backpressure protocols, wrap request-handling resources safely, and serialize network payloads via your custom binary bitwise Codecs. The entire application architecture will be modular, structured in pure layers decoupled by Scala 3 context parameters.

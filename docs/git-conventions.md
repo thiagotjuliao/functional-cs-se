@@ -41,11 +41,8 @@ was reached.
 | `b4-m10-streams-backpressure` | `Stream[A]`, pull/push protocol, demand control | 17 |
 | `b4-m11-resource-lifecycle` | `Resource` / `bracket`, leak-free teardown | 18 |
 | `b4-m12-tagless-binary-codecs` | Tagless final algebras, reflection-free codecs | 19–20 |
-
-> **Open gap:** `CURRICULUM.md` currently stops at Module 12. Weeks 21–22 —
-> Block 4's graded exercise set and Mini-Project 4 — are undefined, so their
-> tags are deliberately absent from this map and must be added once the
-> curriculum's final section is written.
+| `b4-graded-set` | Graded exercise set: infinite streams, leak-proof I/O, `Match Types` codecs | 21 |
+| `b4-p4-nio-http-server` | Mini-Project 4: reactive NIO HTTP server (course capstone) | 22 |
 
 ## 3. Tag Message Template
 
