@@ -7,15 +7,15 @@ val munit = "org.scalameta" %% "munit" % "1.3.6" % Test
 // statically is a bug that never reaches a test, a benchmark or production.
 val strictWarnings = Seq(
   "-source:future", // opt into the next-generation Scala 3 semantics
-  "-explain",       // print the full inference/derivation trace on error
+  "-explain", // print the full inference/derivation trace on error
   "-deprecation",
   "-feature",
   "-unchecked",
-  "-Wall"           // every warning category the compiler knows about
+  "-Wall" // every warning category the compiler knows about
 )
 
 // Warnings are errors in production code only. Test sources stay permissive so
-// that exploratory spikes and deliberate anti-pattern demonstrations compile.
+// that exploratory spikes and deliberate antipattern demonstrations compile.
 //
 // Both scopes are assigned inside each project rather than on ThisBuild: sbt's
 // Test configuration extends Compile, and scope delegation reaches the more
