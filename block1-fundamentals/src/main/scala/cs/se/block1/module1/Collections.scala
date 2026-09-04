@@ -86,4 +86,4 @@ object Csv:
     * linear while `foldLeft(""){ _ + _ }` is quadratic.
     */
   def renderCsv(rows: List[List[String]]): String =
-    rows.map(_.mkString(", ")).mkString("\n")
+    rows.map(_.mkString(",")).mkString("\n")
