@@ -77,7 +77,7 @@ functional-cs-se/
   * *Easy:* Designing smart constructors with opaque types to block bad primitives (e.g., structural Email/CPF wrappers).
   * *Medium:* Providing manual `Functor` and `Monad` instances for deeply nested or custom recursive structures.
   * *Hard:* Creating a custom property-based validation mini-engine on top of MUnit to empirically verify Monad Laws (Left Identity, Right Identity, Associativity).
-* **🚀 Mini-Projeto 2: Combinatoric Validation Framework & State Mutation Engine (Week 10)**
+* **🚀 Mini-Project 2: Combinatoric Validation Framework & State Mutation Engine (Week 10)**
   * *Description:* Code your own mini-"Cats Core" engine. The integration goal is a resilient Financial Transaction Processor. Incoming complex data validations must accumulate multiple parallel processing errors via a custom `Validated` data structure, and successive structural state mutations must be evaluated purely functionally through your manual `State` monad, yielding immutable transaction logs without any variable mutations.
 
 ---
@@ -98,7 +98,7 @@ functional-cs-se/
   * *Easy:* Writing a custom lazy data abstraction that handles atomic memoization (evaluate once, cache safely).
   * *Medium:* Implementing a concurrency racing combinator (`race`), where two competing `IO` tasks execute simultaneously, automatically canceling the loser cleanly.
   * *Hard:* Coding an asynchronous, non-blocking binary `Semaphore` relying exclusively on your native `IO`, `Ref`, and `Deferred` implementations.
-* **🚀 Mini-Projeto 3: Micro-Effect Runtime & Resilient Background Job Processor (Week 16)**
+* **🚀 Mini-Project 3: Micro-Effect Runtime & Resilient Background Job Processor (Week 16)**
   * *Description:* Build a lightweight, custom clone of a framework like "Cats Effect" or "ZIO". The mini-project consists of an high-throughput background batch processing engine. The system will poll high-volume mock tasks, dynamically throttle concurrency quotas through your custom fiber runtime, allocate loads across virtual threads, and track system vital signs via an immutable fiber context tracker (`FiberRef`).
 
 ---
@@ -120,5 +120,5 @@ functional-cs-se/
   * *Easy:* Engineering a continuous, infinite reactive Stream of Prime Numbers or Fibonacci records evaluated entirely on demand.
   * *Medium:* Testing a robust logging system that guarantees a target file descriptor is securely closed even if the input streaming fiber encounters a fatal exception halfway through.
   * *Hard (Module 12 Specific):* Implement a pure type-level `Codec` combinator using Scala 3 `Match Types` that automatically synthesizes binary encoders for fixed-size tuples without relying on reflection or third-party macros.
-* **🚀 Mini-Projeto 4: Fully Reactive Stream-Based HTTP Server from Scratch (Week 22)**
+* **🚀 Mini-Project 4: Fully Reactive Stream-Based HTTP Server from Scratch (Week 22)**
   * *Description:* The ultimate capstone project merging every concept learned in this course. Utilizing native Java Non-Blocking Sockets (Java NIO Sockets) running in a pure functional wrapper, you will build an **asynchronous, stream-oriented HTTP Server** completely from scratch (similar to a micro-scale fusion of *FS2* and *Http4s*). The server will sustain concurrent incoming client traffic, stream responses using your manual backpressure protocols, wrap request-handling resources safely, and serialize network payloads via your custom binary bitwise Codecs. The entire application architecture will be modular, structured in pure layers decoupled by Scala 3 context parameters.
