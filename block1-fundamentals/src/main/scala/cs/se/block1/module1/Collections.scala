@@ -26,7 +26,13 @@ object WordStats:
     * Think about which `Map` operation lets you express "increment or insert"
     * as one expression rather than a lookup followed by a branch.
     */
-  def wordFrequencies(words: List[String]): Map[String, Int] = ???
+  def wordFrequencies(words: List[String]): Map[String, Int] =
+    words.foldLeft(Map[String, Int]()) { (acc, s) =>
+      acc.updatedWith(s) {
+        case Some(n) => Some(n + 1)
+        case None => Some(1)
+      }
+    }
 
   /** The `n` most frequent entries, most frequent first.
     *
@@ -40,7 +46,9 @@ object WordStats:
     *   - `n` larger than the map yields every entry, still ordered;
     *   - no mutation, no sorting in place.
     */
-  def topN(frequencies: Map[String, Int], n: Int): List[(String, Int)] = ???
+  def topN(frequencies: Map[String, Int], n: Int): List[(String, Int)] =
+    if n <= 0 then List()
+    else frequencies.toList.sortBy((s, n) => (-n, s)).take(n)
 end WordStats
 
 /** Exercise 8 (Hard) — asymptotic allocation, not asymptotic time.
@@ -77,4 +85,5 @@ object Csv:
     * is a single growing buffer. Find it, and be able to explain why it is
     * linear while `foldLeft(""){ _ + _ }` is quadratic.
     */
-  def renderCsv(rows: List[List[String]]): String = ???
+  def renderCsv(rows: List[List[String]]): String =
+    rows.map(_.mkString(", ")).mkString("\n")

@@ -33,20 +33,24 @@ object Vec2:
       * Those three laws make `(Vec2, +, Zero)` a commutative monoid. You are
       * building your first algebraic structure without noticing.
       */
-    def +(w: Vec2): Vec2 = ???
+    def +(w: Vec2): Vec2 =
+      Vec2(v.x + w.x, v.y + w.y)
 
     /** Scalar multiplication. `v * 1.0` must return a value equal to `v`. */
-    def *(k: Double): Vec2 = ???
+    def *(k: Double): Vec2 =
+      Vec2(v.x * k, v.y * k)
 
     /** Euclidean inner product. Must be commutative: `a.dot(b) == b.dot(a)`. */
-    def dot(w: Vec2): Double = ???
+    def dot(w: Vec2): Double =
+      (v.x * w.x) + (v.y * w.y)
 
     /** Euclidean length.
       *
       * Must equal `math.sqrt(v.dot(v))`, and must be non-negative for every
       * input, including negative components.
       */
-    def norm: Double = ???
+    def norm: Double =
+      Math.sqrt(v.dot(v))
   end extension
 end Vec2
 
@@ -72,7 +76,11 @@ object Shape:
       * Implement with a single exhaustive pattern match. No `if`, no
       * `isInstanceOf`, no default case.
       */
-    def area: Double = ???
+    def area: Double =
+      s match
+        case Circle(r) => Math.PI * r * r
+        case Rectangle(w, h) => w * h
+        case Triangle(b, h) => 0.5 * b * h
 
   /** Total area of a collection of shapes.
     *
@@ -80,4 +88,5 @@ object Shape:
     * empty list must yield `0.0` — the identity of the `(Double, +)` monoid,
     * which is the correct answer rather than an edge case to special-case.
     */
-  def totalArea(shapes: List[Shape]): Double = ???
+  def totalArea(shapes: List[Shape]): Double =
+    shapes.foldLeft(0.0)((acc, s) => acc + s.area)

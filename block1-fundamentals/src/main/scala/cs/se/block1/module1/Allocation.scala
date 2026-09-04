@@ -17,7 +17,8 @@ object Boxing:
     *
     * The empty list must yield `0L`.
     */
-  def sumBoxed(xs: List[Int]): Long = ???
+  def sumBoxed(xs: List[Int]): Long =
+    xs.foldLeft(0L)(_ + _)
 
   /** Sum an `Array[Int]` allocating nothing in steady state.
     *
@@ -33,7 +34,12 @@ object Boxing:
     *     it compiles to the same machine code the imperative loop would;
     *   - must agree with `sumBoxed(xs.toList)` for every input.
     */
-  def sumPrimitive(xs: Array[Int]): Long = ???
+  def sumPrimitive(xs: Array[Int]): Long =
+    @scala.annotation.tailrec
+    def loop(i: Int = 0, acc: Long = 0L): Long =
+      if i == xs.length then acc
+      else loop(i + 1, acc + xs(i))
+    loop()
 end Boxing
 
 /** Exercise 5 (Hard) — the controlled experiment for escape analysis.
@@ -63,9 +69,18 @@ object Escape:
     *   - keep the method small — over `-XX:FreqInlineSize` (325 bytecodes)
     *     nothing gets inlined and the whole experiment collapses.
     */
-  def sumNorms(xs: Array[Double], ys: Array[Double]): Double = ???
+  def sumNorms(xs: Array[Double], ys: Array[Double]): Double =
+    require(
+      xs.length == ys.length,
+      s"both input arrays must be of the same size: got ${xs.length} and ${ys.length}"
+    )
+    @scala.annotation.tailrec
+    def loop(i: Int = 0, acc: Double = 0.0): Double =
+      if i == xs.length then acc
+      else loop(i + 1, acc + Vec2(xs(i), ys(i)).norm)
+    loop()
 
-  /** The escaping control: materialise every vector into an array.
+  /** The escaping control: materialize every vector into an array.
     *
     * This is the *same* construction work as `sumNorms`, except the references
     * leave the method. Escape analysis is therefore powerless and every `Vec2`
@@ -74,7 +89,12 @@ object Escape:
     * Implement it purely — `Array.tabulate` builds the array without a single
     * mutation at the source level.
     */
-  def collectVecs(xs: Array[Double], ys: Array[Double]): Array[Vec2] = ???
+  def collectVecs(xs: Array[Double], ys: Array[Double]): Array[Vec2] =
+    require(
+      xs.length == ys.length,
+      s"Both input arrays must be of the same size: got ${xs.length} and ${ys.length}"
+    )
+    Array.tabulate(xs.length)(i => Vec2(xs(i), ys(i)))
 end Escape
 
 /** Exercise 7 (Hard) — heap arithmetic from first principles.

@@ -1,5 +1,8 @@
 package cs.se.block1.module1
 
+import com.sun.management.ThreadMXBean
+import java.lang.management.ManagementFactory
+
 /** Exercise 3 (Easy) — the measuring instrument for the entire module.
   *
   * Implement this one first: Exercises 4, 5 and 8 are validated through it.
@@ -22,12 +25,15 @@ package cs.se.block1.module1
   */
 object AllocationProbe:
 
+  val bean: ThreadMXBean = ManagementFactory.getThreadMXBean.asInstanceOf[ThreadMXBean]
+
   /** Cumulative bytes allocated by the *current thread* since it started.
     *
     * Monotonically non-decreasing. The absolute value is meaningless; only
     * differences between two readings carry information.
     */
-  def allocatedBytes: Long = ???
+  def allocatedBytes: Long =
+    bean.getCurrentThreadAllocatedBytes
 
   /** Evaluate `body` and report both its result and the bytes it allocated.
     *
@@ -40,7 +46,12 @@ object AllocationProbe:
     *     two readings. Evaluating it before the first reading silently returns
     *     zero and is the single most likely bug in this exercise.
     */
-  def measure[A](body: => A): (A, Long) = ???
+  def measure[A](body: => A): (A, Long) =
+    val firstReading = allocatedBytes
+    val value = body
+    val measureResult = allocatedBytes - firstReading
+    (value, measureResult)
+end AllocationProbe
 
 /** Exercise 9 (Hard) — a minimal, honest timing harness.
   *
