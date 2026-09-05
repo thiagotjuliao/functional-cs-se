@@ -38,10 +38,86 @@ A technical explanation delivered in the chat is conversation, not an artifact. 
 Whenever I indicate that I am starting a new module (e.g., *"Starting Block 1, Module 1"*), you must strictly follow these 4 steps entirely in English:
 
 ### Step 1: Deep Theoretical Guide (`docs/theory/`)
-Generate a comprehensive Markdown guide focused on the module's core topic. It must include:
+
+Generate a comprehensive Markdown guide focused on the module's core topic. It must cover:
+
 * Deep CS explanation (e.g., low-level memory mechanics, execution semantics, or mathematical abstractions).
 * Practical SE applications (real-world production bottlenecks, performance characteristics, architecture patterns).
-* Curated references (classic textbooks, academic papers, or key terms for pedagogical videos).
+* Curated references (classic textbooks, academic papers, or key terms for pedagogical videos), kept in the block's `references.md`.
+
+**How it is written is not a matter of style. The contract below is binding, and it applies to every theory guide in this repository — new ones and revisions of existing ones alike.**
+
+#### 📖 The Progressive Didactic Contract
+
+The reference implementation of this contract is
+`annex-foundations/docs/theory/annex1_bitwise.md`. When in doubt, match it.
+
+1. **Assume zero prior exposure to the module's topic.** Begin at the simplest
+   honest starting point — how to *read* the thing before how to reason about
+   it. Never open with the formal characterisation; that is the top of the
+   staircase, not the bottom.
+
+2. **Structure the guide as numbered Parts**, each depending only on the Parts
+   before it. Within a Part, number the sections continuously across the whole
+   document so that any point can be cited precisely (`Part III.14`).
+
+3. **Open with a "How To Read This Guide" map**: a table giving each Part, its
+   content, and which exercises it unlocks. The reader must know, before
+   starting, where the staircase leads.
+
+4. **Nothing is asserted without being shown.** Every concept follows the same
+   three beats:
+   *what it is* → *a worked example with the result computed and displayed* →
+   *what it is for, in three lines of realistic code*.
+
+5. **Every numeric result must be executed and verified before it is written.**
+   Run the calculation, then write the guide from the output. A wrong table in a
+   teaching document is worse than no table. State in the guide that the results
+   were verified.
+
+6. **Motivate each idea rather than announcing it.** Where a concept has an
+   obvious wrong first attempt, present that attempt and show precisely why it
+   fails before introducing the real answer. Understanding *why* a design was
+   forced is the difference between knowledge and memorisation.
+
+7. **Give traps their own Part.** Silent failures — the ones that compile, run,
+   and produce a wrong answer only for inputs a naive test never generates —
+   are collected, named, and demonstrated with a table of the exact inputs where
+   the behaviour diverges.
+
+8. **Give real-world use its own Part.** Not a paragraph of motivation at the
+   top: a dedicated Part showing where the mechanism appears in production
+   systems (the JDK, Scala's own collections, wire protocols), with the concrete
+   line of code that uses it.
+
+9. **Cross-reference the exercises by number**, in both directions: the guide
+   says which exercise builds a concept, and each exercise's Scaladoc cites the
+   Part that explains it.
+
+10. **Close with a Self-Check** (questions answerable in prose, without running
+    code, at least one of which requires a derivation by hand) and a **Where To
+    Go Next** table pointing at the specific chapters of the curated sources.
+
+**Depth is never traded for accessibility.** The guide must reach exactly the
+rigour it would have reached anyway — it simply builds a staircase up to it
+instead of dropping the reader at the summit. Formal characterisations,
+asymptotic bounds and algebraic laws all stay; they arrive *after* the reader can
+already read the notation they are written in.
+
+**Formatting conventions:** worked examples go in aligned ```text blocks, not
+prose. Operator semantics get truth tables. Divergent behaviours get a table of
+inputs with both columns of results side by side. Use the narrowest width that
+still demonstrates the point (8-bit words rather than 32-bit, three-element
+structures rather than thousand-element ones), then state that the rule holds
+unchanged at full width.
+
+#### Assumed-Knowledge Gaps
+
+When a module assumes a primitive it does not teach, do not stop the module to
+teach it and do not pretend the gap is absent. Record it in the **Annex Backlog**
+table at the foot of `annex-foundations/docs/checklist.md`. When I ask for that
+annex, it is written as a full entry — theory guide, checklist and MUnit exercise
+set — under this same contract, tagged `a<n>-<slug>`.
 
 ### Step 2: The Checklist and Deliverables Contract (`docs/checklist.md`)
 Provide a rigid, bulletproof list of acceptance criteria for the module. I will save this list and only advance when every item is marked as checked `[x]`.
