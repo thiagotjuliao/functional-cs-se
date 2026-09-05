@@ -4,7 +4,7 @@ package cs.se.block1.module1
   *
   * A two-dimensional vector. `final` is deliberate: a class that cannot be
   * subclassed keeps its call sites monomorphic, which is a precondition for the
-  * inlining that escape analysis depends on (module guide §4.2).
+  * inlining that escape analysis depends on (guide, Part IV.16).
   *
   * Heap footprint of one instance: `align8(12 + 8 + 8)` = 32 bytes. You will
   * re-derive that number mechanically in Exercise 7.

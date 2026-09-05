@@ -12,7 +12,7 @@ A reference marked **[core]** is one whose absence will actually hurt you later.
 - **[core]** Lindholm, Yellin, Bracha, Buckley — *The Java Virtual Machine
   Specification, Java SE 21 Edition*. Read **§2.5 (Run-Time Data Areas)** and
   **§2.6 (Frames)**. Around fifteen pages, and they are the ground truth for
-  everything in §1 of the module guide.
+  everything in Part I of the module guide.
 - **JEP 439: Generational ZGC** — the design rationale for why a low-latency
   collector eventually had to become generational anyway. Short and unusually
   well written.

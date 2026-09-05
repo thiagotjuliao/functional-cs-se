@@ -11,7 +11,7 @@ object Boxing:
   /** Sum a `List[Int]` as a fold.
     *
     * Every element is already a boxed `java.lang.Integer` (16 bytes each, per
-    * module guide §1.2), and the `Long` accumulator is itself boxed on each
+    * guide, Part I.4.2), and the `Long` accumulator is itself boxed on each
     * step of a generic fold. Whether C2 manages to scalar-replace that
     * accumulator is a question you should answer by measuring, not by guessing.
     *
@@ -100,7 +100,7 @@ end Escape
 /** Exercise 7 (Hard) — heap arithmetic from first principles.
   *
   * No reflection, no JOL, no measurement: derive the numbers from the layout
-  * rules in module guide §1.2. This is the exercise that converts the theory
+  * rules in the guide, Part I.4.1. This is the exercise that converts the theory
   * from something you have read into something you can compute.
   *
   * Model assumptions, all of which hold on 64-bit HotSpot with a heap under

@@ -15,9 +15,9 @@ measurement.
 
 - [ ] Read `docs/theory/module1_jvm.md` in full.
 - [ ] Read JVM Specification §2.5–2.6 and JVM Anatomy Quarks #4 and #18.
-- [ ] Answer all five questions in §9 (Self-Check) of the module guide **in
-      writing**, without re-reading the guide. Append the answers to this file
-      under "Self-Check Answers".
+- [ ] Answer all six questions in the Self-Check section of the module guide
+      **in writing**, without re-reading the guide. Append the answers to this
+      file under "Self-Check Answers".
 - [ ] Derive, from the object-layout rules alone, the heap cost of a
       `List[Int]` and an `Array[Int]` of one million elements. Both numbers must
       match your Exercise 7 implementation.
@@ -111,10 +111,11 @@ The point of this module is measurement. Fill in every blank:
 
 ## Self-Check Answers
 
-> Write your §9 answers here before requesting the module audit.
+> Write your Self-Check answers here before requesting the module audit.
 
 1.
 2.
 3.
 4.
 5.
+6.

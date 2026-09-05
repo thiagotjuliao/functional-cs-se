@@ -8,7 +8,7 @@ package cs.se.block1.module1
   * roughly `O(log32 n)` nodes, and shares every untouched subtree with the
   * previous version.
   *
-  * Note the connection back to module guide §3: every one of those freshly
+  * Note the connection back to the guide, Part III: every one of those freshly
   * allocated path nodes points *down* into older, shared nodes. Young → old.
   * The write barrier never fires.
   */
@@ -60,7 +60,7 @@ end WordStats
   * each `+` copies the entire accumulated prefix into a fresh `String`. For
   * 2,000 rows that is not a micro-inefficiency, it is a different complexity
   * class — and on G1 those growing intermediate strings eventually become
-  * humongous allocations that bypass Eden entirely (module guide §6.1).
+  * humongous allocations that bypass Eden entirely (guide, Part VI.21).
   *
   * The spec measures your implementation against a deliberately naive control
   * and requires you to beat it by a wide margin.
