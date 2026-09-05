@@ -21,7 +21,15 @@ functional-cs-se/
  │              └── module1_jvm.md  
  ├── block2-category-types/         // Subproject 2
  ├── block3-effects-concurrency/    // Subproject 3
- └── block4-distributed-streams/    // Subproject 4
+ ├── block4-distributed-streams/    // Subproject 4
+ └── annex-foundations/             // Subproject 5 — the Annex Track (optional)
+      ├── src/main/scala/...
+      ├── src/test/scala/...
+      └── docs/
+           ├── checklist.md
+           └── theory/
+                ├── references.md
+                └── annex1_bitwise.md
 ```
 
 ---
@@ -35,6 +43,7 @@ functional-cs-se/
 | **3. Software Engineering & Effects**| 6 Weeks | ⭐️⭐️⭐️⭐️⭐️ | Fiber Runtime, Concurrency, Project Loom. |
 | **4. Distributed Systems & Streams** | 6 Weeks | ⭐️⭐️⭐️⭐️⭐️ | Manual Backpressure, NIO Sockets, Codecs. |
 | **Total Course** | **22 Weeks (~5 Months)** | **High (4.2/5.0)** | Elite Engineer & Scientist Formation. |
+| *Annex Track* | *As needed* | *Varies* | *Assumed prerequisites, on demand.* |
 
 ---
 
@@ -122,3 +131,39 @@ functional-cs-se/
   * *Hard (Module 12 Specific):* Implement a pure type-level `Codec` combinator using Scala 3 `Match Types` that automatically synthesizes binary encoders for fixed-size tuples without relying on reflection or third-party macros.
 * **🚀 Mini-Project 4: Fully Reactive Stream-Based HTTP Server from Scratch (Week 22)**
   * *Description:* The ultimate capstone project merging every concept learned in this course. Utilizing native Java Non-Blocking Sockets (Java NIO Sockets) running in a pure functional wrapper, you will build an **asynchronous, stream-oriented HTTP Server** completely from scratch (similar to a micro-scale fusion of *FS2* and *Http4s*). The server will sustain concurrent incoming client traffic, stream responses using your manual backpressure protocols, wrap request-handling resources safely, and serialize network payloads via your custom binary bitwise Codecs. The entire application architecture will be modular, structured in pure layers decoupled by Scala 3 context parameters.
+
+---
+
+## 📎 The Annex Track: `annex-foundations`
+
+* **Duration:** As needed | **Complexity:** Varies | **Blocking:** Never
+
+The four blocks are written for an engineer who already has certain primitives:
+two's complement, asymptotic notation, IEEE-754, the Java Memory Model. Rather
+than either stopping a module to teach a prerequisite or pretending the gap is
+not there, each such primitive gets its own annex entry — a full theory guide,
+checklist and MUnit exercise set, built to exactly the same standard as a main
+module.
+
+The track is **optional and non-blocking**: no block waits on it, and an
+unfinished annex blocks nothing except itself. It is aggregated into the sbt
+build so that `scalafmtCheckAll` and a full `sbt test` cover it like any other
+subproject.
+
+Its input queue is the **Annex Backlog** table at the foot of
+`annex-foundations/docs/checklist.md`. The discipline is: the moment a main
+module assumes something you cannot derive, record it there. A gap left
+unrecorded is a gap that will be rediscovered under deadline in Block 4.
+
+* **Annex A1: Bitwise Arithmetic & Binary Representation**
+  * *Theory:* `Int` as an element of the ring Z/2^32 Z rather than of the
+    integers. Two's complement and the master identity `-x == ~x + 1`. Bytecode
+    semantics of the six operators, the masked shift distance, floor-vs-truncate
+    division, sign extension on widening. Addition as a fixed point of a Boolean
+    recurrence. Population count from naive loop to SWAR to HotSpot intrinsic.
+  * *Implementation:* Nine exercises rising from bit addressing to the HAMT node
+    primitive (bitmap + `popcount` sparse indexing) and a zig-zag/LEB128 varint
+    codec. `opaque type` bitmasks with zero runtime representation.
+  * *Feeds:* **B1-M2** (structural sharing in persistent structures),
+    **B3-M9** (packed atomic state under `compareAndSet`), **B4-M12** (binary
+    codecs built from `&`, `|`, `>>`).

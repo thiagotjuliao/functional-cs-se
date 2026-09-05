@@ -12,7 +12,12 @@ criterion of a module's checklist is `[x]` and the module's MUnit suite is green
 ```text
 b<block>-m<module>-<kebab-slug>     // a theory + exercise module
 b<block>-p<n>-<kebab-slug>          // a block's capstone mini-project
+a<n>-<kebab-slug>                   // an Annex Track entry (no block prefix)
 ```
+
+An annex tag carries no block number precisely because an annex belongs to no
+block: it is a prerequisite the main curriculum assumes, and the absent prefix
+is what says so at a glance in `git tag -n9`.
 
 Tags are **annotated** (`git tag -a`), never lightweight. An annotated tag is a
 real object in the object database carrying an author, a date and a message; a
@@ -44,6 +49,16 @@ was reached.
 | `b4-graded-set` | Graded exercise set: infinite streams, leak-proof I/O, `Match Types` codecs | 21 |
 | `b4-p4-nio-http-server` | Mini-Project 4: reactive NIO HTTP server (course capstone) | 22 |
 
+### Annex Track
+
+Unscheduled by construction: an annex is tagged when it is finished, not when
+the calendar says so. The map grows as the backlog in
+`annex-foundations/docs/checklist.md` is consumed.
+
+| Tag | Milestone | Week |
+| :--- | :--- | :---: |
+| `a1-bitwise-arithmetic` | Two's complement, bit idioms, `popcount`, HAMT indexing, varint codecs | — |
+
 ## 3. Tag Message Template
 
 The message is the scientific abstract of the milestone. Keep it terse and
@@ -66,7 +81,8 @@ Learned:
 <scope>: <imperative summary>
 ```
 
-Where `<scope>` is the module slug (`b1-m2`), `build`, `docs`, or `chore`.
+Where `<scope>` is the module slug (`b1-m2`), the annex slug (`a1`), `build`,
+`docs`, or `chore`.
 Commit granularity follows the pedagogy, not the calendar: one commit per
 *concept proven*, so that `git log --oneline` reads as a syllabus.
 

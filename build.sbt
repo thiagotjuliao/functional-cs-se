@@ -33,7 +33,8 @@ lazy val root = (project in file("."))
     fundamentals,
     categoryTypes,
     effectConcurrency,
-    distributedStreams
+    distributedStreams,
+    annex
   )
 
 lazy val fundamentals = (project in file("block1-fundamentals"))
@@ -57,3 +58,19 @@ lazy val effectConcurrency = (project in file("block3-effect-concurrency"))
 lazy val distributedStreams = (project in file("block4-distributed-streams"))
   .settings(commonSettings)
   .settings(name := "distributed-streams")
+
+// The annex track is orthogonal to the 22-week schedule: it holds the
+// prerequisites the main blocks assume rather than teach. It is aggregated so
+// that `scalafmtCheckAll` and a full `sbt test` cover it like any other
+// subproject, but no block depends on it — an unfinished annex blocks
+// nothing except itself.
+lazy val annex = (project in file("annex-foundations"))
+  .settings(commonSettings)
+  .settings(
+    name := "annex",
+    // A1 measures the gap between handwritten bit algorithms and the HotSpot
+    // intrinsics that replace them. That comparison is only meaningful on a JVM
+    // whose flags the suite controls, so fork as Block 1 does.
+    Test / fork := true,
+    Test / javaOptions ++= Seq("-Xmx2g", "-XX:+UseG1GC")
+  )
