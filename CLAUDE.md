@@ -120,7 +120,7 @@ annex, it is written as a full entry — theory guide, checklist and MUnit exerc
 set — under this same contract, tagged `a<n>-<slug>`.
 
 ### Step 2: The Checklist and Deliverables Contract (`docs/checklist.md`)
-Provide a rigid, bulletproof list of acceptance criteria for the module. I will save this list and only advance when every item is marked as checked `[x]`.
+Provide a rigid, bulletproof list of acceptance criteria for the module. I will save this list and only advance when every item is marked as checked `[x]`. The list always ends with an **Oral Defence** section, whose box is closed by the Challenge Log described in Step 4.
 
 ### Step 3: The Expanded Exercise Set (MUnit)
 Provide the problem descriptions and **empty type signatures** for a robust batch of **5 to 10 exercises**, balanced across three tiers:
@@ -133,7 +133,8 @@ Provide the problem descriptions and **empty type signatures** for a robust batc
 When I signal that I have completed the exercises or the block's mini-project (without me needing to paste my full code base), act as an elite technical auditor:
 1. **JVM Bottleneck Audit:** Detail common engineering mistakes, anti-patterns, and low-level traps I might have fallen into (e.g., Escape Analysis failures, hidden memory retention, or thread contention).
 2. **Conceptual Challenges:** Ask 2 or 3 highly precise technical questions about my design choices so I can verify my own codebase's correctness.
-3. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
+3. **The Challenge Log (`docs/challenge-log.md`):** The answers are an artifact, not a conversation. Record every challenge and its answer in the block's or annex's `docs/challenge-log.md` — one entry per question, carrying the derivation, the bytecode listing or the measurement that supports it, never the verdict alone. A green suite proves the code works and proves nothing about whether I can say *why*; this file is the evidence behind the checklist's **Oral Defence** box, and that box closes only when every exercise has an entry. Hold it to the same discipline as a theory guide: every number executed and verified before it is written, worked examples in aligned ```text blocks, the narrowest width that still demonstrates the point. Where I answered partially and the rest was drawn out, record the complete answer — the log is a reference, not a transcript or a grade. When a module is closed without a Step 4 round, say so as its own entry rather than letting the exercise go silently missing: an omission that leaves no trace is indistinguishable from an audit that had no questions worth asking.
+4. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
 
 ---
 
