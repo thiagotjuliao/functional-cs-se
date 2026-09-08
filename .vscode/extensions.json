@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    // Scala 3 language server: type inference, Scaladoc hovers, code lenses.
+    "scalameta.metals",
+
+    // Sidebar panel rendering the documentation of the symbol under the cursor.
+    // The nearest equivalent VS Code has to IntelliJ's rendered doc comments.
+    "bierner.docs-view",
+
+    // Colour-codes comment categories (`// !`, `// ?`, `// TODO`, `// *`) so a
+    // warning in an exercise does not read like an ordinary note.
+    "aaron-bond.better-comments"
+  ]
+}

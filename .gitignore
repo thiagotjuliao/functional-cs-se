@@ -11,6 +11,26 @@ metals.sbt
 .idea/
 *.iml
 
+# `.vscode/` is mostly per-user state, but `settings.json` and
+# `extensions.json` are an environment contract — the editor configuration the
+# repository's conventions assume. They travel with the repository; everything
+# else in the directory does not.
+#
+# The pattern must be `.vscode/*`, not `.vscode/`: git does not descend into an
+# excluded directory, so a trailing-slash exclusion makes the negations below
+# unreachable.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# --- Misplaced tool output ---
+
+# Coursier builds its Windows cache path from %LOCALAPPDATA%. A process that
+# cannot see that variable resolves it to the literal string "null" and writes
+# the cache to ./null in the working directory — tens of megabytes of jars,
+# untracked, one careless `git add .` away from the history.
+null/
+
 # --- JVM crash / profiling artifacts ---
 hs_err_pid*.log
 replay_pid*.log
