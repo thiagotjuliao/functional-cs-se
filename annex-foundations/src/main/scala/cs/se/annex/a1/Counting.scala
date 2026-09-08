@@ -27,7 +27,14 @@ object PopCount:
     * obvious `while` loop is banned, and rewriting it functionally is the point
     * of the "easy" version.
     */
-  def naive(x: Int): Int = ???
+  def naive(x: Int): Int =
+    @scala.annotation.tailrec
+    def loop(i: Int = 0, count: Int = 0): Int =
+      if i == 32 then count
+      else
+        val c = if ((x >> i) & 1) == 1 then 1 else 0
+        loop(i + 1, count + c)
+    loop()
 
   /** Count set bits by repeatedly clearing the lowest set one.
     *
@@ -38,7 +45,12 @@ object PopCount:
     * State in your Scaladoc why this terminates for `Int.MinValue`, whose bit
     * pattern is a single set bit in the sign position.
     */
-  def kernighan(x: Int): Int = ???
+  def kernighan(x: Int): Int =
+    @scala.annotation.tailrec
+    def loop(n: Int, count: Int = 0): Int =
+      if n == 0 then count
+      else loop(n & (n - 1), count + 1)
+    loop(x)
 
   /** Count set bits by parallel field summation (SIMD Within A Register).
     *
@@ -51,7 +63,16 @@ object PopCount:
     * Write them out in binary before using them, and be able to explain why the
     * final multiply performs four additions at once.
     */
-  def swar(x: Int): Int = ???
+  def swar(x: Int): Int =
+    val c1 = 0b01010101010101010101010101010101
+    val c2 = 0b00110011001100110011001100110011
+    val c3 = 0b00001111000011110000111100001111
+    val c4 = 0b1000000010000000100000001
+
+    val y = x - ((x >>> 1) & c1) // pairs
+    val w = (y & c2) + ((y >>> 2) & c2) // nibbles
+    val z = (w + (w >>> 4)) & c3 // bytes
+    (z * c4) >>> 24 // horizontal sum
 end PopCount
 
 /** Exercise 5 (Medium) — Arithmetic reconstructed from Boolean algebra.
