@@ -76,7 +76,7 @@ object TwosComplement:
     * asymmetric (guide, Part I.6.5). That is not an edge case to special-case; it is
     * the correct answer in `Z/2^32 Z`.
     */
-  def negate(x: Int): Int = ???
+  def negate(x: Int): Int = ~x + 1
 
   /** `0` when `x >= 0`, and `-1` (all bits set) when `x < 0`.
     *
@@ -84,7 +84,7 @@ object TwosComplement:
     * a sign into a value that can be `&`-ed and `^`-ed with, which is how every
     * branchless algorithm below eliminates its conditional.
     */
-  def signMask(x: Int): Int = ???
+  def signMask(x: Int): Int = x >> 31
 
   /** Absolute value with no branch and no call to `Math.abs`.
     *
@@ -95,14 +95,17 @@ object TwosComplement:
     * Document what it returns for `Int.MinValue`, and why that is forced rather
     * than chosen.
     */
-  def absBranchless(x: Int): Int = ???
+  def absBranchless(x: Int): Int =
+    val m = signMask(x)
+    (x ^ m) - m
 
   /** Do `x` and `y` have the same sign? Zero counts as non-negative.
     *
     * One `^` and one comparison. No multiplication (it overflows) and no
     * comparison of `x < 0` against `y < 0` (that is the branching version).
     */
-  def sameSign(x: Int, y: Int): Boolean = ???
+  def sameSign(x: Int, y: Int): Boolean =
+    (x ^ y) >= 0
 
   /** Division by two rounding toward **negative infinity**, i.e. `floor(x / 2)`.
     *
@@ -111,7 +114,7 @@ object TwosComplement:
     * (guide, Part III.15). Implement it as a single shift, and then answer in the
     * checklist whether the compiler emits the same instructions for `x / 2`.
     */
-  def floorDiv2(x: Int): Int = ???
+  def floorDiv2(x: Int): Int = x >> 1
 end TwosComplement
 
 /** Exercise 3 (Easy) — Powers of two.
