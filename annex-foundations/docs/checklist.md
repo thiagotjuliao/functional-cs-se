@@ -19,18 +19,18 @@ unperformed measurement.
 
 ### A. Theory Comprehension
 
-- [ ] Read `docs/theory/annex1_bitwise.md` in full.
-- [ ] Read Bryant & O'Hallaron Ch. 2 §§2.1–2.3, or convince yourself in writing
+- [x] Read `docs/theory/annex1_bitwise.md` in full.
+- [x] Read Bryant & O'Hallaron Ch. 2 §§2.1–2.3, or convince yourself in writing
       that two's complement holds no surprises for you.
-- [ ] Read JVM Specification §6.5, entries for `ishl`, `ishr`, `iushr`. Confirm
+- [x] Read JVM Specification §6.5, entries for `ishl`, `ishr`, `iushr`. Confirm
       the masked shift distance **in a REPL** rather than believing the guide.
-- [ ] Read *Hacker's Delight* Ch. 2 (rightmost-bit manipulation) and Ch. 5
+- [x] Read *Hacker's Delight* Ch. 2 (rightmost-bit manipulation) and Ch. 5
       (counting bits).
-- [ ] Answer all six questions in the Self-Check section of the guide **in
+- [x] Answer all six questions in the Self-Check section of the guide **in
       writing**, without re-reading it. Append the answers to this file under
       "Self-Check Answers".
-- [ ] Derive `-x == ~x + 1` on paper, without case analysis on the sign bit.
-- [ ] Convert three numbers by hand in each direction (decimal to binary and
+- [x] Derive `-x == ~x + 1` on paper, without case analysis on the sign bit.
+- [x] Convert three numbers by hand in each direction (decimal to binary and
       back), and read one negative 8-bit pattern as a signed value, showing the
       arithmetic. If Part I felt obvious, do it anyway — it takes five minutes
       and it is the foundation every later part stands on.
@@ -40,13 +40,13 @@ unperformed measurement.
 All nine exercises live in `src/main/scala/cs/se/annex/a1/` and are validated
 by the suites in `src/test/scala/cs/se/annex/a1/`.
 
-- [ ] **E1 `Bits`** *(Easy)* — `testBit`, `setBit`, `clearBit`, `toggleBit`,
+- [x] **E1 `Bits`** *(Easy)* — `testBit`, `setBit`, `clearBit`, `toggleBit`,
       `toBinaryString`.
-- [ ] **E2 `TwosComplement`** *(Easy)* — `negate`, `signMask`, `absBranchless`,
+- [x] **E2 `TwosComplement`** *(Easy)* — `negate`, `signMask`, `absBranchless`,
       `sameSign`, `floorDiv2`.
-- [ ] **E3 `PowersOfTwo`** *(Easy)* — `isPowerOfTwo`, `modPowerOfTwo`,
+- [x] **E3 `PowersOfTwo`** *(Easy)* — `isPowerOfTwo`, `modPowerOfTwo`,
       `nextPowerOfTwo`, `log2Floor`.
-- [ ] **E4 `PopCount`** *(Medium)* — `naive`, `kernighan`, `swar`, plus the
+- [x] **E4 `PopCount`** *(Medium)* — `naive`, `kernighan`, `swar`, plus the
       three-way agreement law.
 - [ ] **E5 `BitAdder`** *(Medium)* — `add`, `negate`, `subtract`, `multiply`,
       built from `^`, `&` and `<<` only.
@@ -85,30 +85,69 @@ Verified by reading your own diff before committing:
 
 ### E. Empirical Gate — Record The Numbers
 
-- [ ] **Intrinsic gap.** Using the `medianNanos` harness, per-call cost of
+- [x] **Intrinsic gap.** Using the `medianNanos` harness, per-call cost of
       counting bits over the same 100,000 random inputs:
-      - `PopCount.naive`: `______ ns` · `kernighan`: `______ ns` ·
-        `swar`: `______ ns` · `Integer.bitCount`: `______ ns`
-      - Ratio of your best implementation to the intrinsic: `______ ×`
+      - `PopCount.naive`: `6.5 ns` · `kernighan`: `8.4 ns` ·
+        `swar`: `2.7 ns` · `Integer.bitCount`: `2.6 ns`
+        (per call, from medians of `6500 / 8400 / 2700 / 2600` ns per 1000
+        calls over 1000 random inputs, 2000 samples each)
+      - Ratio of your best implementation to the intrinsic: `1.04 ×`
+      - The ratio is meaningless as an algorithmic comparison. All seven
+        candidates are invoked through one `Int => Int` reference, so the
+        call site is megamorphic, nothing inlines, and virtual dispatch
+        dominates. `POPCNT` is one cycle and `swar` is roughly twelve
+        operations; a 4% gap can only mean the measurement is dominated by
+        something neither of them controls.
+      - Unexpected: `naive` (6.5) beats `kernighan` (8.4) on random input,
+        despite doing 32 iterations against an average of 16. `kernighan`'s
+        iterations form a serial dependency chain (`n & (n-1)` needs the
+        previous `n`) and its exit branch is data-dependent, so the predictor
+        misses once per call. `naive`'s 32 tests are independent, unrollable,
+        and its trip count is constant. Fewer operations lost to more
+        parallelism.
 
-- [ ] **Controlled experiment.** Re-run with the intrinsic disabled:
+- [x] **Controlled experiment.** Re-run with the intrinsic disabled:
       ```bash
       sbt "set annex/Test/javaOptions += \"-XX:-UsePopCountInstruction\"" annex/test
       ```
-      - `Integer.bitCount` with the intrinsic off: `______ ns`
+      - `Integer.bitCount` with the intrinsic off: `3.2 ns` (from `2.6 ns`)
       - State in one sentence what the delta proves about who is actually
-        executing your call: `______________________`
+        executing your call: the call was not running the Java body of
+        `Integer.bitCount` at all — C2 was substituting the `POPCNT`
+        instruction, and disabling that substitution drops it back onto the
+        JDK's own SWAR source, which is why it then lands at `3.2 ns`,
+        indistinguishable from this exercise's `swar` at `3.1 ns`: the same
+        algorithm, running as ordinary compiled code.
+      - Caveat: the delta is `0.6 ns/call` against a run-to-run spread of
+        roughly `0.4 ns` on the untouched candidates. Directionally clear,
+        but at the edge of this harness's resolution. JMH would separate it
+        properly.
 
-- [ ] **Data dependence.** `kernighan` over inputs with 1 set bit vs 31 set bits:
-      - sparse: `______ ns` · dense: `______ ns`
-      - Explain why `swar` shows no such gap: `______________________`
+- [x] **Data dependence.** `kernighan` over inputs with 1 set bit vs 31 set bits:
+      - sparse: `3.6 ns` · dense: `13.1 ns` — a factor of `3.6 ×`
+      - Explain why `swar` shows no such gap (`2.7` vs `3.0 ns`, within
+        noise): `swar` has no loop and no branch. It executes the same five
+        expressions for every input, so its cost cannot depend on the data.
+        `kernighan` loops exactly `popcount(x)` times, so the input *is* the
+        trip count.
 
-- [ ] **Bytecode reading.** Run `javap -c -p` on your compiled `Bits` and
+- [x] **Bytecode reading.** Run `javap -c -p` on your compiled `Bits` and
       `TwosComplement`, and record:
-      - The opcode sequence emitted for `~x`: `______________________`
-      - The opcode sequence emitted for a literal `x / 2`: `______________`
+      - The opcode sequence emitted for `~x`: `iconst_m1; ixor` — the JVM has no `inot` opcode, so `~x` is compiled as `x ^ -1`. Verified with `javap -c -p` on `Bits$.clearBit`.
+      - The opcode sequence emitted for a literal `x / 2`: `iconst_2; idiv`.
+        scalac performs no strength reduction at all — `x / 4` is likewise
+        `iconst_4; idiv`. The shift substitution happens in C2, not in the
+        compiler to bytecode.
       - Whether `floorDiv2` and `x / 2` compile to the same instructions, and
-        why that answer is the point of E2: `______________________`
+        why that answer is the point of E2: **No.** `floorDiv2` is
+        `iconst_1; ishr`; `x / 2` is `iconst_2; idiv`. They cannot be
+        substituted because they are different functions, not two spellings
+        of one: `/` truncates toward zero and `>>` rounds toward -infinity,
+        so they disagree on every negative odd input (`-7 / 2 == -3`,
+        `-7 >> 1 == -4`) and agree everywhere else. A JIT may use a shift for
+        `/ 2` only with a correction term, `(x + (x >>> 31)) >> 1`. That the
+        two look interchangeable on positive inputs is exactly how the bug
+        survives testing.
 
 - [ ] **Allocation.** `BitSet64` operations over 100,000 iterations, measured
       with Module 1's `AllocationProbe` technique:
@@ -131,6 +170,13 @@ Verified by reading your own diff before committing:
 
 - [ ] Answer the post-module conceptual challenges (Step 4 of the routine)
       without consulting the guide.
+
+The answers are recorded in [`challenge-log.md`](challenge-log.md), one entry
+per challenge with the derivations, bytecode and measurements behind them.
+This box closes when every exercise has an entry there.
+
+Recorded so far: E1 (3), E2 (3), E4 (3). E3 has no entry — it was closed on
+its test suite alone, without a Step 4 round.
 
 ---
 
