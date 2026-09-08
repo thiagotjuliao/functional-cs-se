@@ -1,5 +1,7 @@
 package cs.se.annex.a1
 
+import cs.se.annex.a1.TwosComplement.signMask
+
 /** Exercise 1 (Easy) — Addressing individual bits.
   *
   * The vocabulary every later exercise is written in. A 32-bit word is read here
@@ -132,7 +134,8 @@ object PowersOfTwo:
     * that `Int.MinValue` is `-2^31` and its bit pattern has a single set bit, so
     * a naive `x & (x - 1) == 0` test accepts it. Handle that.
     */
-  def isPowerOfTwo(x: Int): Boolean = ???
+  def isPowerOfTwo(x: Int): Boolean =
+    x > 0 && (x & (x - 1)) == 0
 
   /** `x mod n` computed by masking, valid **only** when `n` is a power of two.
     *
@@ -143,7 +146,9 @@ object PowersOfTwo:
     *
     * For non-negative `x` the result must equal `x % n`.
     */
-  def modPowerOfTwo(x: Int, n: Int): Option[Int] = ???
+  def modPowerOfTwo(x: Int, n: Int): Option[Int] =
+    if !isPowerOfTwo(n) then None
+    else Some(x & (n - 1))
 
   /** The smallest power of two greater than or equal to `x`.
     *
@@ -155,7 +160,14 @@ object PowersOfTwo:
     * distances `1, 2, 4, 8, 16`. Write it that way: it is a fold, not a loop,
     * and seeing that is half the point.
     */
-  def nextPowerOfTwo(x: Int): Option[Int] = ???
+  def nextPowerOfTwo(x: Int): Option[Int] =
+    if x <= 1 then Some(1)
+    else
+      val y = List(1, 2, 4, 8, 16).foldLeft(x - 1) { (acc, d) =>
+        acc | acc >>> d
+      } + 1
+
+      if y == Int.MinValue then None else Some(y)
 
   /** `floor(log2(x))`, i.e. the index of the highest set bit.
     *
@@ -167,5 +179,18 @@ object PowersOfTwo:
     * `nextPowerOfTwo` plus a population count, or from a branchless binary
     * search over the five shift distances.
     */
-  def log2Floor(x: Int): Option[Int] = ???
+  def log2Floor(x: Int): Option[Int] =
+    if x <= 0 then None
+    else
+      val y = List(16, 8, 4, 2, 1)
+        .foldLeft((x, 0)) { case ((v, r), d) =>
+          val t = v >>> d
+          val m = signMask(-t)
+          val b = d & m
+
+          (v >>> b, r + b)
+        }
+        ._2
+
+      Some(y)
 end PowersOfTwo
