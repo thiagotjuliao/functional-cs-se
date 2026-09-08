@@ -22,22 +22,26 @@ object Bits:
     *
     * Must not allocate and must not branch.
     */
-  def testBit(x: Int, index: Int): Boolean = ???
+  def testBit(x: Int, index: Int): Boolean =
+    ((x >> index) & 1) == 1
 
   /** `x` with bit `index` set. Idempotent: setting a set bit changes nothing. */
-  def setBit(x: Int, index: Int): Int = ???
+  def setBit(x: Int, index: Int): Int =
+    x | (1 << index)
 
   /** `x` with bit `index` cleared. Idempotent, and the left inverse of `setBit`
     * only when the bit was clear to begin with — state which of these holds:
     *   - `clearBit(setBit(x, i), i) == clearBit(x, i)` for all `x`
     *   - `setBit(clearBit(x, i), i) == setBit(x, i)` for all `x`
     */
-  def clearBit(x: Int, index: Int): Int = ???
+  def clearBit(x: Int, index: Int): Int =
+    x & ~(1 << index)
 
   /** `x` with bit `index` flipped. Must be an involution: applying it twice with
     * the same index is the identity, for every `x`.
     */
-  def toggleBit(x: Int, index: Int): Int = ???
+  def toggleBit(x: Int, index: Int): Int =
+    x ^ (1 << index)
 
   /** The 32-character, zero-padded binary rendering of `x`, most significant bit
     * first.
@@ -50,7 +54,10 @@ object Bits:
     * Build it functionally — a range, a map and a `mkString`, or a fold. No
     * `StringBuilder`, no `var`, no loop.
     */
-  def toBinaryString(x: Int): String = ???
+  def toBinaryString(x: Int): String =
+    (31 to 0 by -1).map { i =>
+      if testBit(x, i) then '1' else '0'
+    }.mkString
 end Bits
 
 /** Exercise 2 (Easy) — Two's complement and branchless sign handling.
