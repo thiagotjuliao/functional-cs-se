@@ -134,7 +134,34 @@ When I signal that I have completed the exercises or the block's mini-project (w
 1. **JVM Bottleneck Audit:** Detail common engineering mistakes, anti-patterns, and low-level traps I might have fallen into (e.g., Escape Analysis failures, hidden memory retention, or thread contention).
 2. **Conceptual Challenges:** Ask 2 or 3 highly precise technical questions about my design choices so I can verify my own codebase's correctness.
 3. **The Challenge Log (`docs/challenge-log.md`):** The answers are an artifact, not a conversation. Record every challenge and its answer in the block's or annex's `docs/challenge-log.md` — one entry per question, carrying the derivation, the bytecode listing or the measurement that supports it, never the verdict alone. A green suite proves the code works and proves nothing about whether I can say *why*; this file is the evidence behind the checklist's **Oral Defence** box, and that box closes only when every exercise has an entry. Hold it to the same discipline as a theory guide: every number executed and verified before it is written, worked examples in aligned ```text blocks, the narrowest width that still demonstrates the point. Where I answered partially and the rest was drawn out, record the complete answer — the log is a reference, not a transcript or a grade. When a module is closed without a Step 4 round, say so as its own entry rather than letting the exercise go silently missing: an omission that leaves no trace is indistinguishable from an audit that had no questions worth asking.
-4. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
+4. **The Recall Set (`docs/quiz/<tag>.html`):** A self-contained HTML page of
+   multiple-choice questions, one per block or annex, extended each time an
+   exercise closes. Its purpose is narrow and must stay narrow.
+
+   Multiple choice measures **recognition**; the challenge log measures
+   **derivation**. The easy instrument must never be allowed to cannibalise the
+   hard one, so the recall set is not a revision of the Oral Defence and never
+   closes a checklist box. What it is good for is the one thing prose cannot
+   force: **discrimination between near-identical alternatives** — `1 << i`
+   against `1L << i`, `:+` against `::`, `-s` against `~s`, `>>` against `>>>`.
+   This curriculum is built almost entirely out of such pairs.
+
+   Binding rules:
+
+   * **Distractors are never invented.** Each wrong option is a mistake that
+     actually occurred — drawn from `challenge-log.md`, from a bug found during
+     the exercise, or from a documented trap in the theory guide.
+   * **Every option explains itself**, right or wrong, citing the entry that
+     documents it. A wrong answer that is merely marked wrong teaches nothing.
+   * **Only closed exercises appear.** Questions about unsolved exercises are
+     spoilers; the file grows as the checklist does.
+   * **Three tiers**, labelled on each question, following the same Easy /
+     Medium / Hard taxonomy as the exercise set. Quantity and distribution are
+     yours to choose.
+   * **No external dependencies.** No CDN, no framework, no build step: one file
+     that opens over `file://` and works offline, themed for light and dark.
+
+5. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
 
 ---
 

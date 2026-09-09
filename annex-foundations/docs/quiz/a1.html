@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>A1 — Bitwise Foundations · Recall Set</title>
+<style>
+  :root {
+    --bg: #fbfaf8;      --panel: #ffffff;   --ink: #1b1a18;
+    --muted: #6b6862;   --line: #e3e0da;    --accent: #7a4b2a;
+    --ok-bg: #eef5ec;   --ok-line: #7fa86c; --ok-ink: #33552a;
+    --no-bg: #fbeeea;   --no-line: #c07a63; --no-ink: #7a3320;
+    --code-bg: #f4f2ee;
+    --easy: #5d7a8c;    --medium: #8a6d3b;  --hard: #8c4a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161a;    --panel: #1f1e23;   --ink: #e8e4dd;
+      --muted: #9b958c; --line: #34323a;    --accent: #d5a37a;
+      --ok-bg: #1c2a1b;  --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+      --no-bg: #2c1c19;  --no-line: #9a5c48; --no-ink: #e0a08c;
+      --code-bg: #17161a;
+      --easy: #8fb0c4;  --medium: #c8a468;  --hard: #cc8080;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161a;      --panel: #1f1e23;   --ink: #e8e4dd;
+    --muted: #9b958c;   --line: #34323a;    --accent: #d5a37a;
+    --ok-bg: #1c2a1b;   --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+    --no-bg: #2c1c19;   --no-line: #9a5c48; --no-ink: #e0a08c;
+    --code-bg: #17161a;
+    --easy: #8fb0c4;    --medium: #c8a468;  --hard: #cc8080;
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 0 20px 80px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header { padding: 44px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 25px; margin: 0 0 8px; letter-spacing: -0.01em; font-weight: 620; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .sub code { font-size: 12.5px; }
+
+  .note {
+    margin: 22px 0 0; padding: 13px 16px; border-left: 2px solid var(--accent);
+    background: var(--panel); font-size: 13.5px; color: var(--muted);
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  .bar .grow { flex: 1 1 auto; }
+  button.f {
+    font: inherit; font-size: 13px; padding: 5px 11px; cursor: pointer;
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  button.f[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+  button.f:hover { color: var(--ink); }
+  #score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #score b { color: var(--ink); font-weight: 620; }
+
+  .q {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 20px 22px; margin: 20px 0;
+  }
+  .meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; }
+  .tier {
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    font-weight: 680; padding: 2px 7px; border-radius: 3px; border: 1px solid;
+  }
+  .tier.easy   { color: var(--easy);   border-color: var(--easy); }
+  .tier.medium { color: var(--medium); border-color: var(--medium); }
+  .tier.hard   { color: var(--hard);   border-color: var(--hard); }
+  .src { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stem { margin: 0 0 15px; }
+  .stem p { margin: 0 0 10px; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 11px 13px; overflow-x: auto; margin: 11px 0;
+    font: 12.5px/1.55 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg); padding: 1px 4px; border-radius: 3px;
+    font: 0.9em/1 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .opt {
+    display: block; width: 100%; text-align: left; font: inherit;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 10px 13px; margin: 7px 0; cursor: pointer;
+  }
+  .opt:hover:not([disabled]) { border-color: var(--accent); }
+  .opt[disabled] { cursor: default; }
+  .opt .k { color: var(--muted); font-weight: 620; margin-right: 8px; }
+  .opt.correct { background: var(--ok-bg); border-color: var(--ok-line); }
+  .opt.wrong   { background: var(--no-bg); border-color: var(--no-line); }
+
+  .why {
+    margin: 9px 0 3px; padding: 11px 14px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid;
+  }
+  .why.correct { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+  .why.wrong   { background: var(--no-bg); border-color: var(--no-line); color: var(--no-ink); }
+  .why pre { background: rgba(127,127,127,0.10); border-color: transparent; }
+  .why code { background: rgba(127,127,127,0.14); }
+  .why b { font-weight: 660; }
+
+  footer {
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--muted);
+  }
+  #empty { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>A1 — Bitwise Foundations · Recall Set</h1>
+  <p class="sub">Exercises E1–E6. Every distractor is a mistake that actually occurred, cited to its entry in <code>challenge-log.md</code>.</p>
+  <div class="note">
+    <strong>This is not the Oral Defence.</strong> Multiple choice measures recognition;
+    the challenge log measures derivation. Use this to sharpen discrimination between
+    near-identical alternatives — <code>1 &lt;&lt; i</code> against <code>1L &lt;&lt; i</code>,
+    <code>:+</code> against <code>::</code> — and never as a substitute for writing the
+    derivation out.
+  </div>
+</header>
+
+<div class="bar">
+  <button class="f" data-tier="all"    aria-pressed="true">All</button>
+  <button class="f" data-tier="easy"   aria-pressed="false">Easy</button>
+  <button class="f" data-tier="medium" aria-pressed="false">Medium</button>
+  <button class="f" data-tier="hard"   aria-pressed="false">Hard</button>
+  <span class="grow"></span>
+  <span id="score">answered <b>0</b>/<b>0</b> · correct <b>0</b></span>
+  <button class="f" id="reset">Reset</button>
+</div>
+
+<main id="list"></main>
+<div id="empty" hidden>No questions at this level.</div>
+
+<footer>
+  E7–E9 are deliberately absent: they would spoil exercises not yet solved.
+  Extend this file as each one closes, keeping distractors sourced from the log
+  rather than invented.
+</footer>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  // ---------------------------------------------------------------- E1
+  {
+    tier: "easy", src: "E1 · challenge 1",
+    stem: `<p>What does <code>testBit(1, 32)</code> return?</p>`,
+    options: [
+      { t: "<code>true</code>", ok: true,
+        why: "The shift distance is masked to its low five bits, so <code>32</code> becomes <code>0</code> and the expression evaluates <code>(1 >> 0) & 1 == 1</code>." },
+      { t: "<code>false</code>", ok: false,
+        why: "This is what the <b>arithmetic</b> reading predicts — shifting a 32-bit value right by 32 ought to push the bit out of the word. The JVM does not do that." },
+      { t: "It throws <code>IllegalArgumentException</code>", ok: false,
+        why: "Nothing checks the precondition. The failure is <b>silent aliasing</b>, not an exception: <code>testBit(x, 32)</code> is <code>testBit(x, 0)</code>. That is exactly why the precondition has to live in the Scaladoc." },
+      { t: "It is undefined behaviour", ok: false,
+        why: "It is fully specified. JVMS §6.5 defines the shift opcodes to use only the low five bits of the distance operand — deterministic, portable, and surprising." }
+    ]
+  },
+  {
+    tier: "medium", src: "E1 · challenge 1",
+    stem: `<p>Disassembling <code>testBit</code>, you look for the instruction that masks the shift distance to five bits and find no <code>iand 31</code> anywhere. Why not?</p>`,
+    options: [
+      { t: "The masking is part of the <code>ishr</code> opcode's specification, not a separate instruction", ok: true,
+        why: "It lives in the definition of the opcode, so it costs <b>zero instructions</b>. x86-64 masks shift counts to five bits in silicon for 32-bit operands, and the JVM adopted the hardware's behaviour." },
+      { t: "The JIT removed it as dead code", ok: false,
+        why: "It was never emitted. The listing is identical in the interpreter, in C1 and in C2 — there is nothing for the JIT to remove." },
+      { t: "scalac hoisted it out of the method", ok: false,
+        why: "No mask is generated at any stage. Reading the bytecode and concluding the shift is pure arithmetic is precisely how this trap survives inspection." },
+      { t: "It only appears when the distance is a runtime value", ok: false,
+        why: "The distance in <code>testBit</code> <em>is</em> a runtime parameter, and still no mask is emitted. The behaviour is in the opcode either way." }
+    ]
+  },
+  {
+    tier: "hard", src: "E1 · challenge 1",
+    stem: `<p>Given that 32-bit shifts mask the distance to five bits, what does <code>1L &lt;&lt; 64</code> evaluate to?</p>`,
+    options: [
+      { t: "<code>1L</code>", ok: true,
+        why: "<code>Long</code> shifts (<code>lshl</code>, <code>lshr</code>, <code>lushr</code>) mask to <b>six</b> bits, so the aliasing there has period 64 rather than 32. The width of the operand fixes the width of the counter." },
+      { t: "<code>0L</code>", ok: false,
+        why: "Same arithmetic intuition that fails on <code>testBit(1, 32)</code>. The bit is not pushed out; the distance is reduced." },
+      { t: "<code>2L</code>", ok: false,
+        why: "That would follow from masking to five bits (<code>64 &amp; 31 == 0</code> gives 1, not 2, in any case). Long shifts mask to six bits: <code>64 &amp; 63 == 0</code>." },
+      { t: "It overflows to <code>Long.MinValue</code>", ok: false,
+        why: "Shifts do not overflow — bits shifted past the width are discarded. Here nothing is even shifted, because the effective distance is zero." }
+    ]
+  },
+  {
+    tier: "hard", src: "E1 · challenge 2",
+    stem: `<p>Is <code>clearBit(setBit(x, i), i) == x</code> a law?</p>`,
+    options: [
+      { t: "Only when bit <code>i</code> of <code>x</code> was already clear", ok: true,
+        why: "<code>setBit(_, i)</code> is <b>not injective</b> — it maps <code>x</code> with bit <code>i</code> clear and <code>x</code> with bit <code>i</code> set to the same result. A non-injective function has no left inverse; the information was destroyed." },
+      { t: "Yes, always — the two operations are inverses", ok: false,
+        why: "They are not inverses. The pair of laws in the Scaladoc says something weaker: <b>the last write wins</b>. Both functions are constant on that bit and the identity on the other 31." },
+      { t: "Never, because <code>&amp;</code> and <code>|</code> do not commute", ok: false,
+        why: "They do compose here: <code>clearBit(setBit(x,i),i)</code> reduces cleanly to <code>clearBit(x,i)</code> by distributivity and <code>m &amp; ~m == 0</code>. The reduction is valid; it just does not land on <code>x</code>." },
+      { t: "Only for non-negative <code>x</code>", ok: false,
+        why: "The sign is irrelevant. What matters is the prior state of bit <code>i</code>, and that is a question about one bit, not about the numeric reading of the word." }
+    ]
+  },
+  {
+    tier: "medium", src: "E1 · challenge 2",
+    stem: `<p>In Boolean algebra, <code>|</code> distributes over <code>&amp;</code>. Why is that step the one worth noticing?</p>`,
+    options: [
+      { t: "Because it has no arithmetic analogue — <code>a + (b·c) ≠ (a+b)·(a+c)</code>", ok: true,
+        why: "<code>&amp;</code> over <code>|</code> mirrors <code>a·(b+c) = ab + ac</code> and feels natural. <code>|</code> over <code>&amp;</code> is a <b>lattice</b> property with no ring counterpart. Boolean algebra is self-dual; arithmetic is not." },
+      { t: "Because it only holds for single-bit values", ok: false,
+        why: "It holds for all 32 bits at once — the operators act position-wise, and the law holds in each position independently." },
+      { t: "Because the JVM implements <code>|</code> as a fused operation", ok: false,
+        why: "This is an algebraic property of the operators, independent of any instruction set. <code>ior</code> and <code>iand</code> are ordinary opcodes." },
+      { t: "Because it fails when the operands share set bits", ok: false,
+        why: "It holds unconditionally. If it failed on shared bits, Law B in <code>clearBit</code>'s Scaladoc would not reduce." }
+    ]
+  },
+  // ---------------------------------------------------------------- E2
+  {
+    tier: "easy", src: "E2 · challenge 4",
+    stem: `<p><code>sameSign(x, y)</code> in one operation and one comparison. Which is it?</p>`,
+    options: [
+      { t: "<code>(x ^ y) &gt;= 0</code>", ok: true,
+        why: "Bit 31 of <code>x ^ y</code> is <code>sign(x) ^ sign(y)</code>, which is <code>0</code> exactly when the signs agree — and a comparison against zero on a signed integer reads precisely that bit. In bytecode: <code>ixor</code> then <code>ifge</code>." },
+      { t: "<code>signMask(x) == signMask(y)</code>", ok: false,
+        why: "Correct but wasteful, and it is the draft the challenge asks you to improve on. It spreads each sign across all 32 positions, then reads one bit — discarding 31 bits it just computed." },
+      { t: "<code>(x &amp; y) &gt;= 0</code>", ok: false,
+        why: "<code>&amp;</code> on the sign bits answers \"are both negative\", not \"do they agree\". <code>sameSign(5, -5)</code> would return <code>true</code>." },
+      { t: "<code>(x ^ y) &gt;&gt;&gt; 31 == 0</code>", ok: false,
+        why: "Correct, but that is one operation and one <em>shift</em> and one comparison. The shift is redundant: the signed comparison already reads bit 31." }
+    ]
+  },
+  {
+    tier: "easy", src: "E2 · Exercise2TwosComplementSpec",
+    stem: `<p>In two's complement, <code>~x</code> equals which arithmetic expression?</p>`,
+    options: [
+      { t: "<code>-x - 1</code>", ok: true,
+        why: "This is the identity the spec asserts directly. It also explains why <code>x + ~x == -1</code> for every <code>x</code>: every bit position holds exactly one 1." },
+      { t: "<code>-x</code>", ok: false,
+        why: "That is arithmetic negation, which is <code>~x + 1</code>. The off-by-one is exactly what separates the two, and confusing them is what makes <code>-s</code> look like a valid <code>complement</code> in E6." },
+      { t: "<code>-x + 1</code>", ok: false,
+        why: "Wrong direction. Check against <code>x = 0</code>: <code>~0</code> is <code>-1</code>, while <code>-0 + 1</code> is <code>1</code>." },
+      { t: "<code>x - 1</code> with the sign flipped afterwards", ok: false,
+        why: "Check <code>x = 0</code>: <code>~0 == -1</code>, but this yields <code>1</code>. The identity does not involve a conditional on the sign at all." }
+    ]
+  },
+  {
+    tier: "medium", src: "E2 · challenge 5",
+    stem: `<p>Do <code>floorDiv2(x)</code> and a literal <code>x / 2</code> compile to the same instructions?</p>`,
+    options: [
+      { t: "No — <code>iconst_1; ishr</code> against <code>iconst_2; idiv</code>, and they are different functions", ok: true,
+        why: "<code>/</code> truncates toward zero, <code>&gt;&gt;</code> rounds toward negative infinity. They disagree on <b>every negative odd input</b> and agree everywhere else — which is why a suite of positive inputs never notices." },
+      { t: "Yes — the JIT strength-reduces the division to a shift", ok: false,
+        why: "It cannot, because they are not the same function. Strength reduction of <code>x / 2</code> requires extra instructions to correct the rounding for negatives, precisely because a bare shift would give a different answer." },
+      { t: "Yes — scalac emits <code>ishr</code> for both", ok: false,
+        why: "scalac emits <code>idiv</code> for <code>/</code>. Reading the bytecode is what settles this, and it is recorded under §E of the checklist." },
+      { t: "No, but only because <code>idiv</code> can throw on division by zero", ok: false,
+        why: "The divisor is the constant <code>2</code>, so no exception is reachable. The difference is the rounding mode, and it is observable in the results, not just in the instruction stream." }
+    ]
+  },
+  {
+    tier: "hard", src: "E2 · challenge 6",
+    stem: `<p><code>signMask</code> is written with <code>&gt;&gt;&gt;</code> instead of <code>&gt;&gt;</code>. What happens to <code>absBranchless</code>, whose body is <code>(x ^ m) - m</code>?</p>`,
+    options: [
+      { t: "It returns a negative result for every negative input, and stays correct for every positive one", ok: true,
+        why: "<code>x >>> 31</code> yields <code>0</code> or <code>1</code>, never <code>-1</code>. Verified: <code>abs(-5)</code> gives <code>-7</code>, <code>abs(-1)</code> gives <code>-3</code>. Positives are untouched because there <code>m == 0</code> and the expression degenerates to the identity — <b>the defect hides entirely in half the domain</b>." },
+      { t: "It returns the correct magnitude but with the sign inverted", ok: false,
+        why: "Not even the magnitude survives: <code>abs(-5)</code> yields <code>-7</code>, not <code>-5</code>. Both roles of <code>m</code> break — <code>x ^ m</code> must produce <code>~x</code>, and <code>x ^ 1</code> only flips bit 0." },
+      { t: "It throws for <code>Int.MinValue</code> and is otherwise correct", ok: false,
+        why: "No exception is possible; the expression is total. And <code>Int.MinValue</code> is not the special case here — every negative is wrong." },
+      { t: "Nothing changes, since only bit 31 is read", ok: false,
+        why: "The whole <b>scale</b> of <code>m</code> matters, not one bit of it. <code>1</code> sets one bit; <code>-1</code> sets all of them. The expression needs the wall." }
+    ]
+  },
+  // ---------------------------------------------------------------- E4
+  {
+    tier: "medium", src: "E4 · challenge 7",
+    stem: `<p>Why does <code>kernighan</code> terminate for <code>Int.MinValue</code>?</p>`,
+    options: [
+      { t: "Because the population count falls by exactly one per step and is bounded below by zero", ok: true,
+        why: "The measure that decreases is the <b>bit count</b>, not the value. It starts at most 32 and reaches zero with no special case. <code>Int.MinValue</code> has one set bit, so the loop clears it once and returns <code>1</code>." },
+      { t: "Because the value strictly decreases toward zero each iteration", ok: false,
+        why: "Refuted by the very input in question. <code>Int.MinValue - 1</code> <b>overflows to <code>Int.MaxValue</code></b> — subtracting one produced a larger number under the signed reading. Any magnitude argument dies on that line." },
+      { t: "Because an <code>Int</code> is 32 bits wide", ok: false,
+        why: "Width is the <em>bound</em>, not the argument. A first draft of <code>multiply</code> also looped over a 32-bit word and ran forever on negatives." },
+      { t: "Because <code>Int.MinValue</code> is special-cased before the loop", ok: false,
+        why: "There is no special case, and that is the point: as a bit pattern <code>Int.MinValue</code> is an ordinary value. It is exceptional only when reasoned about as a magnitude." }
+    ]
+  },
+  {
+    tier: "hard", src: "E4 · challenge 7",
+    stem: `<p>Reading the word as signed, what is <code>Int.MinValue - 1</code>?</p>`,
+    options: [
+      { t: "<code>Int.MaxValue</code> — larger than the value we subtracted from", ok: true,
+        why: "Shown in the 8-bit analogue: <code>1000 0000</code> (−128) minus one is <code>0111 1111</code> (127). Subtraction in <code>Z/2^32</code> is total and simply wraps; what \"overflows\" is only the signed interpretation layered on top." },
+      { t: "<code>Int.MinValue</code> — it saturates", ok: false,
+        why: "The JVM does not saturate integer arithmetic. It wraps, silently and deterministically." },
+      { t: "It throws <code>ArithmeticException</code>", ok: false,
+        why: "Only <code>Math.subtractExact</code> throws. The plain <code>isub</code> opcode never signals overflow." },
+      { t: "<code>-Int.MaxValue</code>", ok: false,
+        why: "Check the bit pattern rather than the arithmetic story: clearing nothing and borrowing through the whole word gives <code>0111 1111 ...</code>, which is positive." }
+    ]
+  },
+  {
+    tier: "hard", src: "E4 · challenge 8",
+    stem: `<p>The last step of the SWAR population count is <code>z * 0x01010101</code>, then <code>&gt;&gt;&gt; 24</code>. What is the multiply doing?</p>`,
+    options: [
+      { t: "Summing the four per-byte counts horizontally, by adding four shifted copies of <code>z</code>", ok: true,
+        why: "<code>0x01010101 = 2^24 + 2^16 + 2^8 + 2^0</code>, so <code>z * 0x01010101 = (z&lt;&lt;24) + (z&lt;&lt;16) + (z&lt;&lt;8) + z</code>. Byte 3 of the sum receives <code>a+b+c+d</code> — the total — and <code>&gt;&gt;&gt; 24</code> extracts it." },
+      { t: "Broadcasting the low byte across all four lanes", ok: false,
+        why: "That is what multiplying a <em>single</em> byte by <code>0x01010101</code> does. Here <code>z</code> already holds four independent counts, and the multiply collapses them rather than replicating one." },
+      { t: "Normalising each lane to the range 0–8", ok: false,
+        why: "The lanes are already in <code>0..8</code> after the third SWAR step. That bound is what makes the trick <em>valid</em> — the largest column sum is 32 against a byte's capacity of 255, so no carry crosses a lane boundary." },
+      { t: "Converting the four counts to a checksum that <code>&gt;&gt;&gt; 24</code> validates", ok: false,
+        why: "Nothing is validated. The high byte holds the exact answer, arrived at by ordinary addition of shifted copies." }
+    ]
+  },
+  {
+    tier: "hard", src: "E4 · challenge 9",
+    stem: `<p>Measured on random input, <code>naive</code> (32 iterations, always) beat <code>kernighan</code> (16 on average): 6500 ns against 8400 ns per 1000 calls. Why?</p>`,
+    options: [
+      { t: "<code>kernighan</code> has a serial dependency chain and a data-dependent exit branch; <code>naive</code>'s tests are independent and its trip count is constant", ok: true,
+        why: "Each <code>n &amp; (n-1)</code> waits on its predecessor, so nothing pipelines, and the exit varies from 0 to 32 per call so the predictor learns nothing. <code>naive</code>'s 32 tests each inspect a different bit of the same <code>x</code> and C2 can unroll the loop. <b>Fewer operations lose to more parallelism.</b>" },
+      { t: "<code>naive</code> was inlined and <code>kernighan</code> was not", ok: false,
+        why: "Neither was inlined — all seven candidates go through one <code>Int =&gt; Int</code> reference, making a single <b>megamorphic call site</b>. That is why only large differences survive this harness." },
+      { t: "The measurement is noise; the difference is within run-to-run spread", ok: false,
+        why: "The spread on untouched candidates is roughly 0.4 ns/call. A 1900 ns gap per 1000 calls is far outside it. The <em>intrinsic-vs-swar</em> comparison is the one at the edge of resolution." },
+      { t: "<code>kernighan</code> allocates on each iteration", ok: false,
+        why: "It allocates nothing — the loop is a local <code>Int</code>. The cost is entirely in the dependency chain and the branch." }
+    ]
+  },
+  {
+    tier: "medium", src: "E4 · challenge 9",
+    stem: `<p>Run with <code>-XX:-UsePopCountInstruction</code>, <code>Integer.bitCount</code> becomes indistinguishable from the hand-written <code>swar</code>. Why?</p>`,
+    options: [
+      { t: "Because the Java body of <code>Integer.bitCount</code> in the JDK <em>is</em> that same SWAR algorithm, with the same four constants", ok: true,
+        why: "With the intrinsic on, C2 replaces the whole call with one <code>POPCNT</code>. With it off, C2 compiles the actual Java source — and the source is the algorithm you reimplemented." },
+      { t: "Because the flag forces both through the interpreter", ok: false,
+        why: "The flag disables one intrinsic substitution. Everything still JIT-compiles normally." },
+      { t: "Because the JIT recognises the SWAR pattern and substitutes <code>POPCNT</code> for both", ok: false,
+        why: "That would make both <em>fast</em>, not both slow. They converge at the slower figure (3100–3200), which is the SWAR cost." },
+      { t: "Because the megamorphic call site dominates and hides the difference", ok: false,
+        why: "The megamorphic site is why the <em>intrinsic barely won</em> in the first place. But it does not explain why disabling the intrinsic moves <code>bitCount</code> specifically onto <code>swar</code>'s number." }
+    ]
+  },
+  // ---------------------------------------------------------------- E5
+  {
+    tier: "medium", src: "E5 · challenge 12",
+    stem: `<p><code>multiply(a, b)</code> consumes the multiplier with <code>y &gt;&gt;&gt; 1</code>. Measured trip counts: <code>b = 1024</code> costs 11 iterations, <code>b = -1</code> costs 32. What governs the cost?</p>`,
+    options: [
+      { t: "The position of the highest set bit, read as an <b>unsigned</b> magnitude", ok: true,
+        why: "<code>&gt;&gt;&gt;</code> is a logical shift: it does not know a sign bit exists. <code>-1</code> read unsigned is <code>2^32 - 1</code>, so its highest bit sits at position 31 and the loop runs 32 times." },
+      { t: "The population count of the multiplier", ok: false,
+        why: "That is what <code>kernighan</code> measures, and it is refuted here: <code>1024</code> has a single set bit and costs 11 iterations." },
+      { t: "The signed magnitude of the multiplier", ok: false,
+        why: "This is the intuition the challenge exists to break. <code>-1</code> is the <em>smallest</em> multiplier by magnitude and the <b>worst case</b> by cost — every negative has bit 31 set." },
+      { t: "Whether the multiplier is a power of two", ok: false,
+        why: "<code>1024</code> is a power of two and still costs 11. The loop shrinks <code>y</code> until it reaches zero regardless of how many bits are set along the way." }
+    ]
+  },
+  {
+    tier: "easy", src: "E5 · challenge 12",
+    stem: `<p>The literature attaches <code>O(log b)</code> to shift-and-add multiplication. At a fixed 32-bit width, what does that notation tell you?</p>`,
+    options: [
+      { t: "Nothing — <code>log2(b) &lt;= 32</code> always, so <code>O(log b)</code> <em>is</em> <code>O(1)</code>", ok: true,
+        why: "Asymptotics over a fixed-size type distinguish nothing. What remains is the <b>constant</b>, and it varies by a factor of 32 between best and worst case. The notation only carries content in arbitrary-precision arithmetic." },
+      { t: "That cost grows logarithmically with the multiplier's value", ok: false,
+        why: "It cannot grow without bound when the input is bounded. And within the range, the ordering it suggests is wrong: <code>-1</code> is smallest by magnitude and worst by cost." },
+      { t: "That the algorithm is asymptotically optimal for multiplication", ok: false,
+        why: "Optimality is not the claim, and at a fixed width the asymptotic frame does not apply in the first place." },
+      { t: "That it beats the hardware multiplier for small <code>b</code>", ok: false,
+        why: "Nothing here compares against the hardware multiplier, and \"small <code>b</code>\" is exactly the misleading category — small by magnitude says nothing about bit length." }
+    ]
+  },
+  // ---------------------------------------------------------------- E6
+  {
+    tier: "easy", src: "E6 · Sets.scala",
+    stem: `<p><code>incl</code> is written as <code>s | (1 &lt;&lt; i)</code> — an <code>Int</code> literal, not <code>1L</code>. What does <code>incl(31)</code> do to an empty <code>BitSet64</code>?</p>`,
+    options: [
+      { t: "Sets bits 31 through 63", ok: true,
+        why: "<code>1 &lt;&lt; 31</code> is <code>Int.MinValue</code>, and widening it to <code>Long</code> uses <code>i2l</code>, which <b>sign-extends</b>. The result is <code>0xFFFFFFFF80000000</code> — a one-element insertion that added 33 elements." },
+      { t: "Sets bit 31, correctly", ok: false,
+        why: "This is what tests over members <code>0..30</code> report, and it is why the bug survives a green suite. The divergence starts exactly at 31." },
+      { t: "Sets bit 0", ok: false,
+        why: "That is what <code>incl(32)</code> does — the shift count is masked to five bits, so <code>1 &lt;&lt; 32</code> is <code>1</code>. Position 31 fails by the <em>other</em> mechanism, sign extension." },
+      { t: "Leaves the set unchanged", ok: false,
+        why: "Something is always OR-ed in. The question is only how much — here, far too much." }
+    ]
+  },
+  {
+    tier: "easy", src: "E6 · challenge 13",
+    stem: `<p>Symmetric difference on a <code>BitSet64</code> is which bitwise operator?</p>`,
+    options: [
+      { t: "<code>^</code>", ok: true,
+        why: "Position by position: out of two operands, the bit survives when exactly one of them is set. <code>1 ^ 1 = 0</code> is the \"in both, so drop it\" row of the truth table." },
+      { t: "<code>|</code> followed by <code>&amp; ~</code> of the intersection", ok: false,
+        why: "Correct as a <em>formula</em>, and it is how the definition is stated — but it is three operations where one suffices, and writing it with <code>-</code> instead of <code>&amp; ~</code> is what put the symmetric difference into <code>diff</code> by accident." },
+      { t: "<code>&amp;</code>", ok: false,
+        why: "That is intersection: the bit survives when <b>both</b> are set — the exact opposite of the row that defines symmetric difference." },
+      { t: "<code>~</code> applied to <code>&amp;</code>", ok: false,
+        why: "<code>~(s &amp; t)</code> keeps everything outside the intersection, including elements in <em>neither</em> set. Symmetric difference keeps only what is in exactly one." }
+    ]
+  },
+  {
+    tier: "medium", src: "E6 · challenge 13",
+    stem: `<p><code>(P(U), symDiff, Empty)</code> is a group; <code>(P(U), union, Empty)</code> is not. Which axiom separates them?</p>`,
+    options: [
+      { t: "Inverse — no <code>t</code> satisfies <code>s union t == Empty</code> except for <code>s = Empty</code>", ok: true,
+        why: "Union only adds; nothing unioned onto <code>{1,2}</code> removes the <code>1</code>. Symmetric difference has inverses in the strongest form: <b>every element is its own</b>, because <code>s symDiff s == Empty</code>." },
+      { t: "Associativity", ok: false,
+        why: "Both are associative — verified for <code>symDiff</code> over 1000 random words, and union's associativity is elementary." },
+      { t: "Closure", ok: false,
+        why: "Both are closed in <code>P(U)</code>: the result of either is still a subset of the universe. (Disjoint union is the operation that fails closure — it does not even land in <code>P(U)</code>.)" },
+      { t: "Identity", ok: false,
+        why: "<code>Empty</code> is the identity of both. Union additionally has <code>Full</code> as the identity of <code>intersect</code>, but that is a different operation." }
+    ]
+  },
+  {
+    tier: "medium", src: "E6 · challenge 16",
+    stem: `<p>Someone implements <code>complement</code> as <code>-s</code> instead of <code>~s</code>. Measured over 1000 random words, which law does it satisfy?</p>`,
+    options: [
+      { t: "Involution, perfectly — 1000/1000 — while disjointness fails 1000/1000", ok: true,
+        why: "<code>-(-s) == s</code> for every <code>s</code>, so involution alone approves a wrong implementation. And <code>s &amp; -s</code> is the E3 expression that <b>isolates the lowest set bit</b>, so it is zero only when <code>s</code> already was." },
+      { t: "None of them", ok: false,
+        why: "It satisfies involution 1000/1000 and the covering law on roughly <b>half</b> of all inputs — including <code>{0}</code> and <code>{0,1,2}</code>, the small sets one picks by hand." },
+      { t: "All of them except cardinality", ok: false,
+        why: "Disjointness fails on every non-empty input, and covering fails about half the time. Cardinality is not the distinguishing law here." },
+      { t: "Covering, but not involution", ok: false,
+        why: "Exactly inverted. Involution is the one it satisfies perfectly, which is what makes it a dangerous single criterion." }
+    ]
+  },
+  {
+    tier: "medium", src: "E6 · Sets.scala",
+    stem: `<p>In a Scala file, <code>Long.bitCount(s)</code> does not compile, yet <code>Integer.bitCount(x)</code> compiles with no import. Why the asymmetry?</p>`,
+    options: [
+      { t: "<code>scala._</code> is imported after <code>java.lang._</code>, so <code>scala.Long</code> shadows <code>java.lang.Long</code> — and <code>Integer</code> has no counterpart in <code>scala._</code>", ok: true,
+        why: "Every file gets <code>java.lang._</code>, then <code>scala._</code>, then <code>Predef._</code>, each shadowing the last. Verified against <code>scala-library-2.13.18.jar</code>: <code>scala.Long$</code> exposes <code>MinValue</code>, <code>MaxValue</code>, <code>box</code>, <code>unbox</code> — and no <code>bitCount</code>." },
+      { t: "<code>bitCount</code> is defined only for 32-bit types", ok: false,
+        why: "<code>java.lang.Long.bitCount(long)</code> exists and is the one you want. The problem is reaching it, not its existence." },
+      { t: "<code>Long</code> is a primitive in Scala and primitives have no companions", ok: false,
+        why: "<code>scala.Long</code> does have a companion object — it is precisely that companion, lacking <code>bitCount</code>, which produces the confusing error message." },
+      { t: "The <code>opaque type</code> hides the underlying <code>Long</code>", ok: false,
+        why: "Inside the defining scope the alias is transparent, so <code>s</code> is usable as a <code>Long</code>. The clash is between two classes named <code>Long</code>, not between the alias and its representation." }
+    ]
+  },
+  {
+    tier: "hard", src: "E6 · Sets.scala",
+    stem: `<p>You write <code>size</code> as <code>Integer.bitCount(s.toInt)</code>. It compiles cleanly under <code>-Wall -Werror</code>. What does <code>Full.size</code> return?</p>`,
+    options: [
+      { t: "<code>32</code>", ok: true,
+        why: "The cast discards the high 32 bits silently. Verified: the high half <code>{32..63}</code> counts as <b>0</b>, and <code>{0, 63}</code> counts as 1. <code>-Werror</code> cannot help — you wrote the conversion deliberately. The law <code>s.size + s.complement.size == 64</code> is what catches it." },
+      { t: "<code>64</code>, because the cast is widened back", ok: false,
+        why: "<code>toInt</code> is narrowing and lossy. Nothing widens it back." },
+      { t: "<code>-1</code>", ok: false,
+        why: "<code>Full.toInt</code> is <code>-1</code>, but <code>bitCount</code> counts its bits: all 32 of them. The count is never negative." },
+      { t: "It throws, because <code>Full</code> does not fit in an <code>Int</code>", ok: false,
+        why: "Narrowing conversions never throw in Scala or Java. They truncate, which is the whole hazard." }
+    ]
+  },
+  {
+    tier: "hard", src: "E6 · challenge 18",
+    stem: `<p><code>toList</code> accumulates with <code>acc :+ i</code> and its Scaladoc requires O(size). For <code>Full</code>, how many cons cells does it allocate — and how many would <code>i :: acc</code> plus a final <code>reverse</code> allocate?</p>`,
+    options: [
+      { t: "2080 against 128", ok: true,
+        why: "<code>:+</code> is <b>O(n)</b> and <code>::</code> is <b>O(1)</b> — the opposite of the array intuition, because cons cells are immutable: prepending shares the tail, appending must copy every cell so the last can point at the new one. So <code>n</code> appends cost <code>0+1+...+(n-1)</code> copies." },
+      { t: "64 against 64 — both are linear", ok: false,
+        why: "Only the prepend version is linear. The append version is quadratic in <code>size</code>, and the twelve tests pass throughout because they verify correctness, not complexity." },
+      { t: "128 against 2080 — <code>reverse</code> is the expensive one", ok: false,
+        why: "Inverted. <code>reverse</code> is a single linear pass; it is <code>:+</code> that walks the whole list on every step." },
+      { t: "2080 against 64 — <code>reverse</code> is free", ok: false,
+        why: "The append figure is right, but <code>reverse</code> costs one more pass of <code>n</code> cells. 64 + 64 = 128, which is still linear." }
+    ]
+  },
+  {
+    tier: "hard", src: "E6 · challenge 17",
+    stem: `<p>Both <code>of</code> and <code>toList</code> are <code>foldLeft</code>s over the same <code>opaque type</code>. The bootstrap methods differ:</p>
+<pre><code>of$$anonfun$1              (long, int) -&gt; long
+toList$$anonfun$adapted$1  (Object, Object) -&gt; Tuple2</code></pre>
+<p>What forces the second through <code>Object</code>?</p>`,
+    options: [
+      { t: "The accumulator is a <code>Tuple2</code>, which stores its components as references", ok: true,
+        why: "<code>_1</code> is typed <code>Object</code> in the bytecode, and a primitive <code>long</code> does not fit in a reference — hence <code>boxToLong</code> and <code>unboxToLong</code> every iteration. <b>The tuple is not expensive for being a tuple; it is expensive for being generic.</b> The <code>adapted</code> suffix is the compiler recording the inserted adapters." },
+      { t: "The element type is <code>Int</code>, which must be boxed for the <code>Range</code>", ok: false,
+        why: "The index boxing is real but secondary — <code>of</code> also folds over <code>Int</code> elements and stays primitive throughout. The accumulator is what differs." },
+      { t: "<code>opaque type</code> erases to <code>Object</code> outside its defining scope", ok: false,
+        why: "It erases to <code>long</code>. Verified on the compiled signatures: <code>public long union(long, long)</code>, <code>public int size(long)</code> — no boxing anywhere the tuple is absent." },
+      { t: "<code>foldLeft</code> on <code>Range</code> is not specialised, unlike on <code>Seq</code>", ok: false,
+        why: "<code>of</code> folds over a <code>Seq</code> and <code>toList</code> over a <code>Range</code>, but that is not the cause: swap the accumulator for a bare <code>BitSet64</code> and the boxing disappears regardless of the collection." }
+    ]
+  },
+  {
+    tier: "hard", src: "E6 · challenge 19",
+    stem: `<p>Rewriting <code>toList</code> Kernighan-style — stopping when the word reaches <code>Empty</code> — removes which of these?</p>`,
+    options: [
+      { t: "The counter: the call to <code>size</code>, the <code>Range</code> allocation, and the boxing of its index", ok: true,
+        why: "Termination comes for free: every step clears exactly one set bit and no step sets one, so the word reaches zero in exactly <code>popcount(s)</code> steps. That proof is what dispenses with an explicit count." },
+      { t: "The need to clear the bit on each iteration", ok: false,
+        why: "Clearing is what makes the loop <em>advance</em>. Without it, <code>numberOfTrailingZeros</code> returns the same index forever." },
+      { t: "The call to <code>numberOfTrailingZeros</code>", ok: false,
+        why: "Still needed — to know <em>which element to emit</em>. What it is no longer needed for is the removal: <code>t &amp; (t - 1)</code> clears the lowest set bit in two instructions without computing its index." },
+      { t: "The boxing of the accumulator", ok: false,
+        why: "That is the tuple's doing, not the <code>Range</code>'s. A Kernighan loop that still folds into a tuple still boxes; the fix for boxing is to stop pairing the word with the list." }
+    ]
+  }
+];
+
+const list  = document.getElementById("list");
+const empty = document.getElementById("empty");
+const score = document.getElementById("score");
+let filter = "all";
+let answered = 0, correct = 0;
+
+function render() {
+  list.textContent = "";
+  const shown = QUESTIONS.filter(q => filter === "all" || q.tier === filter);
+  empty.hidden = shown.length > 0;
+
+  shown.forEach((q, idx) => {
+    const card = document.createElement("article");
+    card.className = "q";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span class="tier ${q.tier}">${q.tier}</span>` +
+                     `<span class="src">${q.src}</span>`;
+    card.appendChild(meta);
+
+    const stem = document.createElement("div");
+    stem.className = "stem";
+    stem.innerHTML = `<p><b>${idx + 1}.</b></p>` + q.stem;
+    card.appendChild(stem);
+
+    const letters = ["A", "B", "C", "D"];
+    const order = q.options.map((o, i) => i);
+    // deterministic per-question shuffle so the correct answer is not always first
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = (idx * 7 + i * 13 + q.stem.length) % (i + 1);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    let done = false;
+    order.forEach((oi, pos) => {
+      const o = q.options[oi];
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.type = "button";
+      b.innerHTML = `<span class="k">${letters[pos]}</span>${o.t}`;
+      b.addEventListener("click", () => {
+        if (done) return;
+        done = true;
+        answered++;
+        if (o.ok) correct++;
+        updateScore();
+        card.querySelectorAll(".opt").forEach(x => { x.disabled = true; });
+        b.classList.add(o.ok ? "correct" : "wrong");
+        const why = document.createElement("div");
+        why.className = "why " + (o.ok ? "correct" : "wrong");
+        why.innerHTML = (o.ok ? "<b>Correct.</b> " : "<b>No.</b> ") + o.why;
+        b.insertAdjacentElement("afterend", why);
+        if (!o.ok) {
+          const right = q.options.find(x => x.ok);
+          const rb = [...card.querySelectorAll(".opt")]
+            .find(x => x.textContent.includes(right.t.replace(/<[^>]+>/g, "")));
+          if (rb) rb.classList.add("correct");
+          const rw = document.createElement("div");
+          rw.className = "why correct";
+          rw.innerHTML = "<b>The answer.</b> " + right.why;
+          card.appendChild(rw);
+        }
+      });
+      card.appendChild(b);
+    });
+
+    list.appendChild(card);
+  });
+  updateScore();
+}
+
+function updateScore() {
+  const total = QUESTIONS.filter(q => filter === "all" || q.tier === filter).length;
+  score.innerHTML = `answered <b>${answered}</b>/<b>${total}</b> · correct <b>${correct}</b>`;
+}
+
+document.querySelectorAll("button.f[data-tier]").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll("button.f[data-tier]").forEach(x =>
+      x.setAttribute("aria-pressed", String(x === b)));
+    filter = b.dataset.tier;
+    answered = 0; correct = 0;
+    render();
+  });
+});
+document.getElementById("reset").addEventListener("click", () => {
+  answered = 0; correct = 0; render();
+});
+
+render();
+</script>
+</body>
+</html>
