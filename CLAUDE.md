@@ -119,6 +119,46 @@ table at the foot of `annex-foundations/docs/checklist.md`. When I ask for that
 annex, it is written as a full entry — theory guide, checklist and MUnit exercise
 set — under this same contract, tagged `a<n>-<slug>`.
 
+#### The Recall Set (`docs/quiz/<tag>.html`)
+
+Alongside the guide, a self-contained HTML page of multiple-choice questions,
+**anchored to the guide and to nothing else**. It grows Part by Part as the
+guide does, and is usable the moment a Part is read — long before the exercises
+exist.
+
+The anchor is the whole design. Questions test the **mechanism the guide
+teaches**, never the solution of an exercise: a question that can be answered
+only by someone who has already solved E6 is a spoiler, and belongs nowhere.
+Cite the section, not the exercise.
+
+Its purpose is narrow and must stay narrow. Multiple choice measures
+**recognition**; `challenge-log.md` measures **derivation**, and only the log
+closes the Oral Defence. The cheap instrument must never stand in for the
+expensive one. What it does that prose cannot is force a choice between
+near-identical alternatives — `>>` against `>>>`, a sign bit against a data bit,
+a mask that rescues a low field but not the top one. This curriculum is built
+almost entirely out of such pairs.
+
+Binding rules:
+
+* **Distractors are never invented.** Each wrong option is a wrong answer the
+  guide already documents — the obvious-wrong-first-attempt required by contract
+  rule 6, an entry from a traps Part required by rule 7, or a divergence from one
+  of their tables.
+* **Every option explains itself**, right or wrong, citing the section that
+  documents it. An option marked wrong without a reason teaches nothing.
+* **Exercise solutions stay out.** The guide is the source; the exercises are
+  not. A distractor drawn from a bug I actually wrote belongs in the challenge
+  log, where it is a derivation, not here, where it would be an answer key.
+* **Three tiers**, labelled per question, following the Easy / Medium / Hard
+  taxonomy of Step 3. Quantity and distribution are yours to choose.
+* **Filterable by Part and by tier**, so a Part can be drilled the day it is
+  read.
+* **No external dependencies.** No CDN, no framework, no build step: one file
+  that opens over `file://` and works offline, themed for light and dark. Every
+  numeric claim executed and verified before it is written, exactly as the guide
+  requires of itself.
+
 ### Step 2: The Checklist and Deliverables Contract (`docs/checklist.md`)
 Provide a rigid, bulletproof list of acceptance criteria for the module. I will save this list and only advance when every item is marked as checked `[x]`. The list always ends with an **Oral Defence** section, whose box is closed by the Challenge Log described in Step 4.
 
@@ -134,34 +174,7 @@ When I signal that I have completed the exercises or the block's mini-project (w
 1. **JVM Bottleneck Audit:** Detail common engineering mistakes, anti-patterns, and low-level traps I might have fallen into (e.g., Escape Analysis failures, hidden memory retention, or thread contention).
 2. **Conceptual Challenges:** Ask 2 or 3 highly precise technical questions about my design choices so I can verify my own codebase's correctness.
 3. **The Challenge Log (`docs/challenge-log.md`):** The answers are an artifact, not a conversation. Record every challenge and its answer in the block's or annex's `docs/challenge-log.md` — one entry per question, carrying the derivation, the bytecode listing or the measurement that supports it, never the verdict alone. A green suite proves the code works and proves nothing about whether I can say *why*; this file is the evidence behind the checklist's **Oral Defence** box, and that box closes only when every exercise has an entry. Hold it to the same discipline as a theory guide: every number executed and verified before it is written, worked examples in aligned ```text blocks, the narrowest width that still demonstrates the point. Where I answered partially and the rest was drawn out, record the complete answer — the log is a reference, not a transcript or a grade. When a module is closed without a Step 4 round, say so as its own entry rather than letting the exercise go silently missing: an omission that leaves no trace is indistinguishable from an audit that had no questions worth asking.
-4. **The Recall Set (`docs/quiz/<tag>.html`):** A self-contained HTML page of
-   multiple-choice questions, one per block or annex, extended each time an
-   exercise closes. Its purpose is narrow and must stay narrow.
-
-   Multiple choice measures **recognition**; the challenge log measures
-   **derivation**. The easy instrument must never be allowed to cannibalise the
-   hard one, so the recall set is not a revision of the Oral Defence and never
-   closes a checklist box. What it is good for is the one thing prose cannot
-   force: **discrimination between near-identical alternatives** — `1 << i`
-   against `1L << i`, `:+` against `::`, `-s` against `~s`, `>>` against `>>>`.
-   This curriculum is built almost entirely out of such pairs.
-
-   Binding rules:
-
-   * **Distractors are never invented.** Each wrong option is a mistake that
-     actually occurred — drawn from `challenge-log.md`, from a bug found during
-     the exercise, or from a documented trap in the theory guide.
-   * **Every option explains itself**, right or wrong, citing the entry that
-     documents it. A wrong answer that is merely marked wrong teaches nothing.
-   * **Only closed exercises appear.** Questions about unsolved exercises are
-     spoilers; the file grows as the checklist does.
-   * **Three tiers**, labelled on each question, following the same Easy /
-     Medium / Hard taxonomy as the exercise set. Quantity and distribution are
-     yours to choose.
-   * **No external dependencies.** No CDN, no framework, no build step: one file
-     that opens over `file://` and works offline, themed for light and dark.
-
-5. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
+4. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
 
 ---
 
