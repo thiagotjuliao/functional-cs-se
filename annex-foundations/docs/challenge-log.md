@@ -18,7 +18,8 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E2 `TwosComplement` | 3 | recorded |
 | E3 `PowersOfTwo` | — | closed on the suite alone, no Step 4 round |
 | E4 `PopCount` | 3 | recorded |
-| E5–E9 | — | pending |
+| E5 `BitAdder` | 3 | recorded |
+| E6–E9 | — | pending |
 
 ---
 
@@ -383,3 +384,152 @@ same four constants. With the intrinsic on, C2 replaces the whole call with one
 Caveat: the delta is `0.6 ns/call` against a run-to-run spread of roughly
 `0.4 ns` on the untouched candidates. Directionally clear, at the edge of this
 harness's resolution. JMH exists to separate exactly this.
+
+---
+
+## E5 — `BitAdder`
+
+### 10. Why does the carry word strictly shrink, and why is 32 an upper bound?
+
+"An `Int` is 32 bits wide" is the *bound*, not the argument. Width alone proves
+nothing: the first draft of `multiply` used `y >> 1` to consume the multiplier
+and looped forever on negative inputs — also a loop over a 32-bit word. A
+termination proof needs a quantity that moves toward the bound on every
+iteration, and the width only says where the bound is.
+
+The quantity is the **count of trailing zeros** of the carry word — equivalently,
+the position of its lowest set bit. `Integer.numberOfTrailingZeros` is the JDK
+name for it.
+
+Look at where the strictness comes from, because the two operations in
+`b_ = (a & b) << 1` contribute differently:
+
+```text
+   a & b     can only clear bits    ->  the count cannot decrease   (non-strict)
+   << 1      injects a zero at the bottom
+                                    ->  the count rises by at least 1  (strict)
+```
+
+`&` alone would give only weak monotonicity, and weak monotonicity does not
+prove termination — a loop can sit at one position forever. The `<< 1` is what
+guarantees movement on *every* iteration, whatever `&` did.
+
+Traced in 8 bits, computing `0111 1111 + 1`, the width's worst case:
+
+```text
+   it   a           carry b      position of the carry's lowest set bit
+    0   0111 1111   0000 0001              0
+    1   0111 1110   0000 0010              1
+    2   0111 1100   0000 0100              2
+    3   0111 1000   0000 1000              3
+    4   0111 0000   0001 0000              4
+    5   0110 0000   0010 0000              5
+    6   0100 0000   0100 0000              6
+    7   0000 0000   1000 0000              7
+    8   1000 0000   0000 0000        -- carry empty
+```
+
+The carry is a front marching left, one position per iteration, never
+retreating. On the eighth turn it leaves through the edge and the word is zero.
+Eight positions, eight iterations; at 32 bits, 32.
+
+The bound is reached exactly when the loop exits, and that is not a coincidence
+to be reconciled: a 32-bit word with 32 trailing zeros **is** zero, which is the
+exit condition. The measure hitting its ceiling and the loop terminating are the
+same event.
+
+Measured: instrumenting the recurrence over 200,000 random pairs plus the
+boundary cases (`-1 + -1`, `Int.MinValue + Int.MinValue`, `0 + 0`) gives a
+maximum of **exactly 32**. The worst case exists and is reachable — `add(-1, -1)`
+propagates a carry across all 32 positions because every one of them is set.
+
+Compare with `kernighan`, which has the same shape of argument with a different
+measure:
+
+| | measure | direction | limit |
+| :--- | :--- | :--- | :--- |
+| `add` | trailing zeros of the carry | rises | 32 = word is zero |
+| `kernighan` | population count | falls | 0 = word is zero |
+
+In both cases the measure is a property of the **bit pattern**, never the
+magnitude — which is precisely what survives the overflow at `Int.MinValue`.
+
+### 11. Make `multiply`'s accumulation branchless.
+
+```scala
+val acc_ = add(acc, x & negate(y & 1))
+```
+
+`y & 1` is `1` or `0`; `negate` maps those to `-1` or `0`; `x & mask` is then `x`
+or `0`; and the addition runs unconditionally. When the bit is clear the code
+adds zero, which is harmless and cheap — `add(acc, 0)` exits on its first test
+without entering the loop.
+
+The method now contains **one branch in its entire body**, the `y == 0` exit
+test, and that one is perfectly predictable: it is taken once per call.
+
+The mask had to be built from `negate` rather than a unary minus, since `-` is
+forbidden in this object. The constraint has a side effect worth noticing: it
+makes the dependency explicit in the source. `multiply` rests on `negate`, which
+rests on `add`, which rests on `^`, `&` and `<<`. The whole tower is visible.
+
+This is the third source the same technique has been fed from in this annex:
+
+| exercise | where the predicate comes from | how the mask is built |
+| :--- | :--- | :--- |
+| E2 `absBranchless` | the sign bit | `x >> 31` |
+| E3 `log2Floor` | "is anything left above?" | `signMask(-t)` |
+| E5 `multiply` | bit 0 of the multiplier | `negate(y & 1)` |
+
+Three origins, one pattern: **produce `0` or `-1`, then let `&` execute the
+decision.**
+
+### 12. Why does `multiply(a, -1)` cost 32 iterations and `multiply(a, 1)` cost 1?
+
+Measured trip counts of the outer loop:
+
+```text
+   b =           1   ->   1
+   b =          13   ->   4
+   b =        1024   ->  11
+   b =  2147483647   ->  31
+   b =          -1   ->  32
+   b =          -5   ->  32
+   b = -2147483648   ->  32
+```
+
+The count is **not** the population count — that is what `kernighan` measures.
+`1024` has a single set bit and costs 11 iterations. The loop shrinks `y` by
+`>>> 1` until it reaches zero, so what governs the cost is the position of the
+**highest** set bit: the bit length of `y`, not its weight.
+
+And the reading is **unsigned**, because `>>>` is a logical shift. It does not
+know a sign bit exists; it treats the word as a pure magnitude:
+
+```text
+   b = -1   read signed:    magnitude 1,   highest bit at position 0    ->  1?
+   b = -1   read unsigned:  2^32 - 1,      highest bit at position 31   ->  32
+```
+
+The measured answer is 32. The unsigned reading governs.
+
+The consequence is the point of the challenge:
+
+> **"Multiplying by a small number is cheap" is false.**
+
+`-1` is the smallest possible multiplier by magnitude and the **worst case** by
+cost. `-5`, `Int.MinValue`, any negative: always 32 iterations, because every
+negative has bit 31 set and therefore maximal length as an unsigned magnitude.
+Magnitude does not predict cost; unsigned bit length does. The same theme as
+everywhere else in this annex — the magnitude intuition is the wrong one, the
+bit-pattern intuition is the right one.
+
+A footnote on the `O(log b)` that the literature attaches to shift-and-add. At a
+fixed width the logarithm is decorative: `log2(b) <= 32` always, so `O(log b)`
+**is** `O(1)` — asymptotics over a fixed-size type distinguish nothing. The
+notation only carries content in arbitrary-precision arithmetic, where `b` grows
+without bound.
+
+What remains here is the **constant**, and it varies by a factor of 32 between
+best and worst case. That is why E4's measurement taught more than an operation
+count would have: at a fixed width, the constant is the whole story.

@@ -48,7 +48,7 @@ by the suites in `src/test/scala/cs/se/annex/a1/`.
       `nextPowerOfTwo`, `log2Floor`.
 - [x] **E4 `PopCount`** *(Medium)* — `naive`, `kernighan`, `swar`, plus the
       three-way agreement law.
-- [ ] **E5 `BitAdder`** *(Medium)* — `add`, `negate`, `subtract`, `multiply`,
+- [x] **E5 `BitAdder`** *(Medium)* — `add`, `negate`, `subtract`, `multiply`,
       built from `^`, `&` and `<<` only.
 - [ ] **E6 `BitSet64`** *(Medium)* — an `opaque type` over `Long` satisfying the
       Boolean-algebra laws.
@@ -175,7 +175,7 @@ The answers are recorded in [`challenge-log.md`](challenge-log.md), one entry
 per challenge with the derivations, bytecode and measurements behind them.
 This box closes when every exercise has an entry there.
 
-Recorded so far: E1 (3), E2 (3), E4 (3). E3 has no entry — it was closed on
+Recorded so far: E1 (3), E2 (3), E4 (3), E5 (3). E3 has no entry — it was closed on
 its test suite alone, without a Step 4 round.
 
 ---
