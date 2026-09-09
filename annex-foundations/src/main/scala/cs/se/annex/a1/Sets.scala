@@ -72,27 +72,30 @@ object BitSet64:
       s & t
 
     /** Relative complement: members of `s` that are not in `t`. */
-    infix def diff(t: BitSet64): BitSet64 = ???
+    infix def diff(t: BitSet64): BitSet64 =
+      s intersect t.complement
 
     /** Symmetric difference. Note that `(BitSet64, symDiff, Empty)` is a *group*
       * — every element is its own inverse — which `union` is not. Being able to
       * say why is worth more than the one line of code.
       */
-    infix def symDiff(t: BitSet64): BitSet64 = ???
+    infix def symDiff(t: BitSet64): BitSet64 =
+      s ^ t
 
     /** Complement with respect to `Full`. Must be an involution. */
-    def complement: BitSet64 = ???
+    def complement: BitSet64 = ~s
 
     /** Cardinality. One call to the 64-bit population count intrinsic — here it
       * is permitted, and idiomatic, because Exercise 4 has already made the
       * point.
       */
-    def size: Int = ???
+    def size: Int = java.lang.Long.bitCount(s)
 
     /** Is `s` a subset of `t`? Express it with one intersection and one
       * comparison, not with iteration over members.
       */
-    infix def subsetOf(t: BitSet64): Boolean = ???
+    infix def subsetOf(t: BitSet64): Boolean =
+      (s intersect t) == s
 
     /** The members, in ascending order.
       *
@@ -101,7 +104,14 @@ object BitSet64:
       * (Exercise 4). Must be `@tailrec` or a fold, and must be O(size), not
       * O(64).
       */
-    def toList: List[Int] = ???
+    def toList: List[Int] =
+      (0 until s.size)
+        .foldLeft((s, List[Int]())) { case ((t, acc), _) =>
+          val i = java.lang.Long.numberOfTrailingZeros(t)
+          (t.excl(i), i :: acc)
+        }
+        ._2
+        .reverse
   end extension
 end BitSet64
 
