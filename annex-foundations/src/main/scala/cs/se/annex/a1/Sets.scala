@@ -60,13 +60,16 @@ object BitSet64:
       s | (1L << i)
 
     /** `s` with `i` removed. Idempotent. */
-    def excl(i: Int): BitSet64 = ???
+    def excl(i: Int): BitSet64 =
+      s & ~(1L << i)
 
     /** Union. Must be associative, commutative, idempotent, with identity `Empty`. */
-    infix def union(t: BitSet64): BitSet64 = ???
+    infix def union(t: BitSet64): BitSet64 =
+      s | t
 
     /** Intersection. Same laws, with identity `Full`. */
-    infix def intersect(t: BitSet64): BitSet64 = ???
+    infix def intersect(t: BitSet64): BitSet64 =
+      s & t
 
     /** Relative complement: members of `s` that are not in `t`. */
     infix def diff(t: BitSet64): BitSet64 = ???
