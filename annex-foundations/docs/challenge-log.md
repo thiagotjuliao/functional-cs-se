@@ -19,7 +19,8 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E3 `PowersOfTwo` | — | closed on the suite alone, no Step 4 round |
 | E4 `PopCount` | 3 | recorded |
 | E5 `BitAdder` | 3 | recorded |
-| E6–E9 | — | pending |
+| E6 `BitSet64` | 7 | recorded |
+| E7–E9 | — | pending |
 
 ---
 
@@ -533,3 +534,289 @@ without bound.
 What remains here is the **constant**, and it varies by a factor of 32 between
 best and worst case. That is why E4's measurement taught more than an operation
 count would have: at a fixed width, the constant is the whole story.
+---
+
+## E6 — `BitSet64`
+
+### 13. Why is `(P(U), symDiff, Empty)` a group when `(P(U), union, Empty)` is not?
+
+Both are closed, associative, commutative and carry `Empty` as identity. The
+axiom that separates them is **inverse**: for a given `s`, is there a `t` with
+`s union t == Empty`?
+
+There is not, except for `s = Empty`. Union only adds; nothing unioned onto
+`{1,2}` will remove the `1`. An operation that cannot undo forms a commutative
+idempotent monoid and stops there.
+
+Symmetric difference has inverses, in the strongest possible form — **every
+element is its own**:
+
+```text
+s symDiff s == Empty        for every s
+```
+
+Verified over 1000 random 64-bit words: the inverse law and associativity both
+hold 1000/1000.
+
+The structural name for this is worth carrying into Block 2. With `symDiff` as
+addition, the powerset is a vector space over the two-element field:
+
+```text
+P({0..63})   ~=   (Z/2Z)^64        one coordinate per bit
+symDiff       =   vector addition
+Empty         =   the zero vector
+```
+
+A field of **characteristic 2**: `x + x = 0` for all `x`. "Every element is its
+own inverse" is not a curiosity of the operation — it is the characteristic of
+the field. And it is why `union` could never qualify: `union` is not addition in
+any field, it is the join of a lattice, and lattices have no inverses.
+
+At the level of a single bit the whole thing collapses to one line of the truth
+table: `1 ^ 1 = 0`.
+
+### 14. Why does `(s union t) - (s intersect t)` compute the symmetric difference, given that `-` is arithmetic subtraction?
+
+Because **`s intersect t` is always a subset of `s union t`**, and that
+inclusion forbids every borrow.
+
+Walk binary subtraction position by position, with `A` the minuend and `B` the
+subtrahend:
+
+```text
+position    A     B     result     borrow needed?
+   B=1      1     1       0             no
+   B=0      1     0       1             no
+   B=0      0     0       0             no
+   B=1      0     1      ---      impossible: B is a subset of A
+```
+
+The fourth row is the only one that would borrow, and the inclusion rules it
+out. With no borrow, no position influences any other — and a subtraction that
+propagates nothing between positions **is** an XOR. Hence
+
+```text
+(s union t) - (s intersect t)  ==  (s union t) symDiff (s intersect t)  ==  s symDiff t
+```
+
+The formula `(A union B) minus (A intersect B)` is the correct definition of
+symmetric difference. What happened here is that `-` stood in for set
+difference and the inclusion made the substitution sound.
+
+It is sound *only* under that inclusion. Remove it and the expression
+disintegrates — verified, showing the low 8 bits (the real damage runs to bit
+63):
+
+```text
+s           t         s - t (arithmetic)     s minus t (correct)   t subset of s?
+---------   -------   --------------------   -------------------   --------------
+{0}         {1}       {0..63}  (Full)        {0}                   no
+{0,1,2}     {2,3}     {0,1,3,4,5,6,7,...}    {0,1}                 no
+{1,3}       {0,2}     {0,2}                  {1,3}                 no
+{0,1,2,3}   {0,1}     {2,3}                  {2,3}                 yes
+```
+
+`{0} - {1}` is `1 - 2 = -1`, which as a set is the entire universe. A set
+difference returning `Full`.
+
+The engineering point outranks the arithmetic one: inside an `opaque type` over
+`Long`, the arithmetic operators remain in scope and remain legal. Nothing in
+the type stops `-` from appearing where set difference was meant.
+
+### 15. `diff` was computing the symmetric difference. Why did twelve passing tests not say so?
+
+They could not run. `Exercise6BitSet64Spec:141` is exactly the assertion that
+catches it:
+
+```scala
+assertEquals((a diff b).raw, (a intersect b.complement).raw, "diff is not a & ~b")
+```
+
+but it dies on `NotImplementedError` from the `???` in `complement` before
+reaching the comparison. The test that would have caught the bug was written,
+present, and mute.
+
+The bug was found by hand instead, on `s = {0,1,2}`, `t = {2,3}`:
+
+```text
+s union t      = {0,1,2,3}   ->  0b1111  =  15
+s intersect t  = {2}         ->  0b0100  =   4
+                                            --
+                                 15 - 4  =  11  ->  0b1011  ->  {0,1,3}
+
+symmetric difference  {0,1,3}    <- what it returned
+relative complement   {0,1}      <- what `diff` promises
+```
+
+The correct implementation is `s & ~t`, written in the file as
+`s intersect t.complement` so that the law stays legible.
+
+**A test that cannot execute is not a safety net.** Ordering matters: a `???`
+anywhere in a chain of laws silences every law downstream of it.
+
+### 16. `-s` is an involution. Why is it not the complement?
+
+Because involution alone does not characterise the complement, and the naive
+check does not notice. Measured over 1000 random 64-bit words with
+`complement(s) = -s`:
+
+```text
+law                                    passed
+------------------------------------   ---------
+involution   f(f(x)) == x              1000/1000
+covering     s union c   == Full        498/1000
+disjoint     s intersect c == Empty       0/1000
+```
+
+The involution law is satisfied perfectly. Worse, the covering law passes on
+roughly half of all inputs — including the small sets one picks by hand:
+
+```text
+s          -s         -(-s)      | involution   s|c == Full   s&c == Empty
+--------   --------   --------   | ----------   -----------   ------------
+00000000   00000000   00000000   | yes          NO            yes
+00000001   11111111   00000001   | yes          yes           NO
+00000110   11111010   00000110   | yes          NO            NO
+00000111   11111001   00000111   | yes          yes           NO
+00001010   11110110   00001010   | yes          NO            NO
+```
+
+`{0}` and `{0,1,2}` both satisfy `s | complement == Full`. Two hand-picked
+cases, two passes, and a wrong implementation ships.
+
+The disjunction law reads **0/1000**, and that is not bad luck. `s & -s` is the
+expression from E3 that **isolates the lowest set bit**, so it is zero if and
+only if `s` was already zero. `s intersect complement(s) == Empty` is
+arithmetically impossible with `-s` for any non-empty `s`.
+
+The lesson generalises past this exercise: the four assertions in the
+`complement` test are not four checks *of* the complement, they are its
+**definition**, written in pieces. Exactly one function satisfies all of them.
+The value of a law is not that it is stricter per case — it is that **the author
+stops choosing the cases**.
+
+### 17. Both `of` and `toList` are folds over the same opaque type. Why is only one of them primitive?
+
+The bootstrap methods of `Sets$package$BitSet64$`, read with `javap -v`:
+
+```text
+of$$anonfun$1              (long, int) -> long             primitive throughout
+toList$$anonfun$adapted$1  (Object, Object) -> Tuple2      note "adapted"
+```
+
+The `adapted` suffix is the compiler recording that it had to insert box/unbox
+adapters.
+
+The cause is the **type of the accumulator**, not of the element. `of` folds
+into a `BitSet64`, which after erasure is a `long`, and a `long` is what the
+lambda carries. `toList` folds into `(BitSet64, List[Int])`, and `Tuple2` stores
+its components as **references** — `_1` is typed `Object` in the bytecode. A
+primitive `long` does not fit in a reference, so every iteration pays for the
+round trip.
+
+`javap -c -p` on the fold's lambda, annotated:
+
+```text
+ 5: boxToInteger          box the Range index
+ 8: Tuple2$.apply         allocate the incoming tuple
+32: unboxToLong           unbox the BitSet64
+48: Long.numberOfTrailingZeros    } the actual
+63: excl                          } work
+66: boxToLong             re-box the BitSet64
+73: boxToInteger          box the index
+76: List.$colon$plus      the append (see challenge 18)
+79: Tuple2$.apply         allocate the outgoing tuple
+```
+
+Five allocations per set bit. The tuple is not expensive for being a tuple; it
+is expensive for being **generic**.
+
+For contrast, the operations that avoided a tuple erase exactly as the exercise
+promised:
+
+```text
+public long union(long, long)      public long complement(long)
+public long diff(long, long)       public int  size(long)
+public long symDiff(long, long)    public long excl(long, int)
+```
+
+`long` throughout. No box, no header — Part VII delivered.
+
+### 18. `toList` passes all twelve tests and violates its own Scaladoc. Where?
+
+The Scaladoc requires *"O(size), not O(64)"*. The implementation is quadratic in
+`size`, because it accumulates with `:+`.
+
+In Scala's `List`, the costs are the opposite of the array intuition:
+
+```text
+::  (prepend)   O(1)
+:+  (append)    O(n)
+```
+
+Cons cells are immutable, which forces it:
+
+```text
+prepend 9 onto [1,2,3]:   9 -> [1 -> 2 -> 3]     one new cell,
+                               ^^^^^^^^^^^^^     tail is SHARED
+
+append 9 onto [1,2,3]:    1' -> 2' -> 3' -> 9    three new cells; the last
+                                                 cell must point at 9 and
+                                                 cannot be mutated
+```
+
+So `n` appends cost `0 + 1 + ... + (n-1)` copies rather than `n` steps.
+Computed:
+
+```text
+n (set bits)   :+ (append)   :: + reverse   ratio
+------------   -----------   ------------   ------
+ 4                  10             8         1.2x
+ 8                  36            16         2.2x
+16                 136            32         4.2x
+32                 528            64         8.2x
+64                2080           128        16.2x
+```
+
+For `Full`, 2080 cons cells where 128 suffice.
+
+The repair is one word: `i :: acc` in place of `acc :+ i`. That breaks the
+Scaladoc's **"in ascending order"** invariant, since prepending emits
+descending, and a single `.reverse` at the end restores it. `reverse` is one
+linear pass, so the total stays linear in `size`.
+
+The twelve tests pass throughout, because they verify **correctness**, not
+complexity and not allocation. This is the argument of this file in one
+exercise: a green suite proves the code works and proves nothing about whether
+the declared contract was honoured.
+
+### 19. What does the Kernighan formulation remove, and what does it not?
+
+It does **not** remove the clearing of the bit. Without it,
+`numberOfTrailingZeros` returns the same index forever and the loop does not
+advance.
+
+What it removes is the **counter**: the call to `size`, the allocation of the
+`Range`, and the boxing of the Range index. The stop condition becomes
+`if t == Empty then acc else ...`.
+
+Termination comes for free, and that is the part that dispenses with the
+counter: every step clears exactly one set bit and no step sets one, so the word
+reaches zero in exactly `popcount(s)` steps.
+
+There is a second saving. Clearing the lowest set bit does not require knowing
+its index:
+
+```text
+t          ntz(t)   t & ~(1<<i)   t & (t-1)   equal?
+--------   ------   -----------   ---------   ------
+10110100     2       10110000      10110000     yes
+00000001     0       00000000      00000000     yes
+10000000     7       00000000      00000000     yes
+11111111     0       11111110      11111110     yes
+```
+
+`excl(i)` rebuilds the mask `1L << i` from the index — a variable shift.
+`t & (t - 1)` clears the same bit in two instructions and never computes the
+index. `numberOfTrailingZeros` is still needed to know *which element to emit*,
+but no longer to remove it.
