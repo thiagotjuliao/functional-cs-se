@@ -44,7 +44,7 @@ object BitSet64:
     * `members`, starting from `Empty` — no loop, no mutable accumulator.
     */
   def of(members: Int*): BitSet64 =
-    members.foldLeft(Empty)((acc, i) => acc ^ (1L << i))
+    members.foldLeft(Empty)((acc, i) => acc | (1L << i))
 
   extension (s: BitSet64)
 
@@ -57,7 +57,7 @@ object BitSet64:
 
     /** `s` with `i` added. Idempotent. */
     def incl(i: Int): BitSet64 =
-      s | (1 << i)
+      s | (1L << i)
 
     /** `s` with `i` removed. Idempotent. */
     def excl(i: Int): BitSet64 = ???
