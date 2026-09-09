@@ -43,7 +43,8 @@ object BitSet64:
     * Precondition: every member lies in `[0, 63]`. Build it as a fold over
     * `members`, starting from `Empty` — no loop, no mutable accumulator.
     */
-  def of(members: Int*): BitSet64 = ???
+  def of(members: Int*): BitSet64 =
+    members.foldLeft(Empty)((acc, i) => acc ^ (1L << i))
 
   extension (s: BitSet64)
 
@@ -51,10 +52,12 @@ object BitSet64:
     def raw: Long = s
 
     /** Membership. Precondition: `i` in `[0, 63]`. */
-    def contains(i: Int): Boolean = ???
+    def contains(i: Int): Boolean =
+      ((s >> i) & 1) == 1
 
     /** `s` with `i` added. Idempotent. */
-    def incl(i: Int): BitSet64 = ???
+    def incl(i: Int): BitSet64 =
+      s | (1 << i)
 
     /** `s` with `i` removed. Idempotent. */
     def excl(i: Int): BitSet64 = ???
