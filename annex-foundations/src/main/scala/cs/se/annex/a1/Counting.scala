@@ -100,13 +100,20 @@ object BitAdder:
     * Termination argument you must be able to give: why does the carry word
     * strictly shrink, and why is 32 iterations therefore an upper bound?
     */
-  def add(a: Int, b: Int): Int = ???
+  @scala.annotation.tailrec
+  def add(a: Int, b: Int): Int =
+    if b == 0 then a
+    else
+      val a_ = a ^ b
+      val b_ = (a & b) << 1
+      add(a_, b_)
 
   /** Negation, from the master identity. May use `add`. */
-  def negate(a: Int): Int = ???
+  def negate(a: Int): Int = add(~a, 1)
 
   /** `a - b`, expressed as addition of the negation. */
-  def subtract(a: Int, b: Int): Int = ???
+  def subtract(a: Int, b: Int): Int =
+    add(a, negate(b))
 
   /** Product of `a` and `b` in `Z/2^32 Z`, by shift-and-add.
     *
@@ -118,5 +125,15 @@ object BitAdder:
     * negative operands — think carefully about whether you need a logical or an
     * arithmetic shift when consuming the bits of `b`.
     */
-  def multiply(a: Int, b: Int): Int = ???
+  def multiply(a: Int, b: Int): Int =
+    @scala.annotation.tailrec
+    def loop(x: Int, y: Int, acc: Int = 0): Int =
+      if y == 0 then acc
+      else
+        val x_ = x << 1
+        val y_ = y >>> 1
+
+        val acc_ = add(acc, x & negate(y & 1))
+        loop(x_, y_, acc_)
+    loop(a, b)
 end BitAdder
