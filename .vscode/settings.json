@@ -7,6 +7,24 @@
   },
 
   // ---------------------------------------------------------------------------
+  // Build import
+  //
+  // Metals answers nothing about a file until it has imported the build and
+  // connected to a build server. At the default ("off") it asks permission
+  // first, through a prompt that is easy to dismiss or miss entirely. A
+  // workspace left in that state does not import at all: every open file only
+  // logs `no build target found ... using scala-library version: 3.3.8` — the
+  // compiler embedded in Metals, not the version this build declares — and the
+  // editor sits waiting on an answer that never arrives. From the outside that
+  // is indistinguishable from an import that never finishes.
+  //
+  // "all" takes the prompt out of the loop. The cost is an `sbt bloopInstall`
+  // whenever build.sbt or plugins.sbt changes, which is work the workspace owes
+  // anyway before it can type-check a single line.
+  // ---------------------------------------------------------------------------
+  "metals.autoImportBuilds": "all",
+
+  // ---------------------------------------------------------------------------
   // Documentation rendering
   //
   // VS Code cannot render a doc comment in place the way IntelliJ's
