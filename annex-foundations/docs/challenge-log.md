@@ -790,6 +790,16 @@ complexity and not allocation. This is the argument of this file in one
 exercise: a green suite proves the code works and proves nothing about whether
 the declared contract was honoured.
 
+**Repaired 2026-09-09**, in `1978404`. `toList` now accumulates with `::` and
+reverses once, and the suite stays at 12/12. The quadratic listing above is kept
+as written: it is the state the audit found, and the reasoning that produced the
+repair is the point of the entry.
+
+What the repair did **not** address is the allocation. `:+` was the complexity
+defect; the `Tuple2` accumulator of challenge 17 is the allocation defect, and it
+is still there — the boxing per iteration is unchanged. §E of
+[`checklist.md`](checklist.md) remains open on that count.
+
 ### 19. What does the Kernighan formulation remove, and what does it not?
 
 It does **not** remove the clearing of the bit. Without it,

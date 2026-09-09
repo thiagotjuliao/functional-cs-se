@@ -50,7 +50,7 @@ by the suites in `src/test/scala/cs/se/annex/a1/`.
       three-way agreement law.
 - [x] **E5 `BitAdder`** *(Medium)* — `add`, `negate`, `subtract`, `multiply`,
       built from `^`, `&` and `<<` only.
-- [ ] **E6 `BitSet64`** *(Medium)* — an `opaque type` over `Long` satisfying the
+- [x] **E6 `BitSet64`** *(Medium)* — an `opaque type` over `Long` satisfying the
       Boolean-algebra laws.
 - [ ] **E7 `Packing`** *(Medium)* — `packInts`/`unpackHi`/`unpackLo` and the
       RGBA byte codec, with roundtrip laws.
