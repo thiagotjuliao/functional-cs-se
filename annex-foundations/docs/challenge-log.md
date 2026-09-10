@@ -21,7 +21,8 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E5 `BitAdder` | 3 | recorded |
 | E6 `BitSet64` | 7 | recorded |
 | E7 `Packing` | 3 | recorded |
-| E8–E9 | — | pending |
+| E8 `BitmapIndex` | 3 | recorded |
+| E9 `VarIntCodec` | — | pending |
 
 ---
 
@@ -976,3 +977,155 @@ The causal order is what makes this hard to spot in review. The allocation is no
 decided by the code that allocates — nothing in `packRgba` changes, and nothing
 in it looks wrong. It is decided by the **shape of the call site that consumes
 it**.
+---
+
+## E8 — `BitmapIndex`
+
+### 23. `IArray(child)` allocates three objects for one element. Which three, and what removes them?
+
+The first `inserted` built the dense array by splicing three pieces together.
+Its bytecode, in order:
+
+```text
+slice                  -> array 1   (the left slice)
+anewarray Object       -> array 2   )
+genericWrapArray       -> ArraySeq  )  this is IArray(child)
+IArray.apply           -> array 3   )
+$plus$plus             -> array 4
+slice                  -> array 5   (the right slice)
+$plus$plus             -> array 6   <- the only survivor
+SparseNode.apply       -> the node
+```
+
+Six arrays allocated, five discarded at once.
+
+The expensive part is the innocent-looking one. `IArray(child)` is a varargs
+call, `apply(xs: A*)(using ClassTag)`, and a varargs argument must arrive as a
+`Seq`. The compiler knows one way to build that: put the element in an array,
+wrap the array in an `ArraySeq`, and let `apply` copy it back out into an array.
+
+```text
+child  ->  [child]  ->  ArraySeq([child])  ->  [child]
+           array          wrapper              array
+```
+
+A full `array -> Seq -> array` round trip for an element already in hand.
+
+The `ClassTag` in that signature is **not** one of the three. It is an implicit
+parameter synthesised at the call site from the method's own `[A: ClassTag]`
+bound — passed in, not allocated here.
+
+`IArray.tabulate(n)(f)` produces the destination in one allocation, and the
+index function is where the real content of the exercise sits. Reading the
+destination backwards — for each position of the result, where does the element
+come from? — with `children = [a,b,c]`, `index = 1`, `child = x`, giving
+`[a,x,b,c]`:
+
+```text
+destination i    value    comes from
+-------------    -----    -------------
+      0            a      children(0)
+      1            x      child
+      2            b      children(1)
+      3            c      children(2)
+```
+
+So `i < index` reads `children(i)`, `i == index` is the new child, and
+`i > index` reads `children(i - 1)`. That `- 1` is the whole asymmetry of
+insertion: from the splice point onward, every element sits one position further
+along in the destination than it did in the source. The two `slice` calls were
+doing that shift implicitly; `tabulate` makes it explicit and costs one array.
+
+Measured on the compiled result:
+
+```text
+before   slice · [anewarray + genericWrapArray + apply] · ++ · slice · ++
+         = 6 arrays + 1 ArraySeq
+after    invokedynamic (closure) · tabulate
+         = 1 array + 1 closure
+```
+
+Not zero: the lambda captures `index`, `children` and `child`, so it is not a
+singleton and costs one object. But one small object replaces five discarded
+arrays. `removed` still splices, and the mirrored index function would apply
+there too.
+
+### 24. `removed` clears the bit with `^`. What breaks if the guard is relaxed?
+
+Take `bitmap = 10001001` (slots {0,3,7}) with `children = [a,b,c]`, and call
+`removed(node, 5)` on the **empty** slot 5.
+
+The damage happens before the choice of clearing operator matters:
+
+```text
+physicalIndex(bitmap, 5) = 2   ->  the code drops children(2) = "c"
+                                    ...which belongs to slot 7, not to slot 5.
+```
+
+The physical index of a **vacant** slot points at the element of the next
+occupied slot. Removing "from" an empty slot removes its neighbour.
+
+The two clearing expressions then differ only in the bookkeeping:
+
+```text
+clearing        new bitmap   arity   length   invariant arity == length
+-------------   ----------   -----   ------   -------------------------
+^  (1<<slot)    10101001       4       2      BROKEN by 2
+& ~(1<<slot)    10001001       3       2      BROKEN by 1
+```
+
+`^` **sets** the bit of a vacant slot: the bitmap starts claiming slot 5 is
+occupied in the same move that the array loses an element. `& ~` is idempotent
+and leaves the bitmap untouched, so it is off by one instead of two.
+
+The two failures are of different **kinds**, which is the part worth carrying:
+
+```text
+bitmap   fails DETECTABLY and reversibly
+         (arity != length announces it; the bit can be put back)
+
+array    fails SILENTLY and irreversibly
+         ("c" is gone; the result is still a valid array of length 2, and no
+          invariant check can say which element went missing)
+```
+
+So choosing `& ~` over `^` is **hygiene, not safety**. It reduces the damage
+from two to one and prevents nothing. Idempotence is a property of the
+expression; what guarantees the operation is `Option.when(hasSlot(...))`. The
+implementation is correct — the correctness lives in the guard, and the chosen
+expression does not carry it alone.
+
+### 25. Why does one `physicalIndex` serve both lookup and insertion?
+
+Because the mask excludes the bit being asked about. `bit - 1` covers strictly
+the positions **below** `slot`, so the count never inspects whether `slot`
+itself is occupied. It answers exactly one question:
+
+> how many elements come before this slot?
+
+And one sentence covers both cases:
+
+```text
+slot occupied   k elements before  ->  the element sits at k
+slot vacant     k elements before  ->  an inserted element would go to k
+```
+
+These are not two readings of an ambiguous number. It is one reading, which is
+why lookup and insertion share the computation — and why the count is
+meaningful for a slot that holds nothing.
+
+Note what the count does **not** say: `k = 2` does not mean slots 0 and 1 are
+occupied. It means two slots below are occupied, whichever they are. For
+`bitmap = 10001001` and `slot = 5` the count is 2, and the occupied slots below
+are 0 and 3.
+
+**The structural precondition** is what makes any of this work: the dense array
+must be **ordered by slot number**. The correspondence between `{occupied
+slots}` and `{0 .. arity-1}` has to be an order-preserving bijection. Were the
+elements held in insertion order, counting bits below would measure the bitmap
+while the array was organised by an unrelated criterion, and the index would
+mean nothing.
+
+That coupling is exactly what `inserted` preserves by splicing at
+`physicalIndex` rather than appending. Appending would be cheaper and would
+destroy the invariant on the first out-of-order insertion.
