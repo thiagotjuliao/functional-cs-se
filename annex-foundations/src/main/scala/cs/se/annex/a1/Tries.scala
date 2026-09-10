@@ -42,13 +42,16 @@ object BitmapIndex:
     *
     * Precondition: `level` in `[0, 6]`.
     */
-  def hashSlice(hash: Int, level: Int): Int = ???
+  def hashSlice(hash: Int, level: Int): Int =
+    (hash >>> (5 * level)) & 0x1f
 
   /** Is logical slot `slot` occupied in `bitmap`? Precondition: `slot` in `[0, 31]`. */
-  def hasSlot(bitmap: Int, slot: Int): Boolean = ???
+  def hasSlot(bitmap: Int, slot: Int): Boolean =
+    (bitmap & 1 << slot) != 0
 
   /** The number of occupied slots — the required length of the dense array. */
-  def arity(bitmap: Int): Int = ???
+  def arity(bitmap: Int): Int =
+    java.lang.Integer.bitCount(bitmap)
 
   /** The position of logical slot `slot` inside the dense children array.
     *
@@ -60,10 +63,17 @@ object BitmapIndex:
     * is the index at which a new child would be inserted. That dual reading is
     * what lets insertion and lookup share one computation.
     */
-  def physicalIndex(bitmap: Int, slot: Int): Int = ???
+  def physicalIndex(bitmap: Int, slot: Int): Int =
+    java.lang.Integer.bitCount(bitmap & ((1 << slot) - 1))
 
   /** The child at logical slot `slot`, if the slot is occupied. */
-  def get[A](node: SparseNode[A], slot: Int): Option[A] = ???
+  def get[A](node: SparseNode[A], slot: Int): Option[A] =
+    val SparseNode(bitmap, children) = node
+
+    Option.when(hasSlot(bitmap, slot)) {
+      val index = physicalIndex(bitmap, slot)
+      children(index)
+    }
 
   /** A new node with `child` inserted at logical slot `slot`.
     *
@@ -76,7 +86,21 @@ object BitmapIndex:
     * `IArray.tabulate`; no `var`, no in-place writes, no `System.arraycopy` into
     * a shared buffer.
     */
-  def inserted[A: ClassTag](node: SparseNode[A], slot: Int, child: A): Option[SparseNode[A]] = ???
+  def inserted[A: ClassTag](node: SparseNode[A], slot: Int, child: A): Option[SparseNode[A]] =
+    val SparseNode(bitmap, children) = node
+
+    Option.when(!hasSlot(bitmap, slot)) {
+      val index = physicalIndex(bitmap, slot)
+      val newBitmap = bitmap | (1 << slot)
+
+      val newChildren = IArray.tabulate(children.length + 1) {
+        case i if i < index => children(i)
+        case i if i == index => child
+        case i if i > index => children(i - 1)
+      }
+
+      SparseNode(newBitmap, newChildren)
+    }
 
   /** A new node with logical slot `slot` vacated, or `None` if it was already
     * empty.
@@ -84,7 +108,18 @@ object BitmapIndex:
     * Must restore the invariant: the bitmap loses one bit and the dense array
     * loses exactly the corresponding element.
     */
-  def removed[A: ClassTag](node: SparseNode[A], slot: Int): Option[SparseNode[A]] = ???
+  def removed[A: ClassTag](node: SparseNode[A], slot: Int): Option[SparseNode[A]] =
+    val SparseNode(bitmap, children) = node
+
+    Option.when(hasSlot(bitmap, slot)) {
+      val index = physicalIndex(bitmap, slot)
+      val newBitmap = bitmap & ~(1 << slot)
+
+      val newChildren = children.slice(0, index) ++
+        children.slice(index + 1, children.length)
+
+      SparseNode(newBitmap, newChildren)
+    }
 end BitmapIndex
 
 /** Exercise 9 (Hard) — Variable-length integer encoding.
