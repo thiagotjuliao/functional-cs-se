@@ -52,7 +52,7 @@ by the suites in `src/test/scala/cs/se/annex/a1/`.
       built from `^`, `&` and `<<` only.
 - [x] **E6 `BitSet64`** *(Medium)* — an `opaque type` over `Long` satisfying the
       Boolean-algebra laws.
-- [ ] **E7 `Packing`** *(Medium)* — `packInts`/`unpackHi`/`unpackLo` and the
+- [x] **E7 `Packing`** *(Medium)* — `packInts`/`unpackHi`/`unpackLo` and the
       RGBA byte codec, with roundtrip laws.
 - [ ] **E8 `BitmapIndex`** *(Hard)* — the HAMT node primitive: `hasSlot`,
       `physicalIndex`, `insertAt`, `removeAt` over a persistent array.

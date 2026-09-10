@@ -20,7 +20,8 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E4 `PopCount` | 3 | recorded |
 | E5 `BitAdder` | 3 | recorded |
 | E6 `BitSet64` | 7 | recorded |
-| E7–E9 | — | pending |
+| E7 `Packing` | 3 | recorded |
+| E8–E9 | — | pending |
 
 ---
 
@@ -830,3 +831,148 @@ t          ntz(t)   t & ~(1<<i)   t & (t-1)   equal?
 `t & (t - 1)` clears the same bit in two instructions and never computes the
 index. `numberOfTrailingZeros` is still needed to know *which element to emit*,
 but no longer to remove it.
+---
+
+## E7 — `Packing`
+
+### 20. Three masks in `Packing` compute nothing. For each, which later instruction already guaranteed the effect?
+
+The bytecode, with the inert work marked:
+
+```text
+unpackHi   getstatic mask; ldc2_w -1L; lxor; land; bipush 32; lshr; l2i
+                           ^^^^^^^^^^^^^^^^^^^^^^ the `& ~mask`
+
+unpackLo   getstatic mask; land; l2i
+                           ^^^^ the `& mask`
+
+alpha      ldc -16777216; iand; bipush 24; iushr
+                          ^^^^ the `& (-1 << 24)`
+```
+
+Three redundancies, and **three different reasons** — which is the point of the
+challenge, because the expressions look alike:
+
+```text
+unpackHi   `& ~mask` is redundant because `lshr 32` DISCARDS what it zeroes
+unpackLo   `& mask`  is redundant because `l2i` PRESERVES what it preserves
+alpha      `& (-1<<24)` is redundant for both reasons at once
+```
+
+The middle one is where the reasoning goes wrong most easily. `l2i` is **not** a
+shift, and in particular it is not `lshr 32` — the two keep opposite halves:
+
+```text
+packed              00000000000000000000000000000111 | 00000000000000000000000000001001
+                              hi = 7                 |            lo = 9
+
+(int) packed          = 9      <- l2i keeps the LOW half
+(int)(packed >>> 32)  = 7      <- lshr 32 keeps the HIGH half
+```
+
+Were `l2i` a 32-bit shift, `unpackLo` would return the `hi` field. It truncates:
+it keeps the low 32 bits and discards the high ones, which is exactly what the
+mask was there to arrange.
+
+All three simplifications verified over 500,000 random values plus the boundary
+cases (`0`, `-1`, `MinValue`, `MaxValue`, and each half in isolation):
+
+```text
+(packed & ~mask) >> 32   vs   packed >> 32      0 mismatches
+(packed & mask).toInt    vs   packed.toInt      0 mismatches
+(p & (-1<<24)) >>> 24    vs   p >>> 24          0 mismatches
+```
+
+`alpha` is the instructive one. It was written *before* the technique the other
+three accessors ended up using, so it kept a mask that the final shape no longer
+needs — four instructions where `red` has three.
+
+### 21. `-1 << 24` compiled to `ldc`; `mask` compiled to `getstatic`. Both are expressions over literals. What made the difference?
+
+Not the expression — the **declaration**. A `val` in an object is a field with a
+getter, read at every call. A constant folded into the expression is a compile-
+time value emitted immediately.
+
+Scala 3 offers a keyword for exactly this, and it accepts the expression rather
+than demanding a literal. Compiled in this project and read with `javap`:
+
+```text
+inline val  = (1L << 32) - 1     ->   ldc2_w 4294967295L
+inline val  = 0xffffffffL        ->   ldc2_w 4294967295L
+final val   = (1L << 32) - 1     ->   ldc2_w 4294967295L
+private val = (1L << 32) - 1     ->   getstatic Field maskPlainVal:J
+```
+
+Three forms become an immediate; only the plain `val` becomes a field. Note that
+`final val` reaches the same place, which is worth knowing where `inline` is not
+available — and that the compiler folds `(1L << 32) - 1` before requiring a
+constant, so the readable form costs nothing against the hex literal.
+
+The difference is small: one `getstatic` against one `ldc2_w`, and the JIT will
+hoist the field read out of any loop it can see. It is recorded because it is
+observable, and because the same file contains one of each — `-1 << 24` was
+folded, `mask` was not, and nothing in the source hints at the asymmetry.
+
+### 22. `packRgba` allocates two objects per valid pixel. Under what conditions does the JVM eliminate them?
+
+The allocations, from the bytecode:
+
+```text
+None:   getstatic scala/None$.MODULE$        singleton, no allocation
+Some:   boxToInteger(I) -> Integer           allocation 1
+        Some$.apply(Object) -> Some          allocation 2
+```
+
+This is not a defect: the Scaladoc requires `Option`, and ground rule 2 forbids
+`throw`. It is a cost worth being able to describe.
+
+**The optimisation is scalar replacement.** C2's escape analysis assigns each
+allocation one of three verdicts:
+
+```text
+NoEscape       never visible outside the method     -> can be dissolved
+ArgEscape      passed to a method, but not stored
+GlobalEscape   stored in a field, returned, or published
+```
+
+A `NoEscape` object need not exist. C2 dissolves it into its fields and keeps
+each in a register: no `new`, no header, no GC pressure.
+
+**The precondition is the subtle part.** Inside `packRgba` the `Some` is
+*returned*, which is `GlobalEscape` by definition. On its own it can never be
+eliminated. Elimination requires C2 to **inline `packRgba` into its caller**
+first, because the escape analysis runs over the already-inlined graph; only in
+the caller's body can the `Some` be proved not to escape. **Allocation removal is
+always downstream of an inlining decision.**
+
+**What survives.** `boxToInteger` calls `Integer.valueOf`, which returns cached
+objects for `-128..127`:
+
+```text
+Integer.valueOf(127) == Integer.valueOf(127)     true    <- cached
+Integer.valueOf(128) == Integer.valueOf(128)     false   <- allocated
+```
+
+A cached `Integer` is a pre-existing global: never allocated, and never
+eliminable either. It barely helps here, because a packed pixel is an arbitrary
+32-bit word:
+
+```text
+pixels landing in the Integer cache:  18 of 1,492,992   (0.001%)
+```
+
+**The condition under which it all fails** is the one E4's challenge 9 already
+demonstrated. A call site is monomorphic with one receiver type, bimorphic with
+two, and **megamorphic** from three: the inline cache gives up and C2 emits
+virtual dispatch. No inlining, therefore no proof of `NoEscape`, therefore two
+allocations per iteration:
+
+```text
+megamorphic call site  ->  no inlining  ->  Some never proved NoEscape
+                       ->  no scalar replacement  ->  two allocations per pixel
+```
+
+The causal order is what makes this hard to spot in review. The allocation is not
+decided by the code that allocates — nothing in `packRgba` changes, and nothing
+in it looks wrong. It is decided by the **shape of the call site that consumes
+it**.
