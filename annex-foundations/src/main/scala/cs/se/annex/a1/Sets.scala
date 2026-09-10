@@ -131,7 +131,6 @@ end BitSet64
   * corrupts every field above it (guide, Part III.16).
   */
 object Packing:
-
   /** Pack two 32-bit fields into one 64-bit word, `hi` in the upper half.
     *
     * Must satisfy, for **every** pair including negatives:
@@ -142,13 +141,16 @@ object Packing:
     * the version without it first, watch `packInts(0, -1)` destroy the high
     * half, and only then fix it.
     */
-  def packInts(hi: Int, lo: Int): Long = ???
+  def packInts(hi: Int, lo: Int): Long =
+    (hi.toLong << 32) | (lo.toLong & ((1L << 32) - 1))
 
   /** The upper 32 bits, as a signed `Int`. */
-  def unpackHi(packed: Long): Int = ???
+  def unpackHi(packed: Long): Int =
+    (packed >> 32).toInt
 
   /** The lower 32 bits, as a signed `Int`. */
-  def unpackLo(packed: Long): Int = ???
+  def unpackLo(packed: Long): Int =
+    packed.toInt
 
   /** Pack four channels into one `Int`, in the layout `0xAARRGGBB`.
     *
@@ -156,16 +158,21 @@ object Packing:
     * silently truncating an out-of-range channel is how one bad value becomes a
     * wrong colour in a different channel.
     */
-  def packRgba(r: Int, g: Int, b: Int, a: Int): Option[Int] = ???
+  def packRgba(r: Int, g: Int, b: Int, a: Int): Option[Int] =
+    if r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255 || a < 0 || a > 255 then None
+    else Some((a << 24) | (r << 16) | (g << 8) | b)
 
   /** The red channel of a packed pixel, in `[0, 255]`. */
-  def red(pixel: Int): Int = ???
+  def red(pixel: Int): Int =
+    (pixel << 8) >>> 24
 
   /** The green channel of a packed pixel, in `[0, 255]`. */
-  def green(pixel: Int): Int = ???
+  def green(pixel: Int): Int =
+    (pixel << 16) >>> 24
 
   /** The blue channel of a packed pixel, in `[0, 255]`. */
-  def blue(pixel: Int): Int = ???
+  def blue(pixel: Int): Int =
+    (pixel << 24) >>> 24
 
   /** The alpha channel of a packed pixel, in `[0, 255]`.
     *
@@ -173,5 +180,6 @@ object Packing:
     * fully opaque pixel is a *negative* `Int`. An arithmetic shift here returns
     * a negative channel. Choose your shift operator deliberately.
     */
-  def alpha(pixel: Int): Int = ???
+  def alpha(pixel: Int): Int =
+    pixel >>> 24
 end Packing
