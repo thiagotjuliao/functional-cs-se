@@ -1,0 +1,126 @@
+package cs.se.block1.module2
+
+/** Exercise 1 (Hard) — the cost model, and the first thing you write.
+  *
+  * This exercise is out of tier order on purpose. It contains no data structure,
+  * no recursion and no measurement: it is arithmetic over the object layout you
+  * derived in Module 1, and its whole job is to **predict** what Exercises 3
+  * through 9 will measure.
+  *
+  * Do it on paper first. Module 1 placed its predictive exercise seventh of
+  * nine, and the result was that every measurement arrived as a new fact to
+  * memorise rather than as confirmation of something already derived. The
+  * difference between those two experiences is the reason this one is first.
+  *
+  * Everything here follows from one rule, stated in the guide, Part III.11:
+  *
+  *   ''You allocate the path from the root to the change. You share everything
+  *   else.''
+  *
+  * All functions are total for non-negative inputs and return `Long`, because
+  * `n` times a cell size overflows `Int` at a few tens of millions — the same
+  * trap `Footprint.arrayOfIntSize` forecloses in Module 1, Exercise 7.
+  */
+object Sharing:
+
+  // Note on the first run: `CellBytes` and `NodeBytes` are `val`s, so their
+  // `???` throws while the object is being initialised rather than when a method
+  // is called. The JVM marks the class unusable from that point, so
+  // `Exercise1SharingSpec` reports one failure and three skipped tests instead
+  // of four failures. That is not a defect in the suite — it is what a failed
+  // static initialiser does. Implement these two first and the other three tests
+  // start running.
+
+  /** Heap cost of one cons cell: a `head` reference and a `tail` reference.
+    *
+    * Do not write `24`. Derive it from `cs.se.block1.module1.Footprint`, so that
+    * this module inherits Module 1's layout model rather than restating its
+    * conclusion. A literal here is a number that stops being checked the moment
+    * the model changes.
+    */
+  val CellBytes: Int = ???
+
+  /** Heap cost of one binary tree node: a value reference and two child
+    * references.
+    *
+    * Derive it the same way. The result is worth pausing on — a third reference
+    * lands inside padding the two-reference cell was already paying for, so the
+    * node and the cell cost the same. Guide, Part I.3.
+    */
+  val NodeBytes: Int = ???
+
+  /** Cells allocated by `x :: xs`, where `xs` has `n` cells.
+    *
+    * The answer does not mention `n`. If yours does, re-read Part I.4: the old
+    * list is not touched, not copied, and not read.
+    */
+  def prependCells(n: Int): Long = ???
+
+  /** Cells allocated by `xs :+ x`, where `xs` has `n` cells.
+    *
+    * The last cell's `tail` would have to change, and it cannot, so it is
+    * rebuilt — which forces its parent to be rebuilt, all the way to the front.
+    */
+  def appendCells(n: Int): Long = ???
+
+  /** Cells allocated by `xs.reverse`, where `xs` has `n` cells.
+    *
+    * Note what is *not* allocated: the elements. Reverse rebuilds the spine and
+    * shares every value it holds.
+    */
+  def reverseCells(n: Int): Long = ???
+
+  /** Cells allocated by `xs.map(f)`, where `xs` has `n` cells.
+    *
+    * Count only the spine. Whatever `f` allocates is `f`'s business, and a
+    * measurement of `map(identity)` is the experiment that separates the two —
+    * Exercise 8 runs it.
+    */
+  def mapCells(n: Int): Long = ???
+
+  /** Bytes for a list-shaped structure of `cells` cells. */
+  def cellBytes(cells: Long): Long = ???
+
+  /** Bytes for a tree-shaped structure of `nodes` nodes. */
+  def nodeBytes(nodes: Long): Long = ???
+
+  /** Depth of a perfectly balanced binary tree holding `n` values.
+    *
+    * Depth is the number of nodes on the path from the root to a leaf, counting
+    * the root. A tree of one node has depth 1, and the empty tree has depth 0.
+    *
+    * Worked values you must reproduce, and they are the ones Part II.6 tabulates:
+    * {{{
+    * balancedDepth(0)          == 0
+    * balancedDepth(1)          == 1
+    * balancedDepth(15)         == 4      // 2^4 - 1
+    * balancedDepth(1_048_575)  == 20     // 2^20 - 1
+    * balancedDepth(1_000_000)  == 20
+    * }}}
+    * Beware the boundary: `balancedDepth(16)` is 5, not 4. Getting that wrong is
+    * an off-by-one in a limit, which is pattern 3 of `error-patterns.md`, and
+    * the suite does test it.
+    */
+  def balancedDepth(n: Int): Int = ???
+
+  /** Nodes allocated by one `insert` into a balanced tree of `n` nodes, when the
+    * value is not already present.
+    *
+    * Every node on the path from the root to the insertion point is rebuilt,
+    * and one new leaf is created. The count therefore exceeds the depth by
+    * exactly one, which is a fact §E of the checklist asks you to explain rather
+    * than assert.
+    */
+  def treeInsertNodes(n: Int): Long = ???
+
+  /** How many times cheaper one `insert` is than copying the whole tree.
+    *
+    * `nodeBytes(n) / (treeInsertNodes(n) * NodeBytes)`, as a `Double` so that
+    * the answer is not silently truncated. For `n = 1_048_575` the measured
+    * value is about `49,932` — verify yours lands there before trusting it.
+    *
+    * Returns `0.0` for the empty tree, where there is nothing to share.
+    */
+  def sharingRatio(n: Int): Double = ???
+
+end Sharing
