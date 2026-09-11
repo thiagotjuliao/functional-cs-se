@@ -26,11 +26,13 @@ compile cleanly under `-Wall -Werror`.
 | 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no — one latent since pinned, five documented |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
 | 6 | A contract no implementation of that signature can satisfy | 2 | no — contracts are prose, and the suite samples the interior |
+| 7 | A unit declared in the name and nowhere the machine reads | 1 | no — both sides of the confusion are `Long` |
+| 8 | An exact integer answer routed through `Double` | 2 | no — the suite stopped two powers of two short |
 
-Patterns 1–6 were found in **Module 1**. Module 2's section is at the foot of
-the file, opened empty on purpose: the file is created with the module, not at
-the end of it, so that a defect fixed in conversation has somewhere to go the day
-it appears.
+Patterns 1–6 were found in **Module 1**, 7 and 8 in **Module 2**. The file was
+created with Module 2 rather than at the end of it, which is why its first two
+entries were written on the day the defects appeared rather than reconstructed
+afterwards.
 
 ---
 
@@ -317,13 +319,12 @@ Read it before committing, not after a defect. Six questions, one per pattern:
    once?
 6. Does any Scaladoc say "every input", and does it hold at `NaN`, at
    `MaxValue`, at `MinValue`?
+7. Does any name in this diff declare a unit, and does the body honour it?
+8. Am I answering an integer question through `Double`?
 
 ---
 
 ## Module 2 — Manual Persistent Data Structures
-
-*Empty at the time of writing, and that is the point: this section exists before
-the first defect does.*
 
 Numbering continues from 6. When a Module 2 defect instantiates one of patterns
 1–6, it is added as an **occurrence to that entry** rather than opening a new
@@ -339,3 +340,110 @@ watching for rather than waiting for:
 | 4 — A constant only as tested as the arithmetic exposing it | `CellBytes` and `NodeBytes` are both 24, so a call that confuses them passes |
 | 2 — Two quantities that coincide | exactly the above: a cell and a node are indistinguishable by size on this JVM |
 | 6 — A contract no implementation can satisfy | `head` on the empty list, and `treeMap` promising to preserve an ordering it cannot |
+
+Patterns 7 and 8 both came out of Exercise 1 — arithmetic with no data structure
+in it, which is worth noting on its own: neither defect needed recursion,
+sharing or a measurement to appear.
+
+---
+
+## 7. A unit declared in the name and nowhere the machine reads
+
+Two functions sit four lines apart in `Sharing.scala`. One counts cells, one
+converts cells to bytes. Both return `Long`.
+
+```text
+written                              means                    intended           verdict
+----------------------------------   ----------------------   ----------------   -------
+def prependCells(n) = CellBytes      a prepend costs 24 ...   1  (one cell)       WRONG
+                                     ... of something
+def cellBytes(cells) = cells * 24    cells -> bytes           cells -> bytes      right
+```
+
+The two compose, and the composition is where the unit error becomes visible:
+
+```text
+call site                                  with CellBytes        with 1L
+----------------------------------------   -------------------   -------
+cellBytes(prependCells(N))                 24 * 24 = 576         24
+```
+
+576 bytes for a single cons cell, against a cell that is 24 bytes. The error is
+not in either function's arithmetic — both multiply correctly. It is that one of
+them multiplied at all.
+
+**The rule.** When two functions differ only by unit, name the unit in the return
+type, not in the identifier — and until that is possible, read every composition
+out loud: `cellBytes(prependCells(n))` should sound like *bytes of cells of a
+prepend*, not *bytes of bytes*.
+
+**Why the build does not catch it.** `Long` is a width, not a unit. The compiler
+has no way to know that one of these quantities is dimensionless and the other
+is not, and `-Wall -Werror` passes without a word. `Exercise1SharingSpec.scala:22`
+does assert `prependCells(n) == 1L`, so this one was caught — but by an
+assertion written specifically for it. Change the constant to anything and the
+type system stays silent. Scala's `opaque type` is the construction that closes
+this, and Block 2 builds it.
+
+---
+
+## 8. An exact integer answer routed through `Double`
+
+`balancedDepth(n)` returns a small `Int` — at most 31 for any `Int` input. It was
+computed as `Math.ceil(Math.log(n + 1) / Math.log(2))`. Two independent failures
+follow from that one line, and neither throws.
+
+```text
+occurrence                  input                  written gives   correct   mechanism
+-------------------------   --------------------   -------------   -------   ---------------------
+ceil over a 1-ulp error     n = 2^29 - 1                      30        29   quotient = 29.000000000000004
+Int overflow before the     n = Int.MaxValue                   0        31   n + 1 wraps to Int.MinValue
+promotion to double
+```
+
+The first, in full:
+
+```text
+n = 2^k - 1        log(n+1)/log(2)          ceil    correct
+---------------    ---------------------    ----    -------
+2^20 - 1           20.00000000000000000       20         20
+2^21 - 1           21.00000000000000000       21         21
+2^29 - 1           29.00000000000000400       30         29     <- diverges
+2^30 - 1           30.00000000000000000       30         30
+```
+
+`n + 1` is `2^29` exactly, so the quotient is mathematically the integer 29.
+`Math.log` is specified to within 1 ulp, the quotient landed four units above 29
+in the last place, and `ceil` turned `4e-15` into a whole level of tree.
+
+The second:
+
+```text
+n = Int.MaxValue = 2147483647
+
+  n + 1                 = -2147483648      <- Int arithmetic; the promotion to
+                                              double happens after the overflow
+  Math.log(-2147483648) = NaN
+  Math.ceil(NaN)        = NaN
+  (int) NaN             = 0                <- JLS 5.1.3: narrowing NaN does not
+                                              throw, it yields zero
+```
+
+The largest tree an `Int` can describe reports the depth of the empty one, and
+`treeInsertNodes` of it reports 1.
+
+**The rule.** An integer question gets an integer answer. Before writing
+`Math.log`, `Math.pow` or `Math.sqrt` in a function whose return type is `Int`,
+ask what the bit-level operation is: here it is the bit length of `n`, which is
+`32 - Integer.numberOfLeadingZeros(n)` — one machine instruction, no `+ 1` to
+overflow and no rounding to get wrong. And when a `double` parameter accepts an
+`Int` expression, check where the widening happens: `Math.log(n + 1)` promotes
+the *result* of `n + 1`, not its operands.
+
+**Why the build does not catch it.** `Math.log` accepts an `Int` by widening, so
+there is no type error; `NaN.toInt` is defined rather than exceptional, so there
+is no runtime error. `-Wall -Werror` is silent on both. The suite was silent for
+a narrower reason worth recording: it sampled `2^k - 1` for `k` up to 20 —
+exactly the right family of inputs, stopped nine powers of two short of the
+first divergence. The walk now runs to `k = 30` and asserts `Int.MaxValue`
+directly, so both occurrences have a test standing over them.

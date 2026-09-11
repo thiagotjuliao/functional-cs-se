@@ -301,9 +301,11 @@ writing a line of `MyList`.
 - [ ] Read `docs/theory/module2_structures.md` in full.
 - [ ] Work `docs/quiz/b1-m2.html`, filtering by Part as you finish each one.
 - [ ] Read Okasaki, *Purely Functional Data Structures*, Ch. 2.
-- [ ] Derive, before measuring anything, the number of cells allocated by
+- [x] Derive, before measuring anything, the number of cells allocated by
       `x :: xs`, by `xs :+ x` and by `xs.reverse` over a list of `n`. All three
-      must match your Exercise 1 implementation.
+      must match your Exercise 1 implementation. Derived as `1`, `n` and `n`:
+      the prepend shares the whole old list, and the other two rebuild the
+      spine while sharing every element it holds.
 - [ ] State, in one line each, what `O(1)`, `O(n)` and `O(log n)` predict about
       the *ratio* of costs when `n` doubles. This is the whole of §7 and it is
       what Exercise 5 measures.
@@ -313,7 +315,7 @@ writing a line of `MyList`.
 All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
 `src/test/scala/cs/se/block1/module2/`.
 
-- [ ] **E1 `Sharing`** *(Hard — do this first)* — the cost model: cells
+- [x] **E1 `Sharing`** *(Hard — do this first)* — the cost model: cells
       allocated and shared per operation, balanced depth, and the tree sharing
       ratio. Pure arithmetic, no data structure, no measurement.
 - [ ] **E2 `MyList`** *(Easy)* — the `enum` ADT, `isEmpty`, `length`,
@@ -365,10 +367,12 @@ Every number below must be produced by *your* structure, not by Scala's. Fill in
 every blank, and compare each against what Exercise 1 predicted **before** you
 ran it.
 
-- [ ] **Cell and node size.**
-      - `Sharing.CellBytes`: `______` · `Sharing.NodeBytes`: `______`
+- [x] **Cell and node size.**
+      - `Sharing.CellBytes`: `24` · `Sharing.NodeBytes`: `24`
       - These are `Footprint.shallowSize` calls from Module 1. If they disagree
-        with 24, one of the two modules is wrong: `______________________`
+        with 24, one of the two modules is wrong: `they agree — align(12 + 2*4)`
+        `= align(20) = 24 and align(12 + 3*4) = align(24) = 24, so the node's`
+        `third reference lands inside padding the cell was already paying for`
 
 - [ ] **List operations over `n = 100,000`.** Predicted from E1, then measured
       with `AllocationProbe` in E8:

@@ -49,13 +49,32 @@ class Exercise1SharingSpec extends Module2Harness:
 
     // Monotone, and it grows by at most one per doubling. That is the whole
     // content of O(log n), asserted as a property rather than sampled.
-    (1 to 20).foreach { k =>
+    // k stops at 29 so that `2 * n` is at most 2^30 and stays inside Int.
+    (1 to 29).foreach { k =>
       val n = 1 << k
       assert(
         Sharing.balancedDepth(2 * n) - Sharing.balancedDepth(n) <= 1,
         s"doubling from $n added more than one level"
       )
     }
+
+    // A full tree of 2^k - 1 values is exactly k deep, across the whole range.
+    // The upper half of this walk is not decoration: an implementation built on
+    // `Math.ceil(Math.log(n + 1) / Math.log(2))` agrees with this one everywhere
+    // below 2^29 and then reports 30 at 2^29 - 1, because the quotient comes
+    // back as 29.000000000000004 and `ceil` promotes 4e-15 into a whole level.
+    (1 to 30).foreach { k =>
+      val n = (1 << k) - 1
+      assertEquals(Sharing.balancedDepth(n), k, s"2^$k - 1 is a full tree of depth $k")
+    }
+
+    // The top of the domain. `n + 1` is Int arithmetic, so any implementation
+    // that forms it overflows to Int.MinValue here; `Math.log` of a negative is
+    // NaN, and narrowing NaN to Int yields 0 without throwing (JLS 5.1.3). The
+    // symptom is that the largest tree expressible reports the depth of the
+    // empty one.
+    assertEquals(Sharing.balancedDepth(Int.MaxValue), 31, "2^31 - 1 values sit 31 levels deep")
+    assertEquals(Sharing.treeInsertNodes(Int.MaxValue), 32L, "and an insert copies all 31")
   }
 
   test("an insert copies the path plus one new leaf, and the ratio is enormous") {
