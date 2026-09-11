@@ -46,11 +46,23 @@ object Vec2:
 
     /** Euclidean length.
       *
-      * Must equal `math.sqrt(v.dot(v))`, and must be non-negative for every
-      * input, including negative components.
+      * Implemented with `Math.hypot` rather than the literal `sqrt(v.dot(v))`.
+      * The two agree wherever both squares are representable, and diverge
+      * exactly where the naive form breaks: `x * x` overflows above
+      * `|x| ~ 1.34e154` and underflows to zero below `|x| ~ 2.22e-162`, so
+      * `Vec2(1e200, 1e200).norm` yields `Infinity` for a true answer of
+      * `1.414e200` — 108 orders of magnitude inside the range of `Double`.
+      * `hypot` factors out the larger magnitude first, so the quotient it
+      * squares never leaves `[0, 1]`.
+      *
+      * Non-negative for every finite input, including negative components. For
+      * a `NaN` component the result is `NaN`, which is neither negative nor
+      * non-negative — IEEE-754 makes every comparison against `NaN` false, so
+      * no implementation satisfies a literal reading of "non-negative for every
+      * input". The qualifier is part of the contract, not a gap in it.
       */
     def norm: Double =
-      Math.sqrt(v.dot(v))
+      Math.hypot(v.x, v.y)
   end extension
 end Vec2
 

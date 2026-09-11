@@ -54,4 +54,25 @@ class Exercise1Vec2Spec extends Module1Harness:
     assertEqualsDouble(Vec2.Zero.norm, 0.0, Tolerance)
   }
 
+  test("norm survives the magnitudes where the squares do not") {
+    // The literal sqrt(x*x + y*y) overflows once |x| passes sqrt(Double.MaxValue)
+    // and underflows to zero below sqrt(Double.MinPositiveValue), even though the
+    // answer itself is nowhere near either limit. These two cases pin the fix.
+    val huge = Vec2(1e200, 1e200)
+    val tiny = Vec2(1e-200, 1e-200)
+    val expectedHuge = math.sqrt(2.0) * 1e200
+    val expectedTiny = math.sqrt(2.0) * 1e-200
+
+    assert(huge.norm.isFinite, s"norm overflowed: got ${huge.norm} for a representable answer")
+    assert(tiny.norm > 0.0, s"norm underflowed to ${tiny.norm} for a representable answer")
+
+    // Relative tolerance: an absolute one is meaningless across 400 orders of magnitude.
+    assert(math.abs(huge.norm / expectedHuge - 1.0) < 1e-12, s"got ${huge.norm}")
+    assert(math.abs(tiny.norm / expectedTiny - 1.0) < 1e-12, s"got ${tiny.norm}")
+
+    // The naive form, kept as the control that shows what is being prevented.
+    assertEquals(math.sqrt(huge.dot(huge)), Double.PositiveInfinity)
+    assertEquals(math.sqrt(tiny.dot(tiny)), 0.0)
+  }
+
 end Exercise1Vec2Spec
