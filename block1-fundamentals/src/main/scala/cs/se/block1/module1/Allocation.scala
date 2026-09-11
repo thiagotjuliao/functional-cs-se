@@ -119,13 +119,22 @@ object Footprint:
   val ReferenceBytes: Int = 4
   val AlignmentBytes: Int = 8
 
+  val IntegerBytes: Int = 4
+  val LongBytes: Int = 8
+  val DoubleBytes: Int = 8
+  val BooleanBytes: Int = 1
+
   /** Round `bytes` up to the next multiple of `AlignmentBytes`.
     *
     * Must be total for all non-negative inputs, and must be the identity on
     * values that are already aligned. Bitwise arithmetic is welcome here — it
     * is a preview of the codec work in Module 12.
     */
-  def align(bytes: Int): Int = ???
+  def align(bytes: Int): Int =
+    (bytes + (AlignmentBytes - 1)) & ~(AlignmentBytes - 1)
+
+  private def alignL(bytes: Long): Long =
+    (bytes + (AlignmentBytes - 1L)) & ~(AlignmentBytes - 1L)
 
   /** Shallow size, in bytes, of one instance of a class with the given fields.
     *
@@ -145,7 +154,15 @@ object Footprint:
       longs: Int,
       doubles: Int,
       booleans: Int
-  ): Int = ???
+  ): Int =
+    align(
+      HeaderBytes +
+        references * ReferenceBytes +
+        ints * IntegerBytes +
+        longs * LongBytes +
+        doubles * DoubleBytes +
+        booleans * BooleanBytes
+    )
 
   /** Total heap cost of an `Array[Int]` of `length` elements.
     *
@@ -153,7 +170,11 @@ object Footprint:
     * because a large array overflows `Int` — a bug you would find in production
     * rather than in a test, which is why the signature forecloses it.
     */
-  def arrayOfIntSize(length: Int): Long = ???
+  def arrayOfIntSize(length: Int): Long =
+    alignL(
+      ArrayHeaderBytes.toLong +
+        IntegerBytes * length.toLong
+    )
 
   /** Total heap cost of a `List[Int]` of `length` elements.
     *
@@ -165,5 +186,8 @@ object Footprint:
     * `arrayOfIntSize(1_000_000)`. If your two functions do not produce that
     * ratio, one of them is wrong.
     */
-  def listOfIntSize(length: Int): Long = ???
+  def listOfIntSize(length: Int): Long =
+    val headAndTail = shallowSize(2, 0, 0, 0, 0)
+    val intBoxing = shallowSize(0, 1, 0, 0, 0)
+    length.toLong * (headAndTail + intBoxing).toLong
 end Footprint

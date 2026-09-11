@@ -85,7 +85,8 @@ object Bench:
     * hold, and the compiler is forced to keep the computation that produces
     * `value` alive.
     */
-  def consume(value: Double): Unit = ???
+  def consume(value: Double): Unit =
+    if value == Double.MinValue then println(value)
 
   /** Run `body` `warmup` times, discard those timings, then run it
     * `iterations` times and return the **median** wall-clock nanoseconds per
@@ -100,11 +101,26 @@ object Bench:
     *     `body`;
     *   - `iterations` must be at least 1; document what you do when it is not,
     *     and encode that decision in the type if you can.
+    *    - `iterations` values less than 1 will produce a -1L default value.
     *
     * Collecting the sample without mutation is the real exercise. Building an
     * `Array[Long]` via `Array.tabulate` keeps the code pure at the source
     * level, at the cost of one allocation *outside* the timed region — which is
     * exactly the right trade.
     */
-  def medianNanos(warmup: Int, iterations: Int)(body: () => Unit): Long = ???
+  def medianNanos(warmup: Int, iterations: Int)(body: () => Unit): Long =
+    def timedRuns(n: Int): Array[Long] =
+      Array.tabulate(n) { _ =>
+        val start = System.nanoTime()
+        body()
+        System.nanoTime() - start
+      }
+
+    if iterations < 1 then -1L
+    else
+      (1 to warmup).foreach(_ => body()) // warmup
+      val sorted = timedRuns(iterations).sorted
+
+      if iterations % 2 != 0 then sorted(iterations / 2)
+      else sorted.slice(iterations / 2 - 1, iterations / 2 + 1).sum / 2
 end Bench
