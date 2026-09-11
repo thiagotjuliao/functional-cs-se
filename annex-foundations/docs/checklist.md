@@ -149,11 +149,71 @@ Verified by reading your own diff before committing:
         two look interchangeable on positive inputs is exactly how the bug
         survives testing.
 
-- [ ] **Allocation.** `BitSet64` operations over 100,000 iterations, measured
-      with Module 1's `AllocationProbe` technique:
-      - Bytes allocated: `______`
+- [x] **Allocation.** `BitSet64` operations over 100,000 iterations, measured
+      with Module 1's `AllocationProbe` technique
+      (`com.sun.management.ThreadMXBean.getCurrentThreadAllocatedBytes`, read
+      either side of the loop, after five warmup passes):
+      - Bytes allocated, word algebra — `union`, `intersect`, `diff`,
+        `symDiff`, `complement`, `size`, `subsetOf`, `contains`, `incl`,
+        `excl`, ten operations per iteration: **`0`**
+      - Bytes allocated, `toList` (sets averaging 32 members): **`309,788,944`**,
+        i.e. `3,098` per call
       - If it is not zero, name what escaped and why an `opaque type` failed to
-        prevent it: `______________________`
+        prevent it:
+
+        **The `opaque type` did not fail — it delivered exactly what Part VII
+        promises.** Ten operations over 100,000 iterations allocate *zero*
+        bytes, and the erased signatures confirm why: `public long union(long,
+        long)`, `public long complement(long)`, `public int size(long)`.
+        Primitive `long` in and out, no box, no header.
+
+        What allocates is `toList`, for two reasons that must be separated
+        because only one of them is avoidable. Measured by component, same
+        100,000 iterations and the same 32-element workload:
+
+        ```text
+        component                                bytes / call
+        --------------------------------------   ------------
+        32 cons cells (:: only)                          768
+        32 cons cells + one reverse                    1,536
+        32 Tuple2 accumulators                         1,176
+                                                  ----------
+        BitSet64.toList, measured                      3,098
+        ```
+
+        **Inherent (~1,536).** The declared return type is `List[Int]`. A cons
+        list of `n` elements is `n` cells, and restoring ascending order after
+        prepending costs a second pass of `n`. No implementation of this
+        signature allocates less; the cost belongs to the type, not to the code.
+
+        **Avoidable (~1,176).** The fold accumulates into a `(BitSet64,
+        List[Int])`. `Tuple2` stores its components as **references** — `_1` is
+        typed `Object` in the bytecode — and a primitive `long` does not fit in
+        a reference, so every iteration pays `boxToLong` on the way out and
+        `unboxToLong` on the way in. The lambda's erased signature records it:
+        `toList$$anonfun$adapted$1(Object, Object)`, where the `adapted` suffix
+        is the compiler noting the box/unbox adapters it had to insert.
+
+        So the precise statement is that **the `opaque type` was bypassed, not
+        defeated**. It guarantees no boxing at its own boundaries, and it cannot
+        guarantee anything about a generic container the value is subsequently
+        placed into: generics operate on references, and that is a property of
+        erasure, not of the alias. Compare `of`, which folds into a bare
+        `BitSet64` and compiles to `of$$anonfun$1(long, int): long` — primitive
+        throughout, in the same file.
+
+        One measured detail worth recording, because it flatters the number:
+        the elements are bit indices in `0..63`, every one of them inside
+        `java.lang.Integer`'s `-128..127` cache, so `boxToInteger` returns a
+        shared instance and allocates nothing. A `toList` over arbitrary `Int`
+        values would pay an additional 16 bytes per element. The cache is doing
+        unearned work for this benchmark.
+
+        The same pattern is recorded three more times in
+        [`challenge-log.md`](challenge-log.md): entry 17 (this `Tuple2`), entry
+        22 (`Option[Int]` in `packRgba`), entry 27 (`Option[(Int, Int)]` in
+        `decodeAt`, which is both at once). Four instances, one cause: a
+        primitive entering a generic container.
 
 ### F. Engineering Hygiene
 
