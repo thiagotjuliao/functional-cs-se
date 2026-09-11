@@ -15,9 +15,6 @@ measurement.
 
 - [ ] Read `docs/theory/module1_jvm.md` in full.
 - [ ] Read JVM Specification §2.5–2.6 and JVM Anatomy Quarks #4 and #18.
-- [ ] Answer all six questions in the Self-Check section of the module guide
-      **in writing**, without re-reading the guide. Append the answers to this
-      file under "Self-Check Answers".
 - [ ] Derive, from the object-layout rules alone, the heap cost of a
       `List[Int]` and an `Array[Int]` of one million elements. Both numbers must
       match your Exercise 7 implementation.
@@ -104,18 +101,28 @@ The point of this module is measurement. Fill in every blank:
 
 ### G. Oral Defence
 
-- [ ] Answer the post-module conceptual challenges (Step 4 of the routine)
-      without consulting the guide.
+- [ ] Work the post-module conceptual challenges (Step 4 of the routine) as a
+      dialogue: attempt each one **before** the discussion, say "I don't know"
+      plainly when that is the truth, and let `challenge-log.md` carry the
+      complete answer the exchange produced.
 
----
+**Carried over from the removed Self-Check.** Four of its six questions ask
+something no other artifact here covers. They are recorded now so the Step 4
+round can put them, rather than losing them with the section they came from:
 
-## Self-Check Answers
+1. A service allocates 800 MB/s with 3 ms young pauses. The rate doubles to
+   1.6 GB/s and the pause *duration* stays at 3 ms. Why — and what would have to
+   change for the duration to grow? (Part II.8)
+2. Why does adding an object pool to a hot path frequently make p99 latency
+   *worse*? (Parts II.7, III.10, VII.1)
+3. Why does an immutable structure produce cheaper write-barrier traffic than a
+   mutable one, given that it performs strictly more stores overall?
+   (Part III.11)
+4. You measure zero allocation in a loop that visibly constructs a case class per
+   iteration. Name the optimisation, the tier that performs it, and two distinct
+   code changes that would silently switch it off. (Parts IV.15, IV.16)
 
-> Write your Self-Check answers here before requesting the module audit.
+The other two are already covered: the object-layout derivations are the fourth
+box of §A and Exercise 7, and the `List[Int]` versus `Array[Int]` ratio is the
+same box.
 
-1.
-2.
-3.
-4.
-5.
-6.

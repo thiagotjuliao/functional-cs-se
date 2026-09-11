@@ -1,0 +1,921 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1-M1 — JVM Semantics · Recall Set</title>
+<style>
+  :root {
+    --bg: #fbfaf8;      --panel: #ffffff;   --ink: #1b1a18;
+    --muted: #6b6862;   --line: #e3e0da;    --accent: #7a4b2a;
+    --ok-bg: #eef5ec;   --ok-line: #7fa86c; --ok-ink: #33552a;
+    --no-bg: #fbeeea;   --no-line: #c07a63; --no-ink: #7a3320;
+    --code-bg: #f4f2ee;
+    --easy: #5d7a8c;    --medium: #8a6d3b;  --hard: #8c4a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161a;    --panel: #1f1e23;   --ink: #e8e4dd;
+      --muted: #9b958c; --line: #34323a;    --accent: #d5a37a;
+      --ok-bg: #1c2a1b;  --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+      --no-bg: #2c1c19;  --no-line: #9a5c48; --no-ink: #e0a08c;
+      --code-bg: #17161a;
+      --easy: #8fb0c4;  --medium: #c8a468;  --hard: #cc8080;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161a;      --panel: #1f1e23;   --ink: #e8e4dd;
+    --muted: #9b958c;   --line: #34323a;    --accent: #d5a37a;
+    --ok-bg: #1c2a1b;   --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+    --no-bg: #2c1c19;   --no-line: #9a5c48; --no-ink: #e0a08c;
+    --code-bg: #17161a;
+    --easy: #8fb0c4;    --medium: #c8a468;  --hard: #cc8080;
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 0 20px 80px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header { padding: 44px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 25px; margin: 0 0 8px; letter-spacing: -0.01em; font-weight: 620; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .sub code { font-size: 12.5px; }
+
+  .note {
+    margin: 22px 0 0; padding: 13px 16px; border-left: 2px solid var(--accent);
+    background: var(--panel); font-size: 13.5px; color: var(--muted);
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  .bar .grow { flex: 1 1 auto; }
+  .bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
+  button.f {
+    font: inherit; font-size: 13px; padding: 5px 11px; cursor: pointer;
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  button.f[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+  button.f:hover { color: var(--ink); }
+  #score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #score b { color: var(--ink); font-weight: 620; }
+
+  .q {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 20px 22px; margin: 20px 0;
+  }
+  .meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .tier {
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    font-weight: 680; padding: 2px 7px; border-radius: 3px; border: 1px solid;
+  }
+  .tier.easy   { color: var(--easy);   border-color: var(--easy); }
+  .tier.medium { color: var(--medium); border-color: var(--medium); }
+  .tier.hard   { color: var(--hard);   border-color: var(--hard); }
+  .src { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stem { margin: 0 0 15px; }
+  .stem p { margin: 0 0 10px; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 11px 13px; overflow-x: auto; margin: 11px 0;
+    font: 12.5px/1.55 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg); padding: 1px 4px; border-radius: 3px;
+    font: 0.9em/1 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .opt {
+    display: block; width: 100%; text-align: left; font: inherit;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 10px 13px; margin: 7px 0; cursor: pointer;
+  }
+  .opt:hover:not([disabled]) { border-color: var(--accent); }
+  .opt[disabled] { cursor: default; }
+  .opt .k { color: var(--muted); font-weight: 620; margin-right: 8px; }
+  .opt.correct { background: var(--ok-bg); border-color: var(--ok-line); }
+  .opt.wrong   { background: var(--no-bg); border-color: var(--no-line); }
+
+  .why {
+    margin: 9px 0 3px; padding: 11px 14px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid;
+  }
+  .why.correct { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+  .why.wrong   { background: var(--no-bg); border-color: var(--no-line); color: var(--no-ink); }
+  .why pre { background: rgba(127,127,127,0.10); border-color: transparent; }
+  .why code { background: rgba(127,127,127,0.14); }
+  .why b { font-weight: 660; }
+
+  footer {
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--muted);
+  }
+  #empty { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>B1-M1 — JVM Semantics · Recall Set</h1>
+  <p class="sub">Anchored to <code>docs/theory/module1_jvm.md</code>. Every question cites the section that teaches it; every distractor is a wrong answer that section already documents.</p>
+  <div class="note">
+    <strong>Mechanism only — no exercise is solved here.</strong> This set tests what the
+    guide teaches, so it is usable the moment you finish reading a Part, long before
+    the exercises. Multiple choice measures recognition; the
+    <code>challenge-log.md</code> measures derivation, and it is the one that closes
+    the Oral Defence. Use this to sharpen discrimination between near-identical
+    alternatives — <code>&gt;&gt;</code> against <code>&gt;&gt;&gt;</code>,
+    <code>&amp;</code> against <code>&amp;&amp;</code> in a mask, a sign bit against a
+    data bit — and never as a substitute for writing a derivation out.
+  </div>
+</header>
+
+<div class="bar">
+  <button class="f" data-tier="all"    aria-pressed="true">All</button>
+  <button class="f" data-tier="easy"   aria-pressed="false">Easy</button>
+  <button class="f" data-tier="medium" aria-pressed="false">Medium</button>
+  <button class="f" data-tier="hard"   aria-pressed="false">Hard</button>
+  <span class="sep"></span>
+  <button class="f" data-part="all"  aria-pressed="true">All parts</button>
+  <button class="f" data-part="I"    aria-pressed="false">I</button>
+  <button class="f" data-part="II"   aria-pressed="false">II</button>
+  <button class="f" data-part="III"  aria-pressed="false">III</button>
+  <button class="f" data-part="IV"   aria-pressed="false">IV</button>
+  <button class="f" data-part="V"    aria-pressed="false">V</button>
+  <button class="f" data-part="VI"   aria-pressed="false">VI</button>
+  <button class="f" data-part="VII"  aria-pressed="false">VII</button>
+  <span class="grow"></span>
+  <span id="score">answered <b>0</b>/<b>0</b> · correct <b>0</b></span>
+  <button class="f" id="reset">Reset</button>
+</div>
+
+<main id="list"></main>
+<div id="empty" hidden>No questions match this filter.</div>
+
+<footer>
+  Extend as new Parts are written, keeping every distractor sourced from the
+  guide rather than invented — and keeping exercise solutions out.
+</footer>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    tier: "easy", part: "I", src: "Part I.4.2 — Worked layout",
+    stem: `<p><code>final case class Vec2(x: Double, y: Double)</code>. What does one instance cost?</p>`,
+    options: [
+      { t: "<code>32</code> bytes", ok: true,
+        why: "<code>align8(12 + 8 + 8) = align8(28) = 32</code>. Four of those bytes are padding — the fields alone are 16, and the header is 12." },
+      { t: "<code>16</code> bytes — two doubles", ok: false,
+        why: "That counts the fields and forgets the header. A 12-byte header is not a rounding error: on small objects it is most of the object." },
+      { t: "<code>28</code> bytes", ok: false,
+        why: "The unpadded total. Objects are padded up to a multiple of 8, so 28 becomes 32." },
+      { t: "<code>24</code> bytes", ok: false,
+        why: "That is <code>Point(Int, Int)</code> or a cons cell — 12 plus 8 bytes of fields. Two <code>Double</code>s are 16." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4.2 — Worked layout",
+    stem: `<p>A <code>::</code> cons cell holds a head reference and a tail reference. What does it cost, with compressed oops?</p>`,
+    options: [
+      { t: "<code>24</code> bytes", ok: true,
+        why: "<code>align8(12 + 4 + 4) = align8(20) = 24</code>. References are <b>4</b> bytes when compressed, not 8 — which is the default whenever the heap is under about 32 GB." },
+      { t: "<code>28</code> bytes — 12 header plus two 8-byte references", ok: false,
+        why: "That is the uncompressed layout, which applies only on heaps above ~32 GB. The default is 4-byte references." },
+      { t: "<code>16</code> bytes", ok: false,
+        why: "16 is a field-less object, or a <code>java.lang.Integer</code>. Two references need 8 bytes on top of the header." },
+      { t: "<code>8</code> bytes — just the two references", ok: false,
+        why: "Every object carries the 12-byte header before any field." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4.1 — Object anatomy",
+    stem: `<p>Why is an <b>array</b>'s header 16 bytes rather than the ordinary 12?</p>`,
+    options: [
+      { t: "It carries an extra 4-byte length field", ok: true,
+        why: "An array must know its own length at runtime — that is what makes bounds checking possible — so the length sits in the header alongside the mark word and the klass pointer." },
+      { t: "Arrays are aligned to 16 bytes rather than 8", ok: false,
+        why: "Alignment is to 8 bytes for arrays as for everything else. The extra 4 bytes are a real field, not padding." },
+      { t: "The klass pointer is 8 bytes for arrays", ok: false,
+        why: "It is 4 bytes under compressed oops regardless of the kind of object." },
+      { t: "Arrays store their element type in the header", ok: false,
+        why: "The element type is part of the class, reached through the klass pointer. The extra word is the length." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4.1 — Object anatomy",
+    stem: `<p>What does the <b>mark word</b> carry?</p>`,
+    options: [
+      { t: "The identity hash code, the GC age bits, and the lock state", ok: true,
+        why: "All three live in those 8 bytes. The GC age bits are what let a copying collector know how many collections an object has survived, which is how promotion is decided." },
+      { t: "A pointer to the class metadata", ok: false,
+        why: "That is the <b>klass pointer</b>, the other 4 bytes of the header, pointing into Metaspace." },
+      { t: "The object's size in bytes", ok: false,
+        why: "Size is derived from the class layout, or from the length field for arrays. It is not stored per instance." },
+      { t: "A reference to the next object in the TLAB", ok: false,
+        why: "A TLAB is a bump-pointer region — objects sit contiguously and need no links." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — Two memories",
+    stem: `<p>Which values live on the stack?</p>`,
+    options: [
+      { t: "Locals and parameters — the frame's variable slots", ok: true,
+        why: "Plus the operand stack and the frame data. Every object you create lives on the heap; what the frame holds is the <em>references</em> to them, along with primitive locals." },
+      { t: "Every object smaller than a threshold size", ok: false,
+        why: "No size threshold exists. An object avoids the heap only when the JIT proves it never escapes (Part IV), and even then it is dismantled into scalars rather than placed on the stack." },
+      { t: "Immutable values, since they need no collection", ok: false,
+        why: "Immutability changes the <em>direction</em> of the references a structure holds (Part III.11), not where the object lives." },
+      { t: "Only primitives; every reference lives on the heap", ok: false,
+        why: "A reference is a value held in a frame slot. The object it points at is on the heap, but the reference itself sits in the frame." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.8 — GC frequency",
+    stem: `<p>A service allocates 1 GB/s into a 512 MB nursery. Roughly how often does a young GC run?</p>`,
+    options: [
+      { t: "Every 500 ms", ok: true,
+        why: "The nursery fills at the allocation rate: half a gigabyte at one gigabyte per second is half a second. Doubling the nursery to 1 GB would halve the frequency, almost for free — that is the cheapest tuning knob in the module." },
+      { t: "Every 1000 ms", ok: false,
+        why: "That would be a 1 GB nursery at the same rate. 512 MB fills in half the time." },
+      { t: "Every 250 ms", ok: false,
+        why: "That is either 2 GB/s into 512 MB, or 1 GB/s into a 256 MB nursery." },
+      { t: "It depends on the survival rate", ok: false,
+        why: "Survival determines each collection's <em>cost</em>, not how often the nursery fills. Keeping those two apart is the point of the three numbers." }
+    ]
+  },
+  {
+    tier: "easy", part: "IV", src: "Part IV.14 — The three states",
+    stem: `<p>An object is <b>returned</b> from the method that created it. Which escape state, and what is optimised?</p>`,
+    options: [
+      { t: "<code>GlobalEscape</code> — nothing is optimised, and it is a real heap allocation", ok: true,
+        why: "Returning, storing to a field, throwing, or publishing to another thread all put the reference somewhere the compiled method cannot account for. This is exactly why an allocation inside a method that returns it can only be removed if the <em>caller</em> inlines that method first." },
+      { t: "<code>NoEscape</code>, since the caller may discard it immediately", ok: false,
+        why: "The analysis cannot depend on what an unknown caller does. Within this compiled method the reference provably leaves, and that settles it." },
+      { t: "<code>ArgEscape</code>", ok: false,
+        why: "That state is for a reference <em>passed into</em> a callee without outliving the caller. Returning is strictly further." },
+      { t: "It depends on whether the return type is a value class", ok: false,
+        why: "Escape state is computed per allocation site from where the reference travels, not from the declared type." }
+    ]
+  },
+  {
+    tier: "easy", part: "VI", src: "Part VI.21 — G1",
+    stem: `<p>Which collector is the default on JDK 21, and what kind of collector is it?</p>`,
+    options: [
+      { t: "G1 — region-based and pause-target driven, with <code>MaxGCPauseMillis</code> defaulting to 200 ms", ok: true,
+        why: "It partitions the heap into about 2048 regions of 1–32 MB, labelled Eden, Survivor, Old or Humongous, and chooses a collection set to meet the pause target. A <em>soft</em>-real-time collector: the target is a goal, not a guarantee." },
+      { t: "Parallel GC — throughput-oriented with no concurrent phases", ok: false,
+        why: "That is the batch and ETL choice, and it was the default long ago. It is not JDK 21's." },
+      { t: "ZGC — concurrent, with sub-millisecond pauses", ok: false,
+        why: "Available on JDK 21 and strongly preferred for allocation-heavy latency-critical work, but opt-in: <code>-XX:+UseZGC -XX:+ZGenerational</code>." },
+      { t: "Serial GC", ok: false,
+        why: "Serial is selected automatically only on small heaps and single-core containers." }
+    ]
+  },
+  // =============================================== Part I — Where Memory Lives
+  {
+    tier: "easy", part: "I", src: "Part I.1 — The question",
+    stem: `<p>A service allocates 1 GB per second with objects averaging 32 bytes. Roughly how many objects per second is that, and what is the guide's verdict on the figure?</p>`,
+    options: [
+      { t: "About 33 million per second — and it is <b>routine</b>", ok: true,
+        why: "<code>1 GB / 32 bytes = 33.6 million</code>. The whole module exists to replace the intuition that this is a catastrophe with the number that says it is not: allocation is nearly free and garbage is exactly free. What costs money is <b>survival</b>." },
+      { t: "About 33 million per second — and it is a pathology to be designed away", ok: false,
+        why: "The arithmetic is right and the conclusion is the one the module overturns. A high allocation rate buys GC <em>frequency</em>, which is cheap; it is the promotion rate that buys cost." },
+      { t: "About 33 thousand per second", ok: false,
+        why: "Three orders of magnitude off. A gigabyte divided by 32 bytes is tens of millions, not tens of thousands." },
+      { t: "It cannot be computed without knowing the survival rate", ok: false,
+        why: "The object <em>count</em> follows from rate and size alone. The survival rate determines the GC's cost, which is a different quantity — and keeping the two apart is the point of Part II.8." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — Two memories",
+    stem: `<p>Which statement about the stack and the heap is correct?</p>`,
+    options: [
+      { t: "The stack is per-thread and freed automatically on return; the heap is shared and freed by the collector", ok: true,
+        why: "That split is the axis of the whole module. Parts I–IV are, in effect, an extended argument about how to get values into the left-hand column." },
+      { t: "Both are per-thread, but only the heap is collected", ok: false,
+        why: "There is one heap per JVM, shared by every thread. That sharing is exactly why heap allocation needs a collector and stack reclamation does not." },
+      { t: "The heap is bounded at about 1 MB and the stack by <code>-Xmx</code>", ok: false,
+        why: "Inverted. <code>-Xss</code> bounds the stack at roughly 512 KB–1 MB; <code>-Xmx</code> bounds the heap in gigabytes." },
+      { t: "Objects go on the stack when small enough and on the heap otherwise", ok: false,
+        why: "Size is not the criterion — every <code>new</code> lands on the heap. An object can avoid the heap only if the JIT proves it never escapes (Part IV), and that is a question about <em>visibility</em>, not size." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3 — The stack",
+    stem: `<p>Why is pushing a stack frame pointer arithmetic rather than an allocation?</p>`,
+    options: [
+      { t: "Because every size in the frame is known at compile time and recorded in the class file", ok: true,
+        why: "The local variable array, the operand stack and the frame data all have statically known shapes (JVMS §2.6), so pushing is \"move the stack pointer down by a known constant\". No allocator, no synchronisation, no bookkeeping — and popping reclaims everything instantly, which is why the stack needs no collector." },
+      { t: "Because the JIT pre-allocates a pool of frames at startup", ok: false,
+        why: "There is no pool. The frame is carved out of the thread's own stack by adjusting a pointer." },
+      { t: "Because frames are allocated in a TLAB", ok: false,
+        why: "The TLAB (Part II.5) is a slab of the <b>young generation</b> — it makes heap allocation cheap, not stack allocation. Frames never touch it." },
+      { t: "Because the garbage collector treats the stack as a single object", ok: false,
+        why: "The collector scans the stack for <em>roots</em> but never manages it. Stack memory is reclaimed by returning, not by collecting." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3.1 — The bound",
+    stem: `<p>With a 512 KB stack and frames of about 100 bytes, roughly how deep can recursion go — and which module does that number motivate?</p>`,
+    options: [
+      { t: "About 5,200 frames, and it is the reason Module 3 exists", ok: true,
+        why: "<code>512 KB / 100 B ≈ 5,242</code>. A naive <code>foldRight</code> over a 100,000-element list is 100,000 nested calls, so every row of that table says it dies. Tail calls and trampolines are how you survive it." },
+      { t: "About 5,200 frames, which is ample for any realistic workload", ok: false,
+        why: "The arithmetic is right; the conclusion is not. A fold over a list of 100,000 elements exceeds it by a factor of twenty." },
+      { t: "About 52,000 frames", ok: false,
+        why: "Off by a factor of ten. 512 KB is 524,288 bytes; divided by 100 that is roughly five thousand, not fifty." },
+      { t: "Unbounded — HotSpot grows the stack on demand", ok: false,
+        why: "A platform thread's stack is fixed at <code>-Xss</code> and exceeding it throws <code>StackOverflowError</code>. A <em>virtual</em> thread is the exception the guide flags forward to Module 8: its stack lives on the heap and grows." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4.1 — Object anatomy",
+    stem: `<p>On 64-bit HotSpot with compressed oops, what is the header of an ordinary object, and what is the size rule?</p>`,
+    options: [
+      { t: "12 bytes — an 8-byte mark word plus a 4-byte klass pointer — with the total padded up to a multiple of 8", ok: true,
+        why: "So the cost of any object is <code>align8(12 + sum of field sizes)</code>. References are 4 bytes when compressed, and arrays carry an extra 4-byte length field, making their header 16." },
+      { t: "16 bytes — two 8-byte words — padded to a multiple of 16", ok: false,
+        why: "16 is the <b>array</b> header, which adds a length field to the ordinary 12. And alignment is to 8 bytes, not 16." },
+      { t: "8 bytes — just the klass pointer — with no padding", ok: false,
+        why: "The mark word is 8 bytes on its own, carrying the identity hash, the GC age bits and the lock state. Dropping it would leave nowhere to record any of those." },
+      { t: "It varies by class; there is no fixed header", ok: false,
+        why: "The header is fixed. What varies is the field block after it, and the padding that follows." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.4.2 — Worked layout",
+    stem: `<p>What does an object with <b>no fields at all</b> cost on the heap?</p>`,
+    options: [
+      { t: "<code>16</code> bytes", ok: true,
+        why: "<code>align8(12 + 0) = 16</code>. The guide asks you to read that twice: the header is not a rounding error — on small objects it <em>is</em> most of the object." },
+      { t: "<code>0</code> bytes — the JVM elides empty objects", ok: false,
+        why: "Only escape analysis can remove an allocation (Part IV), and that depends on visibility rather than on emptiness. A field-less object that escapes is a real 16 bytes." },
+      { t: "<code>12</code> bytes", ok: false,
+        why: "That is the header before padding. Objects are padded up to a multiple of 8, so 12 becomes 16." },
+      { t: "<code>8</code> bytes", ok: false,
+        why: "Smaller than the mark word alone. The mark word is 8 and the klass pointer adds 4 before any padding." }
+    ]
+  },
+  {
+    tier: "hard", part: "I", src: "Part I.4.2 — Worked layout",
+    stem: `<p>Apply <code>align8(12 + fields)</code> to <code>final case class Pair(a: Int, b: Long)</code>.</p>`,
+    options: [
+      { t: "<code>24</code> bytes", ok: true,
+        why: "<code>12 header + 4 (Int) + 8 (Long) = 24</code>, already a multiple of 8, so no padding is added. Compare <code>Point(Int, Int)</code>: <code>12 + 4 + 4 = 20 → 24</code> — the same total, reached with four bytes of padding instead of none." },
+      { t: "<code>32</code> bytes", ok: false,
+        why: "That is <code>Vec2(Double, Double)</code>: <code>12 + 8 + 8 = 28 → 32</code>. A <code>Long</code> and an <code>Int</code> together are 12 bytes of fields, not 16." },
+      { t: "<code>20</code> bytes", ok: false,
+        why: "20 is the unpadded total for two <code>Int</code> fields. Here the fields are 4 and 8, giving 24 — and 20 would not survive the alignment rule anyway." },
+      { t: "<code>16</code> bytes", ok: false,
+        why: "That is the cost of a field-less object, or of a <code>java.lang.Integer</code>. It leaves no room for a <code>Long</code>." }
+    ]
+  },
+  {
+    tier: "hard", part: "I", src: "Part I.4.3 — The 10x tax",
+    stem: `<p>One million <code>Int</code>s. What do <code>Array[Int]</code> and <code>List[Int]</code> actually cost on the heap?</p>`,
+    options: [
+      { t: "3.81 MiB against 38.15 MiB — a ten-fold difference", ok: true,
+        why: "<code>Array[Int]</code> is <code>16 + 4,000,000</code>. <code>List[Int]</code> is a million times 40, because each element is <b>two</b> objects: a 24-byte cons cell and the 16-byte <code>Integer</code> it points at. Twenty-four plus sixteen to store four bytes of payload." },
+      { t: "4 MB against 4 MB — the representations differ but the payload does not", ok: false,
+        why: "This is the naive expectation the table exists to break. The payload is 4 MB in both; the <em>heap cost</em> differs by 10x because of headers and boxing." },
+      { t: "3.81 MiB against 22.9 MiB — the cons cells only", ok: false,
+        why: "This counts the cons cells at 24 bytes and forgets the boxes. The <code>Integer</code> is a separate heap object — that is the second half of the tax, and Part V explains why it is unavoidable under erasure." },
+      { t: "3.81 MiB against 15.3 MiB — the boxes only", ok: false,
+        why: "Symmetric mistake: this counts the 16-byte boxes and forgets the cons cells that link them." }
+    ]
+  },
+  // =============================================== Part II — Allocation and garbage
+  {
+    tier: "easy", part: "II", src: "Part II.5 — The TLAB",
+    stem: `<p>What does allocating inside a TLAB actually cost?</p>`,
+    options: [
+      { t: "Three instructions: read the bump pointer, add the size, compare against the limit", ok: true,
+        why: "The buffer is thread-private, so there are no locks, no free lists and no search for a hole. It is competitive with stack allocation in C — which is why <b>\"create fewer objects\" is, on its own, bad advice on the JVM</b>." },
+      { t: "A lock acquisition plus a free-list search", ok: false,
+        why: "That describes a shared-heap allocator, which is exactly what the TLAB exists to avoid. The slow path — requesting a fresh TLAB — touches the shared heap, but ordinary allocation does not." },
+      { t: "A call into the collector to reserve space", ok: false,
+        why: "The collector is not involved in allocation at all. It runs when the nursery fills, and its cost is charged for survivors, not for creations." },
+      { t: "It depends on the object's size class", ok: false,
+        why: "Size enters only as the number added to the bump pointer. There are no size classes and no segregated lists." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.6 — The generational hypothesis",
+    stem: `<p>What does the <b>weak generational hypothesis</b> assert?</p>`,
+    options: [
+      { t: "Most objects die young; those surviving a few collections tend to survive indefinitely", ok: true,
+        why: "Observed empirically across decades of workloads (Ungar, 1984). HotSpot exploits it by splitting the heap — a small nursery where everything is born, an old generation for survivors — so young collections run often and cheaply." },
+      { t: "Most objects are small, so the heap should be organised by size class", ok: false,
+        why: "The hypothesis is about <b>lifetime</b>, not size. Size-class organisation is a malloc strategy, not a generational one." },
+      { t: "Allocation rate predicts collection cost", ok: false,
+        why: "Part II.8 says precisely the opposite: allocation rate buys frequency, and cost follows survivors. Conflating the two is named there as the most common mistake in JVM performance discussions." },
+      { t: "Objects referenced from the old generation are likely to be long-lived", ok: false,
+        why: "That is a consequence people sometimes draw, not the hypothesis. The hypothesis is a claim about the mortality curve of <em>newly allocated</em> objects." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.7 — The copying collector",
+    stem: `<p>A 512 MB nursery collects at a 1% survival rate. How much work does the collector do, and what do the other 507 MB cost?</p>`,
+    options: [
+      { t: "About 5 MB of copying; the garbage costs <b>exactly zero</b>", ok: true,
+        why: "A copying collector's cost is proportional to the volume of <em>surviving</em> data. Dead objects are never touched, never visited, never written — the survivors are copied out and the whole region is declared empty in one stroke. Not \"costs little\": <b>zero</b>, because no code ran for any of it." },
+      { t: "About 5 MB of copying, plus a sweep proportional to the garbage", ok: false,
+        why: "There is no sweep. Sweeping is what a mark-sweep collector does in the old generation; a copying young collector reclaims by evacuating survivors and abandoning the region." },
+      { t: "About 507 MB of work, since that is what must be reclaimed", ok: false,
+        why: "This is the intuition the section overturns. Reclamation is not proportional to what is reclaimed — it is proportional to what is kept." },
+      { t: "512 MB of work — the entire region is processed", ok: false,
+        why: "The region is not processed; it is <em>abandoned</em> once its survivors are elsewhere." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.8 — The three numbers",
+    stem: `<p>A service allocating 1 GB/s into a 512 MB nursery doubles its allocation rate to 2 GB/s. What happens to GC <b>frequency</b> and to pause <b>duration</b>?</p>`,
+    options: [
+      { t: "Frequency doubles, from one young GC every 500 ms to every 250 ms; duration is unchanged", ok: true,
+        why: "Allocation rate controls how fast the nursery fills, and therefore frequency. Duration follows <b>survivors</b> — a different metric entirely. Doubling the nursery instead would halve the frequency almost for free." },
+      { t: "Both double", ok: false,
+        why: "Only frequency tracks the allocation rate. Duration would grow only if more data <em>survived</em> each collection — that is the promotion rate, the second of the three numbers." },
+      { t: "Frequency is unchanged; duration doubles", ok: false,
+        why: "Exactly inverted, and it is the most common version of the mistake: reading allocation rate as a proxy for GC cost." },
+      { t: "Neither changes; the collector adapts its heap sizing", ok: false,
+        why: "G1 does adapt over time, but the immediate arithmetic is unavoidable: twice the fill rate reaches the same nursery size in half the time." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.8 — The three numbers",
+    stem: `<p>Which metric controls the <b>cost</b> of each collection, as opposed to its frequency?</p>`,
+    options: [
+      { t: "Promotion rate — how much survives into the old generation", ok: true,
+        why: "Allocation rate buys frequency, which is cheap; promotion rate buys cost, which is not. The third number, live set size, governs pause duration and heap sizing." },
+      { t: "Allocation rate", ok: false,
+        why: "That controls frequency. Conflating it with cost is named in the guide as the most common mistake in JVM performance discussions." },
+      { t: "The number of threads allocating", ok: false,
+        why: "Each thread has its own TLAB, so threads affect contention on the slow path, not the cost model of a collection." },
+      { t: "The size of the old generation", ok: false,
+        why: "A larger old generation defers an expensive problem rather than changing the cost of a young collection." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.8 — The shape of FP",
+    stem: `<p>Why is functional programming's memory profile the one generational collectors were designed for?</p>`,
+    options: [
+      { t: "Very high allocation rate with a characteristically <b>low promotion rate</b>", ok: true,
+        why: "The intermediate values in a <code>map</code> chain are dead before the next young collection even runs. High rate buys frequency, which is cheap; low promotion keeps each collection cheap too. FP is not fighting the JVM's memory model — it is the workload that model was tuned for." },
+      { t: "Low allocation rate, because immutable values are shared rather than copied", ok: false,
+        why: "Sharing helps, but the rate is genuinely high — every <code>map</code> builds a new collection. The point is that the rate is the cheap half." },
+      { t: "A large live set that the collector can size for in advance", ok: false,
+        why: "A large live set is the <em>pathology</em>, not the goal. It is the shape the guide tells you to fear: a modest allocation rate where most objects survive." },
+      { t: "Objects of uniform size, which makes evacuation predictable", ok: false,
+        why: "Uniformity is not part of the cost model. What matters is the mortality curve." }
+    ]
+  },
+  // =============================================== Part III — Immutability and the collector
+  {
+    tier: "medium", part: "III", src: "Part III.9 — The cross-generational problem",
+    stem: `<p>A young GC must find every reference pointing <em>into</em> the young generation, and some of those live in the old generation. Why can it not simply scan the old generation?</p>`,
+    options: [
+      { t: "Because scanning it would defeat the entire purpose of having generations", ok: true,
+        why: "The point of a nursery collection is that its cost is proportional to young survivors. Walking the whole old generation to find roots would make every young GC cost as much as a full one." },
+      { t: "Because the old generation may be concurrently mutated", ok: false,
+        why: "Young collections are stop-the-world in G1, so nothing is mutating during the scan. The objection is cost, not concurrency." },
+      { t: "Because old-generation objects cannot reference young ones", ok: false,
+        why: "They certainly can — that is the whole problem the write barrier exists to track. Every <code>cache.put(key, freshValue)</code> creates one." },
+      { t: "Because the card table has already collected those references", ok: false,
+        why: "The card table is the <em>solution</em>, not a reason the scan is unnecessary. The question is why the solution was needed." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.10 — Write barriers",
+    stem: `<p>What is a <b>write barrier</b>, and when is it paid?</p>`,
+    options: [
+      { t: "Extra machine code emitted for every reference field store, recording into a card table that a region now points somewhere young", ok: true,
+        why: "It is small per store and paid on <b>every reference store you ever perform</b>. G1 additionally maintains per-region remembered sets, and at GC time the dirty cards are scanned as extra roots." },
+      { t: "A lock taken around reference stores to keep the collector consistent", ok: false,
+        why: "No lock is involved. The barrier is inline code that records a fact; it does not serialise anything." },
+      { t: "A check performed when <em>reading</em> a reference", ok: false,
+        why: "That is a <b>load</b> barrier, which is ZGC's mechanism (Part VI.22). A write barrier runs on stores." },
+      { t: "A pause inserted between the young and old collection phases", ok: false,
+        why: "Barriers are per-operation costs in application code, not phases of a collection." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.11 — The inversion",
+    stem: `<p>Why does an immutable structure generate cheaper barrier traffic than a mutable one, despite performing strictly <em>more</em> stores overall?</p>`,
+    options: [
+      { t: "Its fields are written once, at construction, when the object is the youngest thing in the heap — so every reference it holds points to something older or equal", ok: true,
+        why: "Immutable structures generate <b>young → old</b> edges, which need no card. Mutable ones generate <b>old → young</b> edges, which cost a barrier and a dirty card. The count of stores is not what is charged; their <em>direction</em> is." },
+      { t: "Because the JIT elides barriers on final fields", ok: false,
+        why: "Finality allows certain reorderings, not barrier elision. The argument here is about generational direction and holds regardless of the <code>final</code> flag." },
+      { t: "Because immutable objects are allocated directly in the old generation", ok: false,
+        why: "They are born in the nursery like everything else. Being born there is precisely what makes them the youngest thing in the heap at construction time." },
+      { t: "Because fewer stores are performed in total", ok: false,
+        why: "The premise of the question is that <em>more</em> stores are performed — rebuilding a structure writes more fields than mutating one in place. The saving is per-store direction, not store count." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.11 — The anti-pattern",
+    stem: `<pre><code>cache.put(key, freshlyComputedValue)</code></pre>
+<p>The cache lives in the old generation and the value was just computed. What does this single line cost?</p>`,
+    options: [
+      { t: "A write barrier and a dirty card, plus promotion of an object that would otherwise have died for free", ok: true,
+        why: "Two costs, and the second is the larger: the value is now reachable from the old generation, so it survives the nursery and gets promoted. Part II.7 says garbage costs zero — this line converts free garbage into paid-for live data." },
+      { t: "A write barrier only; the value's lifetime is unaffected", ok: false,
+        why: "Reachability <em>is</em> lifetime. Holding the reference from a long-lived structure is exactly what extends it." },
+      { t: "Nothing measurable — a single store is cheap", ok: false,
+        why: "The store is cheap. The promotion it causes is not, and it repeats on every put." },
+      { t: "A full GC, because the old generation was modified", ok: false,
+        why: "No collection is triggered by a store. The card is marked and scanned at the <em>next</em> young GC." }
+    ]
+  },
+  {
+    tier: "easy", part: "III", src: "Part III.12 — Structural sharing",
+    stem: `<p>A persistent tree update rewrites only the path from the changed node to the root. What does that mean for the collector?</p>`,
+    options: [
+      { t: "<code>O(log n)</code> fresh nodes, every one pointing <em>down</em> into older shared subtrees — young → old, free", ok: true,
+        why: "Structural sharing sharpens Part III.11 rather than complicating it: the new nodes are the youngest things in the heap, so every reference they hold necessarily points to something older. No cards, every time." },
+      { t: "<code>O(n)</code> fresh nodes, since persistence requires copying the structure", ok: false,
+        why: "Copying the whole structure is what persistence <em>avoids</em>. Only the path to the root is rewritten; the untouched subtrees are shared." },
+      { t: "The old nodes must be scanned for references into the new ones", ok: false,
+        why: "The old nodes are unchanged, and their references still point where they always did. It is the new nodes that point into them, which is the free direction." },
+      { t: "Barrier traffic proportional to the depth of the tree", ok: false,
+        why: "Barrier traffic follows old → young stores, and this update produces none." }
+    ]
+  },
+  // =============================================== Part IV — Escape analysis
+  {
+    tier: "easy", part: "IV", src: "Part IV.13 — The idea",
+    stem: `<p>What does escape analysis prove, and what does the proof license?</p>`,
+    options: [
+      { t: "That an object never leaves the method that created it — so nobody can observe whether it exists, and the compiler may not create it", ok: true,
+        why: "Choi et al., IBM, 1999, performed by C2 <b>after inlining</b>. That ordering matters: the analysis sees whatever the inliner has merged into one compiled method, and nothing beyond it." },
+      { t: "That an object is small enough to fit in a register", ok: false,
+        why: "Size is not the criterion. A large object that never escapes can still be dismantled; a tiny one that escapes cannot." },
+      { t: "That an object is immutable, so copies are interchangeable", ok: false,
+        why: "Immutability is not required. What is required is that no reference to the object outlives the compiled method." },
+      { t: "That an object is unreachable, so it can be collected immediately", ok: false,
+        why: "This is stronger and earlier than collection: the object is never allocated in the first place, so there is nothing to collect." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.14 — The three states",
+    stem: `<p>C2 computes an escape state per allocation site. Which state unlocks scalar replacement?</p>`,
+    options: [
+      { t: "<code>NoEscape</code> — the object never leaves the compiled method", ok: true,
+        why: "<code>ArgEscape</code> (passed to a callee but not outliving the caller) buys lock elision and partial optimisation; <code>GlobalEscape</code> (stored to a field, returned, thrown, published) buys nothing and means a real heap allocation." },
+      { t: "<code>ArgEscape</code>", ok: false,
+        why: "Passing the reference to a callee already puts it somewhere the analysis cannot dismantle it. It still permits lock elision and partial optimisation." },
+      { t: "<code>GlobalEscape</code>, provided the field is <code>final</code>", ok: false,
+        why: "<code>GlobalEscape</code> unlocks nothing at all. Finality does not change where the reference can travel." },
+      { t: "Any of the three, once the method is hot enough", ok: false,
+        why: "Heat governs whether C2 compiles the method at all. Given compilation, the escape state governs what is legal." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.15 — Scalar replacement",
+    stem: `<p>What does <code>-XX:+EliminateAllocations</code> do to a <code>NoEscape</code> object?</p>`,
+    options: [
+      { t: "Dismantles it — its fields become JIT-managed values in registers or the frame, and the object never exists", ok: true,
+        why: "Not \"allocated cheaply\": <b>never allocated</b>. This is the mechanism that makes idiomatic FP viable in hot loops — tuples, <code>Option</code>s, small case classes and closures frequently cost nothing once the JIT has warmed up." },
+      { t: "Allocates it on the stack frame instead of the heap", ok: false,
+        why: "A near miss, and the usual folk version. HotSpot does not do stack allocation of objects; it replaces the object with its <em>scalars</em>, which may live in registers and never form an object layout at all." },
+      { t: "Allocates it in a TLAB rather than the shared heap", ok: false,
+        why: "That is ordinary allocation (Part II.5) and applies to every object. Scalar replacement removes the allocation entirely." },
+      { t: "Pools it for reuse across invocations", ok: false,
+        why: "Pooling is the anti-pattern of Part VII.1. Nothing here is reused, because nothing is created." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.16 — What destroys it",
+    stem: `<p>A virtual call site has seen three distinct receiver implementations. What follows for the objects passed through it?</p>`,
+    options: [
+      { t: "The site is megamorphic, so it cannot be inlined; the callee stays opaque and its arguments must escape", ok: true,
+        why: "Escape analysis is a whole-compiled-method analysis, so it dies wherever inlining dies. This is why \"code to an interface with many implementations\" — excellent advice in general — carries a real cost in hot loops, and why a <code>sealed trait</code> with three cases behaves differently from an open interface with twelve." },
+      { t: "Nothing — escape analysis runs before inlining and is unaffected", ok: false,
+        why: "It runs <b>after</b> inlining, on whatever the inliner produced. That ordering is what makes inlining failures propagate into allocation." },
+      { t: "The arguments become <code>ArgEscape</code>, which still permits scalar replacement", ok: false,
+        why: "<code>ArgEscape</code> permits lock elision and partial optimisation, not scalar replacement. And an un-inlined callee is worse than that: the reference is genuinely published beyond the analysis." },
+      { t: "C2 recompiles the site for each receiver type", ok: false,
+        why: "C2 can speculate on one or two receivers and guard the assumption. At three it gives up and emits a virtual dispatch." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.16 — Inlining budget",
+    stem: `<p>Which pair of thresholds does HotSpot apply to method size when deciding to inline?</p>`,
+    options: [
+      { t: "<code>MaxInlineSize</code> at 35 bytecodes, and <code>FreqInlineSize</code> at 325 for hot methods", ok: true,
+        why: "Above 35 a method is inlined only if hot; above 325 essentially never. <b>Long methods are optimisation barriers</b> — small methods are not merely more readable, they are faster, because the optimiser can see across them." },
+      { t: "35 lines of source and 325 lines of source", ok: false,
+        why: "The budget is measured in <b>bytecodes</b>, not source lines. A short line can emit many bytecodes and a long one few." },
+      { t: "One threshold, at 325 bytecodes for all methods", ok: false,
+        why: "There are two, and the lower one is what most methods meet first: 35 bytecodes unless the method is hot." },
+      { t: "A percentage of the caller's size rather than an absolute count", ok: false,
+        why: "Both limits are absolute bytecode counts." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.16 — Cold code",
+    stem: `<p>Why does the guide say a benchmark that runs a loop a hundred times measures <em>a different program</em> from the one running in production?</p>`,
+    options: [
+      { t: "Escape analysis is a C2 optimisation; interpreted and C1-compiled code allocates for real", ok: true,
+        why: "Everything in Part IV applies <b>only after warmup</b> — typically thousands of invocations under tiered compilation. A hundred iterations measure the interpreter and C1, where every allocation is a real one." },
+      { t: "Because a hundred iterations are statistically insufficient", ok: false,
+        why: "Sample size is a separate and lesser problem. Even with perfect statistics, a cold run measures code the optimiser has not yet transformed." },
+      { t: "Because the collector has not run yet, so allocation appears free", ok: false,
+        why: "Inverted: allocation appears <em>expensive</em> in cold code, because the eliminations have not happened. And allocation is cheap regardless of whether a collection has run." },
+      { t: "Because the TLAB is cold and the first allocations take the slow path", ok: false,
+        why: "A TLAB refill is a minor one-off cost. The structural difference is which compiler tier is executing the loop." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.17 — Proving it",
+    stem: `<p>How does the module ask you to establish that scalar replacement happened, rather than believe it did?</p>`,
+    options: [
+      { t: "Measure allocated bytes, then repeat the identical measurement with <code>-XX:-DoEscapeAnalysis</code>; the difference <b>is</b> the scalar replacement", ok: true,
+        why: "Same code, one variable changed — a controlled experiment, and how a scientist establishes a claim rather than repeating one. The reading comes from <code>ThreadMXBean.getThreadAllocatedBytes</code>: take a reading, run the workload, take another, subtract." },
+      { t: "Read the JIT's inlining log and check the allocation site is absent", ok: false,
+        why: "<code>-XX:+PrintInlining</code> is a useful diagnostic, but it reports inlining decisions rather than eliminations, and it demonstrates nothing about bytes." },
+      { t: "Compare wall-clock time with and without the optimisation", ok: false,
+        why: "Timing conflates many effects at once. The allocation counter measures the quantity actually in question." },
+      { t: "Inspect the bytecode with <code>javap</code> and confirm no <code>new</code> is emitted", ok: false,
+        why: "The <code>new</code> is always in the bytecode — the elimination happens in C2, long after. Bytecode inspection cannot see a JIT decision." }
+    ]
+  },
+  // =============================================== Part V — Boxing
+  {
+    tier: "easy", part: "V", src: "Part V.18 — Why an Int becomes an object",
+    stem: `<p>Why does <code>List[Int]</code> store boxed <code>Integer</code>s rather than raw <code>int</code>s?</p>`,
+    options: [
+      { t: "The JVM has no generics at runtime, so the container erases to one of <code>Object</code> — and an <code>Object</code> must be a real heap object", ok: true,
+        why: "That is where the second half of Part I's 10x tax comes from: 24 bytes of cons cell plus 16 bytes of box, to store 4 bytes of payload." },
+      { t: "Because <code>Int</code> in Scala is a reference type", ok: false,
+        why: "<code>scala.Int</code> compiles to the primitive <code>int</code> wherever the type is known. The boxing is forced by the <em>container's</em> erased signature, not by the element type." },
+      { t: "Because <code>List</code> needs to store <code>null</code> for the empty case", ok: false,
+        why: "The empty case is the <code>Nil</code> object, not a null element. The erasure argument applies equally to containers that never store null." },
+      { t: "Because immutable structures cannot hold primitives", ok: false,
+        why: "<code>Array[Int]</code> holds primitives and so does an <code>opaque type</code> over <code>Int</code>. Immutability is unrelated." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.19 — The Integer cache",
+    stem: `<p>A micro-benchmark boxes the values <code>0</code> to <code>100</code> in a loop and reports zero allocation. What has it measured?</p>`,
+    options: [
+      { t: "The <code>Integer.valueOf</code> cache — the JDK hands out 256 pre-built instances for −128..127, so nothing is allocated", ok: true,
+        why: "Box the value 500 instead and you get 16 bytes each time. <b>A micro-benchmark over small integers lies to you about production behaviour</b>, and Exercise 4 deliberately tests outside the cache." },
+      { t: "Scalar replacement eliminating the boxes", ok: false,
+        why: "Plausible, and it is why the two must be told apart: the cache returns a <em>shared existing</em> object, while scalar replacement means no object at all. Switching off escape analysis distinguishes them — the cached figure does not move." },
+      { t: "Genuinely allocation-free boxing, since Scala specialises <code>Int</code>", ok: false,
+        why: "There is no specialisation here; the boxes are real objects. They simply already existed." },
+      { t: "A measurement error, since <code>ThreadMXBean</code> cannot see small allocations", ok: false,
+        why: "The counter is exact and counts every byte. Nothing was allocated because nothing needed to be." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.20 — Escape hatches",
+    stem: `<p><code>Array[Int]</code> is a genuine <code>int[]</code>, 4 bytes per element. What re-introduces boxing on it?</p>`,
+    options: [
+      { t: "Calling <em>generic</em> combinators such as <code>arr.foldLeft</code>, which go through an erased signature", ok: true,
+        why: "An allocation-free traversal therefore needs an explicit recursive walk over indices. Exercise 4 makes you feel this — the array is primitive, and the moment a generic method touches its elements they are boxed on the way through." },
+      { t: "Storing it in a field, which forces the elements to escape", ok: false,
+        why: "Escape analysis concerns the array object, not its element representation. An <code>int[]</code> holds primitives wherever it lives." },
+      { t: "Nothing — an <code>Array[Int]</code> is allocation-free under every operation", ok: false,
+        why: "This is the belief the caveat exists to correct, and it is why the escape hatch is narrower than it looks." },
+      { t: "Reading an element into a <code>val</code>", ok: false,
+        why: "A local <code>val</code> of type <code>Int</code> is a primitive slot. Nothing is boxed by a read into a known-typed local." }
+    ]
+  },
+  // =============================================== Part VI — Collectors
+  {
+    tier: "medium", part: "VI", src: "Part VI.21 — G1",
+    stem: `<p>G1 partitions the heap into about 2048 regions. What is a <b>humongous</b> allocation, and why does it hurt?</p>`,
+    options: [
+      { t: "An object larger than 50% of a region — it bypasses Eden, goes straight into contiguous old regions, and is reclaimed only by the concurrent cycle", ok: true,
+        why: "Note the shape of the pathology: it is a <b>size</b> problem, not a rate one. A workload repeatedly allocating large arrays or long strings degrades badly however modest its allocation rate." },
+      { t: "An allocation that exhausts the TLAB and takes the slow path", ok: false,
+        why: "TLAB exhaustion is routine and cheap — the thread simply requests a fresh buffer. Humongous is about exceeding half a <em>region</em>." },
+      { t: "Any object over 1 MB", ok: false,
+        why: "The threshold is relative: half a region, and regions are 1–32 MB depending on heap size. The same object can be humongous on one heap and ordinary on another." },
+      { t: "An object that survives enough collections to be promoted", ok: false,
+        why: "That is ordinary promotion. A humongous object never passes through Eden at all." }
+    ]
+  },
+  {
+    tier: "hard", part: "VI", src: "Part VI.21 — G1",
+    stem: `<p>What is an <b>evacuation failure</b>, and what does it indicate about the configuration?</p>`,
+    options: [
+      { t: "No free region is available to copy survivors into, so G1 must abort and fix up the heap in place — a long, ugly pause", ok: true,
+        why: "It is what an over-tight heap under high promotion looks like. The collector's entire cheap path depends on having somewhere to evacuate <em>to</em>; when to-space is exhausted, the cheap path is gone." },
+      { t: "The concurrent marking cycle failed to complete before the heap filled", ok: false,
+        why: "That is concurrent mode failure, a related but distinct pathology of the marking phase rather than the copying phase." },
+      { t: "A humongous object could not find contiguous regions", ok: false,
+        why: "That is humongous allocation failure. Evacuation failure concerns ordinary survivors having nowhere to be copied." },
+      { t: "The pause target was missed, so G1 shrinks the collection set", ok: false,
+        why: "Shrinking the collection set is G1 working as designed — it is a pause-target collector. Evacuation failure is the opposite: the plan could not be executed at all." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.22 — ZGC",
+    stem: `<p>ZGC stores GC metadata inside the pointer itself and installs a <b>load barrier</b>. What does that buy, and what does it cost?</p>`,
+    options: [
+      { t: "It buys relocation while the application runs — pauses independent of heap size — and costs a few percent of throughput", ok: true,
+        why: "Every reference read checks the colour bits and self-heals a stale reference, which is what lets objects move under a running application. The trade-off stated plainly: <b>ZGC buys latency with throughput</b>." },
+      { t: "It buys throughput by removing write barriers", ok: false,
+        why: "Exactly inverted on both halves. ZGC adds a barrier on <em>reads</em>, and it spends throughput rather than gaining it." },
+      { t: "It buys smaller heaps, since metadata lives in pointers rather than in side tables", ok: false,
+        why: "The colour bits are free real estate in a 64-bit pointer, so nothing is saved in the heap. What is bought is concurrent relocation." },
+      { t: "It buys deterministic pauses by scheduling collection at fixed intervals", ok: false,
+        why: "Pauses are sub-millisecond because the expensive work happens concurrently, not because it is scheduled." }
+    ]
+  },
+  {
+    tier: "easy", part: "VI", src: "Part VI.23 — Selection",
+    stem: `<p>A latency-critical service with a large heap and high churn. Which collector, and why?</p>`,
+    options: [
+      { t: "Generational ZGC — its pauses are independent of heap size", ok: true,
+        why: "On JDK 21 that is <code>-XX:+UseZGC -XX:+ZGenerational</code>. The selection rule in full: Parallel for batch and ETL where throughput is everything, G1 as the balanced default, ZGC where latency dominates on a large heap." },
+      { t: "Parallel GC — no concurrent-phase overhead means shorter pauses", ok: false,
+        why: "No concurrent overhead means better <em>throughput</em>, at the cost of longer stop-the-world pauses that scale with the heap. It is the batch and ETL choice." },
+      { t: "G1 with <code>MaxGCPauseMillis</code> set very low", ok: false,
+        why: "The pause target is soft. Below a certain point G1 cannot meet it, because its pauses still scale with the survivors it must evacuate." },
+      { t: "Serial GC, to avoid coordination between collector threads", ok: false,
+        why: "Serial is for small heaps and single-core containers. On a large heap its pauses are the longest of all." }
+    ]
+  },
+  // =============================================== Part VII — The cost model
+  {
+    tier: "hard", part: "VII", src: "Part VII.1 — Pooling",
+    stem: `<p>Why does adding an object pool to a hot path frequently make p99 latency <em>worse</em>?</p>`,
+    options: [
+      { t: "It converts cheap young garbage into expensive old-generation live data, and adds barrier traffic on top", ok: true,
+        why: "Both halves of the module land here. Part II.7: garbage costs zero, survival costs everything — a pool makes objects survive. Part III.10: the pool is old, the objects it hands out are fresh, so every return is an old → young store. And it introduces lifecycle bugs. Pools are justified only for genuinely expensive <b>external</b> resources — connections, file descriptors, direct buffers." },
+      { t: "Because pool access must be synchronised, and lock contention dominates", ok: false,
+        why: "Contention is a real cost but a secondary one; a thread-local pool would remove it and the generational damage would remain." },
+      { t: "Because pooled objects are larger than freshly allocated ones", ok: false,
+        why: "They are the same objects. What changes is how long they live." },
+      { t: "It does not — pooling reliably improves p99 by removing allocation", ok: false,
+        why: "Removing allocation removes the cheap thing. The module's whole argument is that allocation was never the expensive event." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.2 — Caches",
+    stem: `<p>The guide says to \"suspect every cache\". What, in the vocabulary of this module, is a cache?</p>`,
+    options: [
+      { t: "A machine for defeating the generational hypothesis", ok: true,
+        why: "It takes objects that would have died young and makes them survive, which inverts the mortality curve the collector is built around. Hence: bound it, measure its hit rate, and know its retained size." },
+      { t: "A structure that trades heap for CPU, and therefore always pays for itself under memory pressure", ok: false,
+        why: "It trades heap for CPU, but \"always pays\" is the assumption being challenged — the heap it costs is <em>old-generation live</em> heap, the most expensive kind." },
+      { t: "A source of write barriers only, with no effect on promotion", ok: false,
+        why: "Barriers are the smaller half. Promotion of objects that would have died free is the larger." },
+      { t: "An application-level concern with no GC consequences", ok: false,
+        why: "It is the single most reliable way to turn a healthy allocation profile into the pathological shape: modest rate, high survival." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.5 — Heap sizing",
+    stem: `<p>\"Size the heap for the live set, not the allocation rate.\" What follows for the nursery and for the old generation?</p>`,
+    options: [
+      { t: "A larger nursery reduces GC frequency almost for free; a larger old generation only defers an expensive problem", ok: true,
+        why: "Frequency follows how fast the nursery fills, so doubling it halves the frequency without changing pause duration. Old-generation space, by contrast, postpones the collection of data that should not have survived in the first place." },
+      { t: "Both should be sized against the allocation rate, since that is what fills them", ok: false,
+        why: "Only the nursery is filled by the allocation rate. The old generation is filled by <em>promotion</em>, which is a different number." },
+      { t: "A larger nursery increases pause duration proportionally", ok: false,
+        why: "Duration follows survivors, not nursery size. A bigger nursery collects less often with the same amount of surviving data per collection." },
+      { t: "Neither matters once ZGC is in use", ok: false,
+        why: "ZGC makes pauses independent of heap size; it does not make a runaway live set free. Sizing for the live set is collector-independent advice." }
+    ]
+  },
+  {
+    tier: "easy", part: "VII", src: "Part VII.3–4 — Method size and polymorphism",
+    stem: `<p>Two of the six cost-model rules concern the optimiser's line of sight. Which pair?</p>`,
+    options: [
+      { t: "Keep hot methods small, and watch polymorphism in hot paths", ok: true,
+        why: "Both are the same underlying fact from Part IV.16: escape analysis is a whole-compiled-method analysis, so it dies wherever inlining dies. A long method is an optimisation barrier; a megamorphic call site is another. A <code>sealed trait</code> with three implementations behaves very differently from an open interface with twelve." },
+      { t: "Avoid pooling, and suspect every cache", ok: false,
+        why: "Those two are about <em>survival</em> — the generational argument of Parts II and III — not about what the optimiser can see." },
+      { t: "Size the heap for the live set, and measure before you argue", ok: false,
+        why: "One is a sizing rule and the other is methodological. Neither concerns inlining." },
+      { t: "Prefer arrays to lists, and prefer <code>opaque type</code> to wrappers", ok: false,
+        why: "Those are Part V's escape hatches from boxing, and neither is among the six rules of the cost model." }
+    ]
+  },
+];
+
+// Every question must offer exactly one correct option. A violation is an
+// authoring error, and it is louder as a console failure than as a silently
+// repaired quiz that then teaches the wrong thing.
+QUESTIONS.forEach((q, i) => {
+  const n = q.options.filter(o => o.ok).length;
+  if (n !== 1) console.error(`question ${i + 1} (${q.src}) has ${n} correct options`);
+});
+
+const list  = document.getElementById("list");
+const empty = document.getElementById("empty");
+const score = document.getElementById("score");
+let tier = "all", part = "all";
+let answered = 0, correct = 0;
+
+const shown = () => QUESTIONS.filter(q =>
+  (tier === "all" || q.tier === tier) && (part === "all" || q.part === part));
+
+function render() {
+  list.textContent = "";
+  const qs = shown();
+  empty.hidden = qs.length > 0;
+
+  qs.forEach((q, idx) => {
+    const card = document.createElement("article");
+    card.className = "q";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span class="tier ${q.tier}">${q.tier}</span><span class="src">${q.src}</span>`;
+    card.appendChild(meta);
+
+    const stem = document.createElement("div");
+    stem.className = "stem";
+    stem.innerHTML = `<p><b>${idx + 1}.</b></p>` + q.stem;
+    card.appendChild(stem);
+
+    const letters = ["A", "B", "C", "D"];
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = (idx * 7 + i * 13 + q.stem.length) % (i + 1);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    let done = false;
+    const buttons = [];
+    order.forEach((oi, pos) => {
+      const o = q.options[oi];
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.type = "button";
+      b.innerHTML = `<span class="k">${letters[pos]}</span>${o.t}`;
+      buttons.push({ b, o });
+      b.addEventListener("click", () => {
+        if (done) return;
+        done = true;
+        answered++;
+        if (o.ok) correct++;
+        updateScore();
+        buttons.forEach(x => { x.b.disabled = true; });
+        b.classList.add(o.ok ? "correct" : "wrong");
+        const why = document.createElement("div");
+        why.className = "why " + (o.ok ? "correct" : "wrong");
+        why.innerHTML = (o.ok ? "<b>Correct.</b> " : "<b>No.</b> ") + o.why;
+        b.insertAdjacentElement("afterend", why);
+        if (!o.ok) {
+          const right = buttons.find(x => x.o.ok);
+          right.b.classList.add("correct");
+          const rw = document.createElement("div");
+          rw.className = "why correct";
+          rw.innerHTML = "<b>The answer.</b> " + right.o.why;
+          right.b.insertAdjacentElement("afterend", rw);
+        }
+      });
+      card.appendChild(b);
+    });
+
+    list.appendChild(card);
+  });
+  updateScore();
+}
+
+function updateScore() {
+  score.innerHTML = `answered <b>${answered}</b>/<b>${shown().length}</b> · correct <b>${correct}</b>`;
+}
+
+function wire(attr, set) {
+  document.querySelectorAll(`button.f[data-${attr}]`).forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(`button.f[data-${attr}]`).forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      set(b.dataset[attr]);
+      answered = 0; correct = 0;
+      render();
+    });
+  });
+}
+wire("tier", v => { tier = v; });
+wire("part", v => { part = v; });
+
+document.getElementById("reset").addEventListener("click", () => {
+  answered = 0; correct = 0; render();
+});
+
+render();
+</script>
+</body>
+</html>

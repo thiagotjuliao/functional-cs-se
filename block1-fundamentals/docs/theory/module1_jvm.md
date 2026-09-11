@@ -628,35 +628,6 @@ In-process, allocation is measured with
 `com.sun.management.ThreadMXBean#getThreadAllocatedBytes` (Part IV.17);
 flight-recorder profiling uses the `jdk.ObjectAllocationSample` event.
 
----
-
-# Self-Check — You Have Not Finished This Module Until You Can Answer
-
-Answer in prose, without running code, into `docs/checklist.md`.
-
-1. Derive the heap cost of `final case class Pair(a: Int, b: Long)` from the
-   layout rules of Part I.4.1, showing the header, the fields and the padding.
-   Then do the same for an `Array[Long]` of 1,000 elements.
-
-2. A service allocates 800 MB/s and shows 3 ms young pauses. Its allocation rate
-   doubles to 1.6 GB/s and pause *duration* stays at 3 ms. Explain precisely why,
-   and state what would have to change for the duration to grow.
-
-3. Why does adding an object pool to a hot path frequently make p99 latency
-   *worse*?
-
-4. Why does an immutable data structure produce cheaper write-barrier traffic
-   than a mutable one, given that it performs strictly more stores overall?
-
-5. You measure zero allocation in a loop that visibly constructs a case class per
-   iteration. Name the optimisation, the compiler tier that performs it, and two
-   distinct code changes that would silently switch it off.
-
-6. `List[Int]` of one million elements: give the heap cost and derive it from the
-   object layout rules. Do the same for `Array[Int]`, and explain the ratio.
-
----
-
 # Where To Go Next
 
 | If you want | Read |
