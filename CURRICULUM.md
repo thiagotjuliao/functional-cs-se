@@ -36,21 +36,39 @@ functional-cs-se/
 
 ## 📊 Schedule & Complexity Overview
 
-| Block | Estimated Duration | Average Complexity | Core Focus |
-| :--- | :---: | :---: | :--- |
-| **1. CS Foundations & Pure FP** | 4 Weeks | ⭐️⭐️ | JVM Semantics, Recursion, Stack Tuning. |
-| **2. Category Theory & Type Systems** | 6 Weeks | ⭐️⭐️⭐️⭐️ | Type-Level Programming, Custom Monads. |
-| **3. Software Engineering & Effects**| 6 Weeks | ⭐️⭐️⭐️⭐️⭐️ | Fiber Runtime, Concurrency, Project Loom. |
-| **4. Distributed Systems & Streams** | 6 Weeks | ⭐️⭐️⭐️⭐️⭐️ | Manual Backpressure, NIO Sockets, Codecs. |
-| **Total Course** | **22 Weeks (~5 Months)** | **High (4.2/5.0)** | Elite Engineer & Scientist Formation. |
-| *Annex Track* | *As needed* | *Varies* | *Assumed prerequisites, on demand.* |
+Complexity is rated on **two axes**, because a single number hides which kind of
+work a block actually is.
+
+* **Abstraction** — how much has to be held in the type system at once: variance,
+  higher-kinded types, algebraic laws, type-level computation.
+* **Machine** — how much has to be *known* about a specific implementation:
+  object layout, collector behaviour, JIT decisions, wire formats. Facts rather
+  than derivations, and each one is a fact about HotSpot, not about computing.
+
+The two are close to independent, and a block can be heavy on one while being
+light on the other. Block 1 and Block 2 are near mirrors of each other.
+
+| Block | Estimated Duration | Abstraction | Machine | Core Focus |
+| :--- | :---: | :---: | :---: | :--- |
+| **1. CS Foundations & Pure FP** | 4 Weeks | ⭐️⭐️ | ⭐️⭐️⭐️⭐️ | JVM Semantics, Recursion, Stack Tuning. |
+| **2. Category Theory & Type Systems** | 6 Weeks | ⭐️⭐️⭐️⭐️ | ⭐️⭐️ | Type-Level Programming, Custom Monads. |
+| **3. Software Engineering & Effects**| 6 Weeks | ⭐️⭐️⭐️⭐️ | ⭐️⭐️⭐️⭐️⭐️ | Fiber Runtime, Concurrency, Project Loom. |
+| **4. Distributed Systems & Streams** | 6 Weeks | ⭐️⭐️⭐️⭐️⭐️ | ⭐️⭐️⭐️⭐️ | Manual Backpressure, NIO Sockets, Codecs. |
+| **Total Course** | **22 Weeks (~5 Months)** | **3.8/5.0** | **3.8/5.0** | Elite Engineer & Scientist Formation. |
+| *Annex Track* | *As needed* | *Varies* | *Varies* | *Assumed prerequisites, on demand.* |
+
+**Read the two columns before starting a block, not after.** Block 1 looks easy
+on the abstraction axis and is not a light block: nothing it asks you to *write*
+goes beyond `enum`, `extension` and `@tailrec`, while what it asks you to *know*
+runs from object headers through card tables to megamorphic call sites. Block 3
+is the only one heavy on both at once, and should be budgeted accordingly.
 
 ---
 
 ## 📚 Detailed Block Curriculum
 
 ### 📂 Subproject 1: `block1-fundamentals`
-* **Duration:** 4 Weeks | **Complexity:** ⭐️⭐️
+* **Duration:** 4 Weeks | **Abstraction:** ⭐️⭐️ | **Machine:** ⭐️⭐️⭐️⭐️
 * **Focus:** Low-level JVM memory management under immutability stress, loop elimination, and functional persistent data structures.
 
 * **Module 1: JVM Semantics & Immutability Allocation Stress (Week 1)**
@@ -70,7 +88,7 @@ functional-cs-se/
 ---
 
 ### 📂 Subproject 2: `block2-category-types`
-* **Duration:** 6 Weeks | **Complexity:** ⭐️⭐️⭐️⭐️
+* **Duration:** 6 Weeks | **Abstraction:** ⭐️⭐️⭐️⭐️ | **Machine:** ⭐️⭐️
 * **Focus:** Mapping Category Theory to production software design, type-driven boundaries, and mathematical property verifications.
 
 * **Module 4: Domain-Driven Design via Algebraic & Opaque Types (Week 5)**
@@ -92,7 +110,7 @@ functional-cs-se/
 ---
 
 ### 📂 Subproject 3: `block3-effects-concurrency`
-* **Duration:** 6 Weeks | **Complexity:** ⭐️⭐️⭐️⭐️⭐️
+* **Duration:** 6 Weeks | **Abstraction:** ⭐️⭐️⭐️⭐️ | **Machine:** ⭐️⭐️⭐️⭐️⭐️
 * **Focus:** Computations suspension, lazy evaluation mechanics, designing custom asynchronous green-thread schedulers, and Loom virtualization.
 
 * **Module 7: Eager vs. Lazy Evaluation & Trampolining Mechanics (Week 11)**
@@ -113,7 +131,7 @@ functional-cs-se/
 ---
 
 ### 📂 Subproject 4: `block4-distributed-streams`
-* **Duration:** 6 Weeks | **Complexity:** ⭐️⭐️⭐️⭐️⭐️
+* **Duration:** 6 Weeks | **Abstraction:** ⭐️⭐️⭐️⭐️⭐️ | **Machine:** ⭐️⭐️⭐️⭐️
 * **Focus:** Infinite data stream pipes with explicit backpressure, bulletproof resource safety, low-level binary codecs, and high-performance network programming.
 
 * **Module 10: Reactive Streaming Foundations & Manual Backpressure (Week 17)**
