@@ -226,7 +226,7 @@ Verified by reading your own diff before committing:
         `tooling` now names changes to the development environment, kept separate
         from `build` because one alters what the compiler does and the other
         alters only what the author sees.
-- [ ] Annotated milestone tag `a1-bitwise-arithmetic` created, using the message
+- [x] Annotated milestone tag `a1-bitwise-arithmetic` created, using the message
       template in `docs/git-conventions.md`, with a real entry under `Learned:`.
 
 ### G. Oral Defence

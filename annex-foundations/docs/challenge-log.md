@@ -23,6 +23,7 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E7 `Packing` | 3 | recorded |
 | E8 `BitmapIndex` | 3 | recorded |
 | E9 `VarIntCodec` | 3 | recorded |
+| Carried over from the Self-Check | 2 | recorded |
 
 ---
 
@@ -1291,3 +1292,158 @@ rescued a wrong expression, while here it is a structural property of the
 format. `|` is still the better spelling — not for correctness, but because it
 states "place these bits here" instead of asking the reader to verify that no
 carry occurs.
+---
+
+## Carried Over — questions inherited from the removed Self-Check
+
+The guide's Self-Check was dropped in favour of this round (contract rule 10).
+Four of its six questions were already covered here or in the recall set; these
+two were not, and are asked as challenges rather than lost.
+
+### 29. A colleague writes `def mod(x: Int, n: Int): Int = x & (n - 1)` and every test passes. What did the tests fail to violate?
+
+**Two preconditions, not one**, and the second survives the first being met.
+
+**`n` must be a power of two.** For `n = 2ᵏ`, `n - 1` is a mask of `k` ones and
+keeping the low `k` bits *is* the remainder (§IV.19). For anything else the
+identity is simply false:
+
+```text
+mod(9, 6) = 9 & 5 = 0b1001 & 0b0101 = 0b0001 = 1        9 % 6 = 3
+```
+
+**`x` must be non-negative** — and this one holds even when `n` is a power of
+two, which is what makes it the harder half. With `n = 8`:
+
+```text
+x       x & (n-1)   x % n    floorMod(x,n)   agree?
+-----   ---------   ------   -------------   ------
+ 0          0          0           0         yes
+ 5          5          5           5         yes
+ 9          1          1           1         yes
+-1          7         -1           7         NO
+-5          3         -5           3         NO
+-9          7         -1           7         NO
+-16         0          0           0         yes
+```
+
+Over 500,000 random `x` with `n` a power of two, **47.7% disagree** with `%`.
+Against `Math.floorMod` the same 500,000 disagree **zero** times.
+
+That second measurement is the real finding: the function is not broken, it
+implements a **different operation**. Masking clears the high bits, sign
+included, so the result always lands in `[0, n)` — the *floored* modulus. Java's
+`%` is the *truncated* remainder, whose sign follows the dividend.
+
+**And this pair has been met before.** `%` is defined as `x - (x / n) * n`, so it
+inherits its rounding convention from `/`:
+
+```text
+division   >>       rounds toward -infinity        /   truncates toward zero   (§III.15)
+modulus    & (n-1)  is floorMod                    %   is rem                  (here)
+```
+
+The same floor-versus-truncate split that separated `floorDiv2` from `x / 2` in
+E2, reappearing in the modulus, and diverging over exactly the same half of the
+domain — which is why a suite of friendly inputs never notices either.
+
+The repair is therefore a choice between two contracts, not a fix to the code:
+
+```text
+"precondition: n is a power of two AND x >= 0"   keeps the equivalence with %
+"this function is floorMod, not %"               changes the contract, not the body
+```
+
+In a hash table — where the technique comes from — the second is usually right: a
+bucket index must never be negative, and `& (n-1)` guarantees that while `%` does
+not.
+
+E3's own `modPowerOfTwo` had already settled both halves. Its Scaladoc says *"For
+non-negative `x` the result must equal `x % n`"* — asserting the equivalence only
+where it holds — and the precondition on `n` is encoded in the return type rather
+than trusted to the caller:
+
+```scala
+def modPowerOfTwo(x: Int, n: Int): Option[Int] =
+  if !isPowerOfTwo(n) then None
+  else Some(x & (n - 1))
+```
+
+The colleague is writing that function with both guards removed.
+
+### 30. Why is a HAMT's branching factor 32 rather than 8 or 128?
+
+Three quantities are in tension, and one of the three candidates is eliminated by
+impossibility rather than by balance.
+
+**Depth is logarithmic, not a quotient.** A trie divides the key space by `b` at
+*every* level, so depth is `log_b(n)`:
+
+```text
+b     bits/level   log_b(10⁶)   levels
+---   ----------   ----------   ------
+  8       3           6.64         7
+ 32       5           3.99         4
+128       7           2.85         3
+```
+
+**The bitmap is the hard constraint.** A node with `b` slots needs `b` bits of
+occupancy:
+
+```text
+b     bits needed   fits an Int (32)?   fits a Long (64)?
+---   -----------   -----------------   -----------------
+  8        8              yes                 yes
+ 32       32              yes                 yes
+128      128              NO                  NO
+```
+
+128 slots fit in no JVM word at all. The whole economy of §IV.20 rests on
+
+```scala
+val physical = Integer.bitCount(bitmap & (bit - 1))   // one POPCNT
+```
+
+and with four words that becomes a sum of partial counts plus a branch to decide
+which words enter whole and which enters masked. `physicalIndex` stops being an
+expression and becomes a loop. **128 is not outscored — it is ruled out.**
+
+**Why 32 beats 8, even though 8 copies less.** The persistent-insert cost appears
+to favour the smaller factor:
+
+```text
+b     levels   copy/level   refs copied, worst case
+---   ------   ----------   -----------------------
+  8      7          8                 56
+ 32      4         32                128
+128      3        128                384
+```
+
+But the two quantities are not priced alike per unit:
+
+```text
+descending a level   chase a pointer into a node probably not in cache
+                     -> a cache miss, ~100+ cycles
+
+copying a reference  contiguous read and write, vectorisable, prefetchable
+                     -> a fraction of a cycle, amortised
+```
+
+Seven levels against four is **three extra cache misses per operation**, which
+comfortably outweighs 72 additional contiguous references. A full dense array of
+32 references occupies 128 bytes under compressed oops — exactly two cache lines,
+fetched together. And a factor of 8 wastes 24 of the 32 bits of the word it still
+has to pay for.
+
+**The hash budget closes the argument.** A 32-bit hash is a finite supply, spent
+`log2(b)` bits per level:
+
+```text
+b=8     3 bits/level  ->  32/3 = 10.7 levels available
+b=32    5 bits/level  ->  32/5 =  6.4 available against 4 needed   comfortable
+b=128   7 bits/level  ->  32/7 =  4.6 available against 3 needed   tight
+```
+
+32 is the only value where all three close at once: the bitmap is exactly one
+word, the physical index is one instruction, the hash has margin over the depth
+actually required, and a full node's dense array is two cache lines.
