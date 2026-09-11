@@ -199,8 +199,22 @@ compressed oops on, Windows 11, in the forked test JVM that `build.sbt` pins to
 ### F. Engineering Hygiene
 
 - [x] All code formatted (`sbt scalafmtAll`) with no manual override.
-- [ ] Every public definition carries a Scaladoc stating its **contract**, not a
+- [x] Every public definition carries a Scaladoc stating its **contract**, not a
       restatement of its name.
+
+      Audited mechanically rather than by impression. Nine public definitions
+      had no Scaladoc at all and now do: `Footprint`'s eight layout constants and
+      `AllocationProbe.bean`. The constants follow the rule stated by pattern 4
+      of [`error-patterns.md`](error-patterns.md) — each names the assertion that
+      would fail if its value were wrong, or admits that none would and gives
+      the range it could still take. `bean` carries the three preconditions its
+      type cannot express.
+
+      What the audit still reports, and why it is not a gap: ten method-**local**
+      bindings (`loop`, `timedRuns`, `firstReading`, `headAndTail` and the like),
+      which are not public definitions, and the companion objects `Vec2` and
+      `Shape`, whose contract is stated by the class and the enum immediately
+      above them and whose every member is documented.
 - [x] Commits follow `docs/git-conventions.md` (`b1-m1: <imperative summary>`),
       one commit per concept proven.
 - [ ] Annotated milestone tag `b1-m1-jvm-semantics` created, using the message
