@@ -22,7 +22,7 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E6 `BitSet64` | 7 | recorded |
 | E7 `Packing` | 3 | recorded |
 | E8 `BitmapIndex` | 3 | recorded |
-| E9 `VarIntCodec` | — | pending |
+| E9 `VarIntCodec` | 3 | recorded |
 
 ---
 
@@ -1129,3 +1129,165 @@ mean nothing.
 That coupling is exactly what `inserted` preserves by splicing at
 `physicalIndex` rather than appending. Appending would be cheaper and would
 destroy the invariant on the first out-of-order insertion.
+---
+
+## E9 — `VarIntCodec`
+
+### 26. `decode` accepts encodings that `encode` never produces. What does that cost?
+
+Five distinct byte strings decode to `-1`, and the encoder emits only the first:
+
+```text
+input                                          decode
+--------------------------------------------  ---------
+00000001                                       Some(-1)   <- canonical
+10000001 00000000                              Some(-1)
+10000001 10000000 00000000                     Some(-1)
+10000001 10000000 10000000 10000000 00000000   Some(-1)
+00000000                                       Some(0)    <- canonical
+10000000 00000000                              Some(0)
+
+encode(-1) = 00000001        encode(0) = 00000000
+```
+
+This does not violate the Scaladoc, which asks `decode` to reject truncated,
+malformed and trailing input and says nothing about canonicity. Standard LEB128
+behaves the same way. It is a property to know one has, not a defect.
+
+**What it costs.** The round trip holds in one direction only:
+
+```text
+decode(encode(n)) == Some(n)     verified over 200,017 values
+encode(decode(bs)) == bs         FALSE for every non-canonical bs
+```
+
+A protocol signs, hashes and deduplicates **bytes**, not values. While each value
+has exactly one representation, "same value" and "same bytes" are
+interchangeable and either can proxy for the other. Multiple representations
+break that, and the simplest consequence is replay:
+
+```text
+original frame     00000001             hash H1  -> accepted, executed
+same command       10000001 00000000    hash H2  -> passes deduplication,
+                                                    executed AGAIN
+```
+
+No signature is forged and no key is guessed. An attacker rewrites the varint
+into an equivalent form and the layer that guaranteed at-most-once delivery
+fails to recognise the repeat, because it compares bytes while the meaning lives
+one level up.
+
+The same shape appears wherever an identity is derived from bytes: transaction
+malleability in Bitcoin, merkle roots diverging between nodes that received
+different forms of the same block, idempotency keys, content-addressed caches.
+
+**The missing check** is the encoder's own rule read from the other side:
+
+```text
+an encoding is canonical  <=>  the final byte has a non-zero payload,
+                               or it is the only byte
+```
+
+A final byte with a zero payload contributes no bits, so the previous byte could
+already have terminated the varint. In the loop this is a condition on the
+terminating branch: with `k > 0` and a zero payload, return `None`.
+
+### 27. `decodeAt` allocates four objects per call. Which are they, and when can the JVM remove them?
+
+```text
+public scala.Option<scala.Tuple2<java.lang.Object, java.lang.Object>> decodeAt(byte[], int)
+                                              ^^^^^^^^^^^^^^^^^^^^^
+```
+
+`Option[(Int, Int)]` stacks the two patterns this annex has already recorded:
+
+```text
+Some       ─┐
+Integer    ─┴─ challenge 22 (E7):  Option[Int] allocates the Some and boxes the Int
+Tuple2     ─┐
+Integer    ─┴─ challenge 17 (E6):  Tuple2 stores references, so primitives are boxed
+```
+
+For contrast, the two methods that return primitives escaped entirely:
+`public byte[] encode(int)` and `public int encodedSize(int)`.
+
+**The condition for removal** is challenge 22's: scalar replacement needs a
+`NoEscape` proof, and the `Some` is *returned* from `decodeAt`, so it escapes by
+definition. It can only be dissolved if C2 **inlines `decodeAt` into its caller**
+and proves there that nothing retains it.
+
+**Two things threaten that in the spec's fold:**
+
+```scala
+values.foldLeft(...) { (acc, _) =>
+  acc.flatMap { (seen, offset) =>
+    VarIntCodec.decodeAt(buffer, offset).map((v, next) => (v :: seen, next))
+  }
+}
+```
+
+The chain is `foldLeft` → lambda → `flatMap` → lambda → `decodeAt` → `loop` →
+`map` → lambda. Every link spends one level of C2's inlining budget
+(`MaxInlineLevel`, 9 by default) and must also fit the size limits. If the chain
+runs too deep, `decodeAt` is never inlined and none of the four allocations can
+go.
+
+Second, `foldLeft` on `List` dispatches virtually. Should that call site observe
+three or more collection implementations over the life of the process it becomes
+**megamorphic**, and C2 stops inlining there — the same cause that flattened the
+measurements in challenge 9.
+
+### 28. The accumulator uses `+` where the idiom is `|`. When do they coincide?
+
+Exactly, and with one condition:
+
+```text
+a + b  ==  a | b      if and only if      a & b == 0
+```
+
+With no shared set bits no column produces a carry, and addition degenerates
+position by position into OR. Verified over 500,000 random pairs with no
+counterexample in either direction:
+
+```text
+a       b       a & b   a + b   a | b   equal?
+-----   -----   -----   -----   -----   ------
+1010    0101    0       15      15      yes
+1100    0011    0       15      15      yes
+1010    0110    0010    16      14      no
+1111    0001    0001    16      15      no
+```
+
+**Why the loop guarantees it.** Each group occupies exactly seven positions and
+the shifts are multiples of seven:
+
+```text
+k    shift   positions occupied by (payload << shift)
+0    0       0..6
+1    7       7..13
+2    14      14..20
+3    21      21..27
+4    28      28..31
+```
+
+No position is claimed twice. The accumulator holds only bits below `shift`; the
+new term holds only bits from `shift` up. The intersection is always empty.
+
+**The symmetry with challenge 14** is what carries beyond this exercise:
+
+```text
+E6   (s∪t) - (s∩t)  ==  (s∪t) ^ (s∩t)     because s∩t ⊆ s∪t    -> never a BORROW
+E9   acc + (p<<k)   ==  acc | (p<<k)      because disjoint     -> never a CARRY
+```
+
+A subtraction that became an XOR and an addition that became an OR, for the same
+underlying reason: **when nothing propagates between positions, the arithmetic
+operation degenerates into the bitwise one.** Carry and borrow are the only
+coupling between columns; remove the coupling and Boolean algebra is what
+remains.
+
+The practical difference is that in E6 the coincidence was an accident that
+rescued a wrong expression, while here it is a structural property of the
+format. `|` is still the better spelling — not for correctness, but because it
+states "place these bits here" instead of asking the reader to verify that no
+carry occurs.

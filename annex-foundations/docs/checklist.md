@@ -56,7 +56,7 @@ by the suites in `src/test/scala/cs/se/annex/a1/`.
       RGBA byte codec, with roundtrip laws.
 - [x] **E8 `BitmapIndex`** *(Hard)* — the HAMT node primitive: `hasSlot`,
       `physicalIndex`, `insertAt`, `removeAt` over a persistent array.
-- [ ] **E9 `VarIntCodec`** *(Hard)* — zig-zag plus LEB128, with a roundtrip law
+- [x] **E9 `VarIntCodec`** *(Hard)* — zig-zag plus LEB128, with a roundtrip law
       over the whole `Int` range and a size bound.
 
 ### C. Correctness Gate
