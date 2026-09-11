@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1-M2 — Persistent Structures · Recall Set</title>
+<style>
+  :root {
+    --bg: #fbfaf8;      --panel: #ffffff;   --ink: #1b1a18;
+    --muted: #6b6862;   --line: #e3e0da;    --accent: #7a4b2a;
+    --ok-bg: #eef5ec;   --ok-line: #7fa86c; --ok-ink: #33552a;
+    --no-bg: #fbeeea;   --no-line: #c07a63; --no-ink: #7a3320;
+    --code-bg: #f4f2ee;
+    --easy: #5d7a8c;    --medium: #8a6d3b;  --hard: #8c4a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161a;    --panel: #1f1e23;   --ink: #e8e4dd;
+      --muted: #9b958c; --line: #34323a;    --accent: #d5a37a;
+      --ok-bg: #1c2a1b;  --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+      --no-bg: #2c1c19;  --no-line: #9a5c48; --no-ink: #e0a08c;
+      --code-bg: #17161a;
+      --easy: #8fb0c4;  --medium: #c8a468;  --hard: #cc8080;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161a;      --panel: #1f1e23;   --ink: #e8e4dd;
+    --muted: #9b958c;   --line: #34323a;    --accent: #d5a37a;
+    --ok-bg: #1c2a1b;   --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+    --no-bg: #2c1c19;   --no-line: #9a5c48; --no-ink: #e0a08c;
+    --code-bg: #17161a;
+    --easy: #8fb0c4;    --medium: #c8a468;  --hard: #cc8080;
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 0 20px 80px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header { padding: 44px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 25px; margin: 0 0 8px; letter-spacing: -0.01em; font-weight: 620; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .sub code { font-size: 12.5px; }
+
+  .note {
+    margin: 22px 0 0; padding: 13px 16px; border-left: 2px solid var(--accent);
+    background: var(--panel); font-size: 13.5px; color: var(--muted);
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  .bar .grow { flex: 1 1 auto; }
+  .bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
+  button.f {
+    font: inherit; font-size: 13px; padding: 5px 11px; cursor: pointer;
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  button.f[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+  button.f:hover { color: var(--ink); }
+  #score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #score b { color: var(--ink); font-weight: 620; }
+
+  .q {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 20px 22px; margin: 20px 0;
+  }
+  .meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .tier {
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    font-weight: 680; padding: 2px 7px; border-radius: 3px; border: 1px solid;
+  }
+  .tier.easy   { color: var(--easy);   border-color: var(--easy); }
+  .tier.medium { color: var(--medium); border-color: var(--medium); }
+  .tier.hard   { color: var(--hard);   border-color: var(--hard); }
+  .src { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stem { margin: 0 0 15px; }
+  .stem p { margin: 0 0 10px; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 11px 13px; overflow-x: auto; margin: 11px 0;
+    font: 12.5px/1.55 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg); padding: 1px 4px; border-radius: 3px;
+    font: 0.9em/1 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .opt {
+    display: block; width: 100%; text-align: left; font: inherit;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 10px 13px; margin: 7px 0; cursor: pointer;
+  }
+  .opt:hover:not([disabled]) { border-color: var(--accent); }
+  .opt[disabled] { cursor: default; }
+  .opt .k { color: var(--muted); font-weight: 620; margin-right: 8px; }
+  .opt.correct { background: var(--ok-bg); border-color: var(--ok-line); }
+  .opt.wrong   { background: var(--no-bg); border-color: var(--no-line); }
+
+  .why {
+    margin: 9px 0 3px; padding: 11px 14px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid;
+  }
+  .why.correct { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+  .why.wrong   { background: var(--no-bg); border-color: var(--no-line); color: var(--no-ink); }
+  .why pre { background: rgba(127,127,127,0.10); border-color: transparent; }
+  .why code { background: rgba(127,127,127,0.14); }
+  .why b { font-weight: 660; }
+
+  footer {
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--muted);
+  }
+  #empty { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>B1-M2 — Persistent Structures · Recall Set</h1>
+  <p class="sub">Anchored to <code>docs/theory/module2_structures.md</code>. Every question cites the section that teaches it; every distractor is a wrong answer that section already documents.</p>
+  <div class="note">
+    <strong>Mechanism only — no exercise is solved here.</strong> This set tests what the
+    guide teaches, so it is usable the moment you finish reading a Part, long before
+    the exercises. Multiple choice measures recognition; the
+    <code>challenge-log.md</code> measures derivation, and it is the one that closes
+    the Oral Defence. Use this to sharpen discrimination between near-identical
+    alternatives — <code>::</code> against <code>:+</code>, what an operation
+    <em>costs</em> against what it <em>retains</em>, a path against a whole
+    structure — and never as a substitute for writing a derivation out.
+  </div>
+</header>
+
+<div class="bar">
+  <button class="f" data-tier="all"    aria-pressed="true">All</button>
+  <button class="f" data-tier="easy"   aria-pressed="false">Easy</button>
+  <button class="f" data-tier="medium" aria-pressed="false">Medium</button>
+  <button class="f" data-tier="hard"   aria-pressed="false">Hard</button>
+  <span class="sep"></span>
+  <button class="f" data-part="all"  aria-pressed="true">All parts</button>
+  <button class="f" data-part="I"    aria-pressed="false">I</button>
+  <button class="f" data-part="II"   aria-pressed="false">II</button>
+  <button class="f" data-part="III"  aria-pressed="false">III</button>
+  <button class="f" data-part="IV"   aria-pressed="false">IV</button>
+  <button class="f" data-part="V"    aria-pressed="false">V</button>
+  <button class="f" data-part="VI"   aria-pressed="false">VI</button>
+  <button class="f" data-part="VII"  aria-pressed="false">VII</button>
+  <span class="grow"></span>
+  <span id="score">answered <b>0</b>/<b>0</b> · correct <b>0</b></span>
+  <button class="f" id="reset">Reset</button>
+</div>
+
+<main id="list"></main>
+<div id="empty" hidden>No questions match this filter.</div>
+
+<footer>
+  Extend as new Parts are written, keeping every distractor sourced from the
+  guide rather than invented — and keeping exercise solutions out.
+</footer>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    tier: "easy", part: "I", src: "Part I.1 — The question this module answers",
+    stem: `<p>A 24 MB structure is updated at exactly one position. Which pair of costs is right?</p>`,
+    options: [
+      { t: "Array: 24 MB to produce a new version. Tree: 504 bytes.", ok: true,
+        why: "§1 and §15. The array must be copied whole; the tree rebuilds only the path from the root to the change and shares everything else. Five orders of magnitude, with the immutable structure on the cheap side." },
+      { t: "Array: 504 bytes. Tree: 24 MB.", ok: false,
+        why: "Backwards. The array is the one that has no way to share — a new version differs from the old at one index, and there is nowhere to put that difference except a full copy." },
+      { t: "Both 24 MB — immutability means copying.", ok: false,
+        why: "This is the obvious first attempt §9 presents and refutes. Copying is what you do when you cannot point at the old parts; immutability is exactly what makes pointing at them safe." },
+      { t: "Both 504 bytes — the JVM shares array contents too.", ok: false,
+        why: "There is no sharing inside an array: its elements are laid out contiguously in one object, so a new version cannot reuse part of the old one's storage." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — The shape",
+    stem: `<p>How many <code>Nil</code> objects exist in a running program that holds a thousand empty lists?</p>`,
+    options: [
+      { t: "One. <code>Nil</code> is a shared singleton.", ok: true,
+        why: "§2 and §25. <code>Nil</code> has no parameters, so Scala 3 compiles it to a single value rather than a class. There are no fields for two empty lists to differ in, so there is nothing to copy." },
+      { t: "A thousand — one per list.", ok: false,
+        why: "That would be true for a case with parameters. An empty list carries no data at all, so one instance serves every use." },
+      { t: "A thousand, but they are interned like strings.", ok: false,
+        why: "No interning is involved. The singleton is produced by the compiler because the case has no parameters, not by a runtime lookup table." },
+      { t: "Zero — <code>Nil</code> is <code>null</code>.", ok: false,
+        why: "§21. <code>Nil</code> is a legitimate value of the type, not the absence of one. That is precisely what lets a <code>match</code> handle it as a case rather than as a failure." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.3 — What one cell costs",
+    stem: `<p>A cons cell holds a <code>head</code> reference and a <code>tail</code> reference. With compressed oops, what does one cost?</p>`,
+    options: [
+      { t: "<code>24</code> bytes", ok: true,
+        why: "<code>shallowSize(2,0,0,0,0) = align8(12 + 4 + 4) = align8(20) = 24</code>. The same arithmetic you implemented in Module 1, Exercise 7." },
+      { t: "<code>8</code> bytes — just the two references", ok: false,
+        why: "Every object carries the 12-byte header before any field, and the total is padded to a multiple of 8." },
+      { t: "<code>20</code> bytes", ok: false,
+        why: "The unpadded sum. §3 runs it through <code>align8</code>, which takes 20 to 24." },
+      { t: "<code>16</code> bytes", ok: false,
+        why: "16 is a field-less object or a boxed <code>Integer</code>. Two references need 8 bytes on top of the 12-byte header." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3 — What one cell costs",
+    stem: `<p>A binary tree node holds a value reference and two child references — three references. What does it cost?</p>`,
+    options: [
+      { t: "<code>24</code> bytes — the same as a cons cell", ok: true,
+        why: "<code>align8(12 + 4 + 4 + 4) = align8(24) = 24</code>. The third reference lands inside padding the two-reference cell was already paying for, so it is free. §3." },
+      { t: "<code>32</code> bytes — one reference more than a cons cell", ok: false,
+        why: "That assumes the extra 4 bytes push the object into a new 8-byte bucket. They do not: a cons cell's 20 bytes were padded to 24, and 24 is exactly what three references plus the header need." },
+      { t: "<code>28</code> bytes", ok: false,
+        why: "28 is not a multiple of 8, so it is not a possible object size. The raw sum here is 24, which is already aligned." },
+      { t: "<code>36</code> bytes", ok: false,
+        why: "Not a multiple of 8, and it counts 8 bytes per reference — the uncompressed layout, which applies only above ~32 GB of heap." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4 — The two ends",
+    stem: `<p>Over a list of 100,000 elements, how many bytes does <code>x :: xs</code> allocate?</p>`,
+    options: [
+      { t: "24 — one cell, and the number does not depend on <code>n</code>", ok: true,
+        why: "Measured. One new cell whose tail points at the list that already existed. The old list is not touched, not copied, not even read. §4 and §10." },
+      { t: "2,400,000 — one cell per element", ok: false,
+        why: "That is the measured cost of <code>xs :+ x</code> or of <code>reverse</code>, both of which rebuild the whole spine. Prepend rebuilds nothing." },
+      { t: "40 — a cell plus a boxed element", ok: false,
+        why: "The element already exists; prepend does not box or copy it. 40 bytes per element is Module 1's <code>List[Int]</code> figure, which is about holding a list, not about extending one." },
+      { t: "48 — the new cell plus a new <code>Nil</code>", ok: false,
+        why: "<code>Nil</code> is a singleton and is never allocated. §2." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.4 — The two ends",
+    stem: `<p>Why must appending to the back of an immutable list rebuild every cell?</p>`,
+    options: [
+      { t: "The last cell's <code>tail</code> would have to change, and changing it is forbidden — so it must be rebuilt, which forces its parent to be rebuilt, and so on to the front.", ok: true,
+        why: "§4. The cascade runs backwards along the arrows, and since the arrows point one way, it reaches the front. That is the whole reason the two ends are asymmetric." },
+      { t: "The elements have to be copied into new positions.", ok: false,
+        why: "The elements are shared, not copied. Only the spine — the cells — is rebuilt. §12 makes the distinction explicit." },
+      { t: "The list must be traversed to find its length first.", ok: false,
+        why: "No length is needed. The cost is in rebuilding cells, not in measuring the list." },
+      { t: "It does not — Scala's <code>:+</code> mutates the last cell internally.", ok: false,
+        why: "Nothing is mutated. The measured 2,400,104 bytes over 100,000 elements is exactly the 100,000 fresh cells this cascade produces." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.5 — Counting operations",
+    stem: `<p>Algorithm A is <code>O(n)</code> with a constant of 10,000. Algorithm B is <code>O(n²)</code> with a constant of 1. Which is faster on <code>n = 100</code>?</p>`,
+    options: [
+      { t: "B — asymptotics says who wins eventually, not who wins on your input.", ok: true,
+        why: "§5 states this cost explicitly: 10,000 × 100 = 1,000,000 against 100² = 10,000. A wins only once n passes 10,000. Discarding constants is an abstraction, and it has a price." },
+      { t: "A — <code>O(n)</code> always beats <code>O(n²)</code>.", ok: false,
+        why: "Only beyond the crossover point. §6 defines <code>O</code> as a bound that holds 'beyond some input size', and that qualifier is doing real work." },
+      { t: "They are equal — constants cancel out.", ok: false,
+        why: "Constants are discarded from the notation, not from reality. The notation is about growth; the running program pays the constant." },
+      { t: "Impossible to say without measuring.", ok: false,
+        why: "Both costs are given as closed forms here, so they can be compared directly. Measuring is what §7 is for, when the constants are not known." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.6 — The notation",
+    stem: `<p>A balanced structure of one million elements needs 20 steps to reach any item. How many does it need at one billion?</p>`,
+    options: [
+      { t: "30", ok: true,
+        why: "§6's table. <code>log2(10^9) ≈ 30</code>. A thousandfold increase in data buys ten extra steps — which is why trees exist." },
+      { t: "20,000 — a thousand times as many", ok: false,
+        why: "That is how <code>O(n)</code> would grow. Logarithmic growth adds a constant number of steps per doubling, not a factor." },
+      { t: "40 — double, because the data is more than doubled", ok: false,
+        why: "Doubling the steps would mean squaring the data size, not multiplying it by a thousand. From 10^6 to 10^9 is about ten doublings, so ten steps." },
+      { t: "20 — logarithmic means constant", ok: false,
+        why: "<code>O(log n)</code> grows, just very slowly. <code>O(1)</code> is the one that does not depend on n at all." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.7 — The doubling test",
+    stem: `<p>You double <code>n</code> and the allocated bytes multiply by about 4, three times running. What is the complexity class?</p>`,
+    options: [
+      { t: "<code>O(n²)</code>", ok: true,
+        why: "§7. Quadrupling per doubling is the signature of a squared term, and the measured append column — 3.964, 3.994, 3.998 — converges on exactly 4." },
+      { t: "<code>O(n)</code>", ok: false,
+        why: "Linear cost doubles when n doubles. The measured prepend column does that: 1.881, 2.012, 2.006." },
+      { t: "<code>O(log n)</code>", ok: false,
+        why: "Logarithmic cost goes up by a fixed step per doubling, not by a factor at all." },
+      { t: "<code>O(n log n)</code>", ok: false,
+        why: "That grows slightly faster than doubling — a factor of a bit over 2 per doubling, not 4." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.7 — The doubling test",
+    stem: `<p>Building a 16,000-element list by repeated <code>append</code> allocated 3,073,467,896 bytes — about 3 GB. What makes this defect hard to catch in review?</p>`,
+    options: [
+      { t: "There is no nested loop to see: the inner <code>O(n)</code> traversal is hidden inside the <code>:+</code> operator.", ok: true,
+        why: "§7 and §17. The quadratic is a single fold over a single collection; the second traversal lives inside an operator that reads as one step. The only visible clue is one character of difference from the linear version." },
+      { t: "The allocation happens off-thread, so the profiler misses it.", ok: false,
+        why: "It is all on the calling thread. That trap belongs to Module 1's <code>AllocationProbe</code>, not here." },
+      { t: "The JIT hides it until the method becomes hot.", ok: false,
+        why: "Compilation tier changes speed, not the number of cells allocated. The byte count is the same interpreted or compiled." },
+      { t: "It only appears when the elements are boxed.", ok: false,
+        why: "The spine is rebuilt regardless of what the elements are; boxing changes the constant, not the exponent." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.8 — Where the formal treatment lives",
+    stem: `<p>Which of these does this guide deliberately <em>not</em> teach, deferring it to Annex A2?</p>`,
+    options: [
+      { t: "Amortised analysis, and why persistence breaks it", ok: true,
+        why: "§8. An amortised bound assumes you only use the latest version; persistence lets you re-use an old one and re-trigger the expensive step. Resolving that needs laziness, and it is Okasaki's central result." },
+      { t: "The meaning of <code>O(n)</code>", ok: false,
+        why: "§6 defines it — informally but correctly — as an upper bound on growth, up to a constant factor, beyond some input size." },
+      { t: "How to measure a complexity class", ok: false,
+        why: "§7 is exactly that: the doubling test, with a measured table." },
+      { t: "Why <code>log n</code> grows slowly", ok: false,
+        why: "§6's table covers it: ten steps at a thousand, twenty at a million, thirty at a billion." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.9 — The idea",
+    stem: `<p>Why is structural sharing safe in an immutable structure and unsafe in a mutable one?</p>`,
+    options: [
+      { t: "In a mutable structure, anyone holding a reference to a shared part could change it out from under the other holder.", ok: true,
+        why: "§9. The property that looks like a restriction — nothing can be written — is exactly what makes pointing at an old part safe. Sharing is unlocked by immutability, not despite it." },
+      { t: "Immutable structures are allocated in a separate heap region.", ok: false,
+        why: "They are allocated in Eden like everything else. Nothing about the memory region is involved." },
+      { t: "The garbage collector refuses to free shared nodes.", ok: false,
+        why: "It frees them normally once the last holder is dropped. Sharing affects when that happens, not whether it can." },
+      { t: "Mutable structures cannot have references to other objects.", ok: false,
+        why: "They can and do. The problem is not the reference, it is that the target can change." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.10 — Prepend",
+    stem: `<p><code>val ys = x :: xs</code>, where <code>xs</code> has 100,000 cells. How much memory is reachable from <code>ys</code>, and how much did the operation cost?</p>`,
+    options: [
+      { t: "Reachable 2,400,000 bytes; cost 24 bytes.", ok: true,
+        why: "§10. Those are different questions and confusing them is §20's trap. The new list <em>is</em> 2.4 MB of reachable memory and it <em>cost</em> one cell to make." },
+      { t: "Reachable 24 bytes; cost 24 bytes.", ok: false,
+        why: "Reachability follows every arrow. From the new cell you can reach all 100,000 shared cells." },
+      { t: "Reachable 2,400,000; cost 2,400,000.", ok: false,
+        why: "That is what a full copy would cost. Nothing was copied — the shared cells already existed." },
+      { t: "Reachable 4,800,000; cost 24.", ok: false,
+        why: "There is only one copy of the shared tail. Both lists reach the same cells; the cells are not duplicated." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.11 — The rule",
+    stem: `<p>State the rule that predicts the cost of any update to a persistent structure.</p>`,
+    options: [
+      { t: "You allocate the path from the root to the change, and share everything else.", ok: true,
+        why: "§11. For a list, the path to the back is the whole list and the path to the front is empty — which is the entire explanation of §4's asymmetry. For a tree, the path is the depth." },
+      { t: "You allocate half the structure on average.", ok: false,
+        why: "Nothing about the cost is an average over the structure. It is determined by one path, whose length depends on where the change is." },
+      { t: "You allocate one node per update, always.", ok: false,
+        why: "True only when the path has length one — prepending to a list. Appending allocates n." },
+      { t: "You allocate whatever the garbage collector has not yet freed.", ok: false,
+        why: "Allocation cost is a property of the operation, not of the collector's state." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.12 — Reverse, map",
+    stem: `<p><code>xs.map(identity)</code> over 100,000 objects. What is allocated?</p>`,
+    options: [
+      { t: "100,000 cells and zero elements.", ok: true,
+        why: "§12. <code>map</code> rebuilds the spine and shares the contents — <code>identity</code> returns the same object it was given. The measured 2,411,000 bytes is the spine plus the function and builder objects." },
+      { t: "100,000 cells and 100,000 elements.", ok: false,
+        why: "The elements are whatever the function returns; <code>identity</code> returns the originals. Copying the spine and copying the contents are different things." },
+      { t: "Nothing — <code>identity</code> is optimised away.", ok: false,
+        why: "<code>map</code> does not know its function is the identity, and must build a new list because the result type could have been different." },
+      { t: "One cell — the result shares the old spine.", ok: false,
+        why: "A mapped list cannot share the old spine: each cell's head may differ, so each cell must be new. Only prepend leaves the spine untouched." }
+    ]
+  },
+  {
+    tier: "easy", part: "IV", src: "Part IV.13 — The structure",
+    stem: `<p>What does the BST invariant buy, in complexity terms?</p>`,
+    options: [
+      { t: "Lookup in <code>O(depth)</code>, because each node lets you discard half the remaining tree.", ok: true,
+        why: "§13. Without the ordering invariant you would have to search both subtrees, which is O(n) — the invariant is what turns a binary tree into a search tree." },
+      { t: "Lookup in <code>O(1)</code>.", ok: false,
+        why: "Constant-time lookup needs hashing and an array, not an ordering. A tree still walks down a path." },
+      { t: "Insert without allocating.", ok: false,
+        why: "Insert always allocates the path; §14 and §15 count it. The invariant governs where you walk, not what you allocate." },
+      { t: "A guaranteed depth of <code>log n</code>.", ok: false,
+        why: "That is what §16 says the invariant does <em>not</em> guarantee. Sorted input produces depth n with the invariant perfectly intact." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.14 — Insert copies the path",
+    stem: `<p>Inserting into an immutable tree at depth 4 rebuilds how many existing nodes, and why that many?</p>`,
+    options: [
+      { t: "Four — the new node's parent must point at it, which makes the parent new, and so on to the root.", ok: true,
+        why: "§14. The cascade runs upward along the parent links, and it stops at the root because there is nothing above it. Everything hanging off the rebuilt path is shared." },
+      { t: "One — only the node being changed.", ok: false,
+        why: "Then its parent would still point at the old node, and the new tree would not contain the change. Immutability forbids editing the parent's field, so the parent must be rebuilt too." },
+      { t: "All of them — the tree is copied.", ok: false,
+        why: "This is §9's obvious first attempt. Only the path is rebuilt; the subtrees hanging off it are pointed at, not copied." },
+      { t: "Two — the node and the root.", ok: false,
+        why: "Every node between them must be rebuilt as well, for the same reason the immediate parent must: their child fields cannot be edited." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.15 — 504 bytes",
+    stem: `<p>One insert into a perfectly balanced tree of 1,048,575 nodes allocated a measured 504 bytes. What is 504?</p>`,
+    options: [
+      { t: "21 nodes at 24 bytes — the 20-deep path, plus the one new leaf.", ok: true,
+        why: "§15. <code>504 / 24 = 21</code>, and <code>log2(2^20) = 20</code>. The arithmetic of §3 and §14 predicts the measurement to the byte." },
+      { t: "21 nodes at 24 bytes — but the 21st is the root, counted twice.", ok: false,
+        why: "The root is counted once. The extra node above the path length is the newly created leaf, which did not exist before." },
+      { t: "A fixed overhead unrelated to depth.", ok: false,
+        why: "It is entirely determined by depth. §16 shows the same insert costing about 25 MB when the depth degenerates to n." },
+      { t: "The boxed integers for the inserted value.", ok: false,
+        why: "One value is boxed at most; that is 16 or 24 bytes, not 504. The figure is 21 tree nodes." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.16 — Depth is everything",
+    stem: `<p>Which input degrades an unbalanced BST from depth 20 to depth n — and why is that input dangerous in practice?</p>`,
+    options: [
+      { t: "Sorted data — and it is what a database export, a test fixture or a sequence of timestamps looks like.", ok: true,
+        why: "§16. Every insert goes the same way, so every node has one child: a linked list wearing a tree's type. The structure is at its worst on the input most likely to arrive in production." },
+      { t: "Random data — order makes the tree unpredictable.", ok: false,
+        why: "Random insertion order is the <em>good</em> case: it is what produces the ~20 depth measured in §15." },
+      { t: "Duplicate keys — they force rebalancing.", ok: false,
+        why: "Duplicates are typically rejected by the invariant and change nothing structurally. No rebalancing happens in a plain BST at all." },
+      { t: "Very large values — deep trees come from big numbers.", ok: false,
+        why: "Depth depends on insertion order, not on magnitude. A tree of three huge numbers is three deep at most." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.17 — The quadratic that looks linear",
+    stem: `<p>How do you spot the quadratic in a fold by eye, without measuring?</p>`,
+    options: [
+      { t: "Look for an <code>O(n)</code> operation inside the fold: <code>:+</code>, <code>++</code>, <code>length</code>, <code>last</code>, <code>apply(i)</code> are all <code>O(n)</code> on a <code>List</code>.", ok: true,
+        why: "§17. The loop is hidden inside the operator, so there is no nested loop to notice; the check has to be on which operations are linear rather than on the shape of the code." },
+      { t: "Look for a nested loop.", ok: false,
+        why: "There is not one. That is exactly what makes this trap survive review — the quadratic is a single fold over a single collection." },
+      { t: "Look for recursion without <code>@tailrec</code>.", ok: false,
+        why: "That is §18's trap, which costs stack rather than time. A tail-recursive fold can still be quadratic." },
+      { t: "Look for <code>var</code> or mutable state.", ok: false,
+        why: "Both versions in §17 are purely functional. Purity does not protect against a bad complexity class." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.18 — foldRight is not foldLeft",
+    stem: `<p>Why can <code>foldLeft</code> run over a million elements while <code>foldRight</code> overflows the stack?</p>`,
+    options: [
+      { t: "<code>foldLeft</code>'s accumulator is complete before the recursive call, so the call is the last thing that happens and the frame can be reused; <code>foldRight</code> must reach the end before combining anything.", ok: true,
+        why: "§18. Every element's frame stays on the stack waiting for the result from deeper in the list, so the stack depth is the list length." },
+      { t: "<code>foldRight</code> allocates more per element.", ok: false,
+        why: "The failure is stack, not heap. A <code>StackOverflowError</code> is not an allocation problem." },
+      { t: "<code>foldLeft</code> is implemented with a <code>while</code> loop and <code>foldRight</code> is not.", ok: false,
+        why: "The reason is structural, not an implementation accident: <code>foldLeft</code> <em>can</em> be tail-recursive and <code>foldRight</code> cannot, given the direction the arrows point." },
+      { t: "<code>foldRight</code> reverses the list first.", ok: false,
+        why: "It does not — and if it did, it would be safe. Some implementations do exactly that as a workaround." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.19 — length in a loop",
+    stem: `<p>Why is pattern-matching on <code>case Nil</code> not merely tidier than testing <code>xs.length == 0</code>?</p>`,
+    options: [
+      { t: "It is asymptotically different: <code>length</code> walks the whole list, so calling it once per element is <code>O(n²)</code>.", ok: true,
+        why: "§19. Ask the structure what it <em>is</em>, not how big it is. The shape is available in constant time; the size is not." },
+      { t: "It is the same cost; the match is only a style preference.", ok: false,
+        why: "<code>length</code> has no stored count to read — it must follow every arrow to the end. That is the whole difference." },
+      { t: "<code>length</code> can return a wrong answer on a shared list.", ok: false,
+        why: "It is always correct. The problem is what it costs, not what it returns." },
+      { t: "The match avoids boxing the comparison.", ok: false,
+        why: "One boxed <code>Int</code> would be 16 bytes. The defect here is a factor of n in time, not a constant in bytes." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.20 — Sharing makes garbage invisible",
+    stem: `<p>A cache holds the last ten versions of a large persistent structure. What can you conclude about its memory use from the allocation rate?</p>`,
+    options: [
+      { t: "Nothing — allocation measures what each version <em>cost</em>, and retention depends on how much the ten versions <em>share</em>.", ok: true,
+        why: "§20. The two numbers answer different questions, and a heap dump reports retained size separately from shallow size precisely because the gap between them is the sharing." },
+      { t: "It retains about ten times one version.", ok: false,
+        why: "It could retain far less, if the versions share almost everything, or far more, if a small recent version pins a huge old one alive." },
+      { t: "It retains the sum of the allocation deltas.", ok: false,
+        why: "Allocation counts bytes produced, including bytes long since collected. Retention counts what is still reachable." },
+      { t: "It retains one version, since the rest are shared.", ok: false,
+        why: "Sharing is partial. Each version's unique path is retained on top of the common core." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.21 — Nil is not null",
+    stem: `<p><code>head</code> on an empty list has no answer. Which framing matches the guide?</p>`,
+    options: [
+      { t: "It is a design decision to be made and defended — throw, return <code>Option</code>, or refuse it at compile time with a non-empty type.", ok: true,
+        why: "§21, and it is the same question Module 1's checklist asked of <code>Escape.sumNorms</code>. What the gate requires is a documented decision, not a particular one." },
+      { t: "It must return <code>Option[A]</code>; anything else is impure.", ok: false,
+        why: "<code>Option</code> is one defensible answer, and it has a real cost: every caller must handle a case that is sometimes impossible, which invites <code>.get</code>." },
+      { t: "It must throw, because the empty list is an error state.", ok: false,
+        why: "The empty list is a legitimate value of the type, not an error. Only <em>asking for its head</em> has no answer." },
+      { t: "It should return <code>null</code>.", ok: false,
+        why: "That reintroduces exactly the absence-of-value problem the ADT was built to remove, and silently." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.22 — Scala's own collections",
+    stem: `<p>Scala's immutable <code>Map</code> is a HAMT with 32-way branching. What does <code>updated</code> cost?</p>`,
+    options: [
+      { t: "About <code>log32(n)</code> nodes — the path from the root to the changed leaf — with every untouched subtree shared.", ok: true,
+        why: "§22. It is §15's arithmetic with a branching factor of 32 instead of 2, which is why the depth is at most 7 for any map that fits in memory." },
+      { t: "The whole map, rehashed.", ok: false,
+        why: "That is what a mutable hash table does when it grows. A HAMT rebuilds only one path." },
+      { t: "One node, like a list prepend.", ok: false,
+        why: "The changed leaf is not at the root, so the path above it must be rebuilt too." },
+      { t: "<code>log2(n)</code> nodes.", ok: false,
+        why: "That is a binary tree. The 32-way branching is what makes the depth 7 rather than 20 at a million entries." }
+    ]
+  },
+  {
+    tier: "easy", part: "VI", src: "Part VI.23 — Git",
+    stem: `<p>A commit changes one file in a repository of a hundred thousand files. What does Git write?</p>`,
+    options: [
+      { t: "New tree objects for the directories on the path from the root to that file, pointing at existing objects for everything else.", ok: true,
+        why: "§23. It is §14 applied to a filesystem, with hashes as the references — which is why checking out an old commit is instant: nothing was ever overwritten." },
+      { t: "A copy of the whole repository at that version.", ok: false,
+        why: "That would make every commit cost the size of the repository. Git shares every unchanged object." },
+      { t: "A diff against the previous commit.", ok: false,
+        why: "Diffs are computed on demand for display. What is stored is whole objects, shared structurally." },
+      { t: "Only the changed file's blob.", ok: false,
+        why: "The blob alone would be unreachable. The directory trees above it must be rewritten to point at it — that is the path." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.24 — Undo, event sourcing",
+    stem: `<p>Undo stacks, event sourcing and MVCC databases share one property. Which?</p>`,
+    options: [
+      { t: "Nothing is ever overwritten, so an old version stays readable without a lock.", ok: true,
+        why: "§24. The same property lets a young collection ignore the write barrier and makes a shared <code>Nil</code> safe. It is not the data structure doing the work — it is the absence of destructive update." },
+      { t: "They all use a binary search tree.", ok: false,
+        why: "The structures differ completely. What they share is the discipline, not the shape." },
+      { t: "They all keep a full copy of every version.", ok: false,
+        why: "With sharing, the marginal cost of a version is the path that changed. Full copies are what you fall back to without sharing." },
+      { t: "They all require a garbage collector.", ok: false,
+        why: "Git and Postgres manage their own reclamation. The property is about not overwriting, not about who frees memory." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.25 — enum as a recursive ADT",
+    stem: `<p>Which guarantee does declaring the list as a closed <code>enum</code> provide that a class hierarchy would not?</p>`,
+    options: [
+      { t: "The compiler knows only two cases exist, so a <code>match</code> over both is provably exhaustive and adding a third case breaks every incomplete match.", ok: true,
+        why: "§25. That guarantee is what makes §19's fix safe: pattern-matching the shape cannot silently miss a case, which is not true of an open hierarchy." },
+      { t: "It makes the structure immutable.", ok: false,
+        why: "Immutability comes from the fields being <code>val</code>s, not from the type being closed. A closed hierarchy of mutable cases is perfectly possible." },
+      { t: "It makes <code>Nil</code> a singleton.", ok: false,
+        why: "That follows from <code>Nil</code> having no parameters, which would also hold for a parameterless case in an open hierarchy." },
+      { t: "It removes the need for variance annotations.", ok: false,
+        why: "§26 shows the opposite: without <code>+A</code> the definition does not work at all." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.26 — Variance and Nothing",
+    stem: `<p>Why does the single <code>Nil</code> singleton serve as an empty <code>MyList[Int]</code>, <code>MyList[String]</code> and <code>MyList[A]</code> at once?</p>`,
+    options: [
+      { t: "<code>Nil</code> has type <code>MyList[Nothing]</code>, <code>Nothing</code> is a subtype of every type, and <code>+A</code> makes <code>MyList</code> covariant — so <code>MyList[Nothing]</code> is a subtype of every <code>MyList[T]</code>.", ok: true,
+        why: "§26. All three facts are needed: the bottom type, the covariance annotation, and the singleton. Remove the <code>+</code> and the first combinator you write fails to typecheck." },
+      { t: "Because <code>Nil</code> is erased at runtime, so its type parameter does not exist.", ok: false,
+        why: "Erasure is a runtime property; this question is decided by the compiler, before erasure, using variance." },
+      { t: "Because Scala automatically widens empty collections.", ok: false,
+        why: "There is no such rule. The behaviour comes from the declared variance, which is why it disappears if you write <code>[A]</code> instead of <code>[+A]</code>." },
+      { t: "Because <code>Nothing</code> is a supertype of every type.", ok: false,
+        why: "<code>Nothing</code> is the <b>bottom</b> type — a subtype of everything. <code>Any</code> is the top." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.26 — Variance and Nothing",
+    stem: `<p>Covariance is safe for <code>MyList[+A]</code> but unsound for a mutable container. What is the standard evidence?</p>`,
+    options: [
+      { t: "Java's arrays are covariant and throw <code>ArrayStoreException</code> at runtime.", ok: true,
+        why: "§26. A covariant mutable container lets you hold a <code>Dog[]</code> as an <code>Animal[]</code> and store a <code>Cat</code> into it — the error can only be caught at runtime, which is exactly what the exception is for." },
+      { t: "Scala forbids variance annotations on generic classes entirely.", ok: false,
+        why: "It allows them and checks them: the compiler rejects a covariant parameter in a contravariant position, which is how it proves the immutable case safe." },
+      { t: "Mutable containers cannot have type parameters.", ok: false,
+        why: "They can. The restriction is on variance, not on genericity." },
+      { t: "Covariance is unsafe for immutable structures too; it is merely convenient.", ok: false,
+        why: "It is provably safe when nothing can be written, because the unsoundness requires a store operation to exploit." }
+    ]
+  }
+];
+
+// Every question must offer exactly one correct option. A violation is an
+// authoring error, and it is louder as a console failure than as a silently
+// repaired quiz that then teaches the wrong thing.
+QUESTIONS.forEach((q, i) => {
+  const n = q.options.filter(o => o.ok).length;
+  if (n !== 1) console.error(`question ${i + 1} (${q.src}) has ${n} correct options`);
+});
+
+const list  = document.getElementById("list");
+const empty = document.getElementById("empty");
+const score = document.getElementById("score");
+let tier = "all", part = "all";
+let answered = 0, correct = 0;
+
+const shown = () => QUESTIONS.filter(q =>
+  (tier === "all" || q.tier === tier) && (part === "all" || q.part === part));
+
+function render() {
+  list.textContent = "";
+  const qs = shown();
+  empty.hidden = qs.length > 0;
+
+  qs.forEach((q, idx) => {
+    const card = document.createElement("article");
+    card.className = "q";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span class="tier ${q.tier}">${q.tier}</span><span class="src">${q.src}</span>`;
+    card.appendChild(meta);
+
+    const stem = document.createElement("div");
+    stem.className = "stem";
+    stem.innerHTML = `<p><b>${idx + 1}.</b></p>` + q.stem;
+    card.appendChild(stem);
+
+    const letters = ["A", "B", "C", "D"];
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = (idx * 7 + i * 13 + q.stem.length) % (i + 1);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    let done = false;
+    const buttons = [];
+    order.forEach((oi, pos) => {
+      const o = q.options[oi];
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.type = "button";
+      b.innerHTML = `<span class="k">${letters[pos]}</span>${o.t}`;
+      buttons.push({ b, o });
+      b.addEventListener("click", () => {
+        if (done) return;
+        done = true;
+        answered++;
+        if (o.ok) correct++;
+        updateScore();
+        buttons.forEach(x => { x.b.disabled = true; });
+        b.classList.add(o.ok ? "correct" : "wrong");
+        const why = document.createElement("div");
+        why.className = "why " + (o.ok ? "correct" : "wrong");
+        why.innerHTML = (o.ok ? "<b>Correct.</b> " : "<b>No.</b> ") + o.why;
+        b.insertAdjacentElement("afterend", why);
+        if (!o.ok) {
+          const right = buttons.find(x => x.o.ok);
+          right.b.classList.add("correct");
+          const rw = document.createElement("div");
+          rw.className = "why correct";
+          rw.innerHTML = "<b>The answer.</b> " + right.o.why;
+          right.b.insertAdjacentElement("afterend", rw);
+        }
+      });
+      card.appendChild(b);
+    });
+
+    list.appendChild(card);
+  });
+  updateScore();
+}
+
+function updateScore() {
+  score.innerHTML = `answered <b>${answered}</b>/<b>${shown().length}</b> · correct <b>${correct}</b>`;
+}
+
+function wire(attr, set) {
+  document.querySelectorAll(`button.f[data-${attr}]`).forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(`button.f[data-${attr}]`).forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      set(b.dataset[attr]);
+      answered = 0; correct = 0;
+      render();
+    });
+  });
+}
+wire("tier", v => { tier = v; });
+wire("part", v => { part = v; });
+
+document.getElementById("reset").addEventListener("click", () => {
+  answered = 0; correct = 0; render();
+});
+
+render();
+</script>
+</body>
+</html>

@@ -87,3 +87,47 @@ Search these exact phrases; the speakers matter more than the venue:
 5. Choi et al. §§1–3 (skim the formalism, read the escape states carefully).
 6. Write Exercises 4–9.
 7. *Nanotrusting the Nanotime* before finalising Exercise 9.
+
+---
+
+## Module 2 — Manual Persistent Data Structures
+
+### Books
+
+- **[core]** Okasaki — *Purely Functional Data Structures* (1998). **Ch. 2** is
+  this module almost exactly: lists, trees, and structural sharing, with the
+  pictures this guide's §14 redraws. **Ch. 3** is balanced trees, which is where
+  Block 2 picks up. Chapters 5 and 6 are amortisation and the persistence
+  problem — leave them until Annex A2 exists, because they assume the formalism
+  that annex will teach.
+- **[core]** Cormen, Leiserson, Rivest, Stein — *Introduction to Algorithms*,
+  **Ch. 3** only. The formal definitions of O, Θ and Ω, in about twenty pages.
+  The rest of the book is a reference, not a read.
+- Bird — *Thinking Functionally with Haskell*, Ch. 7. The same structures with
+  laziness in the language rather than bolted on, which makes the contrast with
+  Scala's strictness visible.
+
+### Papers
+
+- **Bagwell — *Ideal Hash Trees* (2001)**, §§1–3. The HAMT behind Scala's
+  immutable `Map` and `Set`. Pairs directly with Annex A1, Exercise 8, and it is
+  §15's arithmetic at a branching factor of 32.
+- **Driscoll, Sarnak, Sleator, Tarjan — *Making Data Structures Persistent*
+  (1989)**. The paper that named the field and separated *partial* from *full*
+  persistence. Read the introduction even if you skip the proofs.
+
+### Source To Read
+
+- `scala.collection.immutable.List` — read `:::`, `reverse` and `foldRight`, and
+  check each against §12 and §18. `foldRight` in particular is worth reading
+  closely: the standard library does not implement it the naive way, and the
+  reason is Exercise 4's last test.
+- `scala.collection.immutable.Vector` — the 32-way trie. Do not try to follow it
+  line by line yet; look only at how depth is bounded.
+
+### Terms Worth A Video Rather Than A Chapter
+
+- *"structural sharing persistent data structures"* — the animations make §14
+  land faster than prose does.
+- *"amortized analysis banker's method"* — preparation for Annex A2, not for
+  this module.
