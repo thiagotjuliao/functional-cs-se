@@ -61,25 +61,25 @@ by the suites in `src/test/scala/cs/se/annex/a1/`.
 
 ### C. Correctness Gate
 
-- [ ] `sbt annex/test` — **all tests green**, zero ignored, zero skipped.
-- [ ] `sbt annex/compile` succeeds under `-Wall -Werror` with **zero**
+- [x] `sbt annex/test` — **all tests green**, zero ignored, zero skipped.
+- [x] `sbt annex/compile` succeeds under `-Wall -Werror` with **zero**
       warnings suppressed by annotation or configuration.
-- [ ] `sbt scalafmtCheckAll` passes.
+- [x] `sbt scalafmtCheckAll` passes.
 
 ### D. Purity Gate
 
 Verified by reading your own diff before committing:
 
-- [ ] Zero occurrences of `var` in `src/main/scala`.
-- [ ] Zero `while` loops and zero imperative `for` loops. Every bit-scanning
+- [x] Zero occurrences of `var` in `src/main/scala`.
+- [x] Zero `while` loops and zero imperative `for` loops. Every bit-scanning
       algorithm is expressed as tail recursion (`@tailrec`) or as a fold.
-- [ ] Zero `throw` and zero `try`/`catch`. Partiality — and there is real
+- [x] Zero `throw` and zero `try`/`catch`. Partiality — and there is real
       partiality here, starting with `Int.MinValue` — is encoded in return types
       or documented as a precondition the tests enforce.
-- [ ] Zero mutable collections. `Array` appears only in E8, where it models a
+- [x] Zero mutable collections. `Array` appears only in E8, where it models a
       HAMT's dense child array, and every operation on it returns a **new**
       array rather than mutating the input.
-- [ ] No use of `java.lang.Integer.bitCount` or its siblings **inside** the
+- [x] No use of `java.lang.Integer.bitCount` or its siblings **inside** the
       exercises that ask you to build them (E4, E3's `log2Floor`). They are the
       oracle the tests compare against, not the implementation.
 
@@ -217,12 +217,18 @@ Verified by reading your own diff before committing:
 
 ### F. Engineering Hygiene
 
-- [ ] All code formatted (`sbt scalafmtAll`) with no manual override.
-- [ ] Every public definition carries a Scaladoc stating its **contract** —
+- [x] All code formatted (`sbt scalafmtAll`) with no manual override.
+- [x] Every public definition carries a Scaladoc stating its **contract** —
       including, for every partial operation, the precondition and the behaviour
       at `Int.MinValue`, `0`, and negative inputs.
 - [ ] Commits follow `docs/git-conventions.md` (`a1: <imperative summary>`), one
       commit per concept proven.
+      - 13 commits carry the `a1:` scope; granularity is one concept each.
+      - **One deviation:** `0ef550b` uses the scope `tooling:`, which §4 of
+        `git-conventions.md` does not list (it permits a module slug, an annex
+        slug, `build`, `docs` or `chore`). Either the commit is mis-scoped or the
+        convention is missing a scope it wants; the history is already pushed, so
+        this box stays open until that is decided rather than rewritten away.
 - [ ] Annotated milestone tag `a1-bitwise-arithmetic` created, using the message
       template in `docs/git-conventions.md`, with a real entry under `Learned:`.
 
@@ -230,6 +236,13 @@ Verified by reading your own diff before committing:
 
 - [ ] Answer the post-module conceptual challenges (Step 4 of the routine)
       without consulting the guide.
+      - All nine exercises have entries in [`challenge-log.md`](challenge-log.md),
+        which is the closing condition the routine states.
+      - The literal condition of this box — *without consulting the guide* — is
+        self-assessed, and several answers in the E8 and E9 rounds were reached
+        with substantial prompting. Left open deliberately: a box that means
+        "I could say why unaided" is worth only as much as the honesty of the
+        person ticking it.
 
 The answers are recorded in [`challenge-log.md`](challenge-log.md), one entry
 per challenge with the derivations, bytecode and measurements behind them.
