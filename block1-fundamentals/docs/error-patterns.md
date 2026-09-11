@@ -1,11 +1,11 @@
-# B1-M1 — Error Patterns
+# Block 1 — Error Patterns
 
 The recall set asks whether the mechanism is understood. The challenge log asks
 whether it can be derived. Neither asks the question this file asks:
 
 > **Where does composition go wrong, once the mechanism is already known?**
 
-Every entry below was a real defect written during this module. None of them is
+Every entry below was a real defect written while working this block. None of them is
 ignorance of a mechanism. `LongBytes = 16` was written by someone who knows a
 `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
@@ -26,6 +26,11 @@ compile cleanly under `-Wall -Werror`.
 | 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no — one latent since pinned, five documented |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
 | 6 | A contract no implementation of that signature can satisfy | 2 | no — contracts are prose, and the suite samples the interior |
+
+Patterns 1–6 were found in **Module 1**. Module 2's section is at the foot of
+the file, opened empty on purpose: the file is created with the module, not at
+the end of it, so that a defect fixed in conversation has somewhere to go the day
+it appears.
 
 ---
 
@@ -312,3 +317,25 @@ Read it before committing, not after a defect. Six questions, one per pattern:
    once?
 6. Does any Scaladoc say "every input", and does it hold at `NaN`, at
    `MaxValue`, at `MinValue`?
+
+---
+
+## Module 2 — Manual Persistent Data Structures
+
+*Empty at the time of writing, and that is the point: this section exists before
+the first defect does.*
+
+Numbering continues from 6. When a Module 2 defect instantiates one of patterns
+1–6, it is added as an **occurrence to that entry** rather than opening a new
+one — the repetition across modules is the finding, and a pattern that recurs in
+a different subject is worth more than one that recurred in the same file.
+
+Four of the six already have obvious surfaces in this module, and they are worth
+watching for rather than waiting for:
+
+| Pattern | Where it can reappear in Module 2 |
+| :--- | :--- |
+| 3 — Off-by-one in a limit | `balancedDepth`: is `balancedDepth(16)` 4 or 5? |
+| 4 — A constant only as tested as the arithmetic exposing it | `CellBytes` and `NodeBytes` are both 24, so a call that confuses them passes |
+| 2 — Two quantities that coincide | exactly the above: a cell and a node are indistinguishable by size on this JVM |
+| 6 — A contract no implementation can satisfy | `head` on the empty list, and `treeMap` promising to preserve an ordering it cannot |

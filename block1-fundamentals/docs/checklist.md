@@ -283,3 +283,154 @@ The other two are already covered: the object-layout derivations are the fourth
 box of §A and Exercise 7, and the `List[Int]` versus `Array[Int]` ratio is the
 same box.
 
+---
+
+## Module 2 — Manual Persistent Data Structures
+
+**Milestone tag:** `b1-m2-persistent-structures`
+
+The exercise order is deliberate and is not by difficulty. **E1 comes first
+although it is the hardest tier**, because it builds the cost model that predicts
+what every later exercise measures. Module 1 put its predictive exercise seventh
+of nine, and the consequence was that its measurements arrived as isolated facts
+instead of as confirmations of a derivation. Do E1 first, on paper, before
+writing a line of `MyList`.
+
+### A. Theory Comprehension
+
+- [ ] Read `docs/theory/module2_structures.md` in full.
+- [ ] Work `docs/quiz/b1-m2.html`, filtering by Part as you finish each one.
+- [ ] Read Okasaki, *Purely Functional Data Structures*, Ch. 2.
+- [ ] Derive, before measuring anything, the number of cells allocated by
+      `x :: xs`, by `xs :+ x` and by `xs.reverse` over a list of `n`. All three
+      must match your Exercise 1 implementation.
+- [ ] State, in one line each, what `O(1)`, `O(n)` and `O(log n)` predict about
+      the *ratio* of costs when `n` doubles. This is the whole of §7 and it is
+      what Exercise 5 measures.
+
+### B. Implementation — Exercises
+
+All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
+`src/test/scala/cs/se/block1/module2/`.
+
+- [ ] **E1 `Sharing`** *(Hard — do this first)* — the cost model: cells
+      allocated and shared per operation, balanced depth, and the tree sharing
+      ratio. Pure arithmetic, no data structure, no measurement.
+- [ ] **E2 `MyList`** *(Easy)* — the `enum` ADT, `isEmpty`, `length`,
+      `headOption`, and the variance that makes `Nil` serve every element type.
+- [ ] **E3 `Combinators`** *(Easy)* — `map`, `filter`, `reverse`.
+- [ ] **E4 `Folds`** *(Easy)* — `foldLeft`, `foldRight`, `append`, `concat`, and
+      the stack-depth difference between the two folds.
+- [ ] **E5 `Building`** *(Medium)* — `byAppend` and `byPrepend`, and the
+      doubling table that proves their complexity classes.
+- [ ] **E6 `MyTree`** *(Medium)* — the BST `enum`: `insert`, `contains`, `size`,
+      `depth`.
+- [ ] **E7 `TreeFold`** *(Medium)* — `foldInOrder`, `toList`, `treeMap`, and the
+      ordering law that ties them together.
+- [ ] **E8 `SharingProof`** *(Hard)* — measure with `AllocationProbe` and
+      confirm, or refute, every prediction E1 made.
+- [ ] **E9 `Balance`** *(Hard)* — `fromSorted` against `fromBalanced`, and what
+      the depth difference does to the cost of one insert.
+
+### C. Correctness Gate
+
+- [ ] `sbt fundamentals/test` — **all tests green**, zero ignored, zero skipped.
+- [ ] `sbt fundamentals/compile` succeeds under `-Wall -Werror` with **zero**
+      warnings suppressed by annotation or configuration.
+- [ ] `sbt scalafmtCheckAll` passes.
+- [ ] Module 1's 28 tests still pass. This module adds to the suite; it does not
+      replace it.
+
+### D. Purity Gate
+
+Verified by reading your own diff before committing:
+
+- [ ] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module2`.
+- [ ] Zero `while` loops and zero imperative `for` loops.
+- [ ] Zero `throw` and zero `try`/`catch`.
+- [ ] Zero mutable collections, and zero use of `scala.collection.immutable.List`
+      *inside* your own structure's implementation. `MyList` is built from
+      `MyList`, or the exercise proves nothing. Converting to `List` at the
+      boundary, in `toList`, is the one permitted crossing.
+- [ ] Every recursive function that walks a whole structure is either
+      `@tailrec` or documented as bounded by depth rather than by size. `MyTree`
+      recursion is the second kind; `MyList` recursion must be the first.
+- [ ] `head` on an empty list: the decision is made, documented in the Scaladoc,
+      and defended in §G. Module 1 asked the same question of
+      `Escape.sumNorms`; the answer here may differ, but it may not be absent.
+
+### E. Empirical Gate — Record The Numbers
+
+Every number below must be produced by *your* structure, not by Scala's. Fill in
+every blank, and compare each against what Exercise 1 predicted **before** you
+ran it.
+
+- [ ] **Cell and node size.**
+      - `Sharing.CellBytes`: `______` · `Sharing.NodeBytes`: `______`
+      - These are `Footprint.shallowSize` calls from Module 1. If they disagree
+        with 24, one of the two modules is wrong: `______________________`
+
+- [ ] **List operations over `n = 100,000`.** Predicted from E1, then measured
+      with `AllocationProbe` in E8:
+
+      | operation | E1 predicts (bytes) | measured (bytes) | agree? |
+      | :--- | ---: | ---: | :---: |
+      | `x :: xs` | `______` | `______` | |
+      | `xs :+ x` | `______` | `______` | |
+      | `xs.reverse` | `______` | `______` | |
+      | `xs.map(identity)` | `______` | `______` | |
+
+      - Where prediction and measurement differ, the difference is itself a
+        result. Account for it: `______________________`
+
+- [ ] **The doubling table.** Build a list of `n` elements both ways and record
+      the bytes, for `n` = 2,000 / 4,000 / 8,000 / 16,000:
+
+      | `n` | `byAppend` | × prev | `byPrepend` | × prev |
+      | ---: | ---: | ---: | ---: | ---: |
+      | 2,000 | `______` | — | `______` | — |
+      | 4,000 | `______` | `______` | `______` | `______` |
+      | 8,000 | `______` | `______` | `______` | `______` |
+      | 16,000 | `______` | `______` | `______` | `______` |
+
+      - The two `× prev` columns are the proof. State the complexity class each
+        one demonstrates, and why the ratio is the evidence rather than the
+        absolute number: `______________________`
+
+- [ ] **Tree sharing.** On a balanced tree of `2^20 − 1` nodes:
+      - whole tree: `______ bytes` · one `insert`: `______ bytes`
+      - nodes copied: `______` · depth: `______` · sharing ratio: `______ ×`
+      - The nodes copied should exceed the depth by exactly one. Say why:
+        `______________________`
+
+- [ ] **Degeneration.** Insert 4,096 values in sorted order and in shuffled
+      order, and record for each:
+      - sorted: depth `______`, one insert costs `______ bytes`
+      - shuffled: depth `______`, one insert costs `______ bytes`
+      - ratio: `______ ×`
+      - Name the production inputs that arrive pre-sorted:
+        `______________________`
+
+### F. Engineering Hygiene
+
+- [ ] All code formatted (`sbt scalafmtAll`) with no manual override.
+- [ ] Every public definition carries a Scaladoc stating its **contract**, not a
+      restatement of its name. Constants carry the rule from pattern 4 of
+      `error-patterns.md`: name the assertion that pins the value, or state that
+      none does.
+- [ ] Commits follow `docs/git-conventions.md` (`b1-m2: <imperative summary>`),
+      one commit per concept proven.
+- [ ] `error-patterns.md` has been read before committing, and any defect that
+      instantiated an existing pattern was added as an occurrence to that entry
+      rather than opening a new one.
+- [ ] Annotated milestone tag `b1-m2-persistent-structures` created, using the
+      message template in `docs/git-conventions.md`, with a real entry under
+      `Learned:`.
+
+### G. Oral Defence
+
+- [ ] Work the post-module conceptual challenges (Step 4 of the routine) as a
+      dialogue: attempt each one **before** the discussion, say "I don't know"
+      plainly when that is the truth, and let `challenge-log.md` carry the
+      complete answer the exchange produced. The box closes when every exercise
+      has an entry there.
