@@ -127,7 +127,7 @@ compressed oops on, Windows 11, in the forked test JVM that `build.sbt` pins to
         Part V.19: omitting that term leaves a 2,048-byte gap, which is exactly
         128 boxes that were never allocated.
 
-- [ ] **Controlled experiment.** Identical suite with escape analysis disabled:
+- [x] **Controlled experiment.** Identical suite with escape analysis disabled:
       ```bash
       sbt "set fundamentals/Test/javaOptions += \"-XX:-DoEscapeAnalysis\"" fundamentals/test
       ```
@@ -143,9 +143,15 @@ compressed oops on, Windows 11, in the forked test JVM that `build.sbt` pins to
         ```
       - The escape-analysis test **is expected to fail** in this configuration.
         Confirm it fails, and state in one sentence why that failure is the
-        proof rather than a defect: `______________________`
+        proof rather than a defect: **the test asserts a property of the
+        optimiser rather than of the code, so removing the optimiser must remove
+        the property — a test that stayed green under `-XX:-DoEscapeAnalysis`
+        would be proof that it had never been measuring escape analysis at all.**
 
-- [ ] **Boxing tax.** Allocation of `sumBoxed` vs `sumPrimitive` over 100,000
+        Note that only this one test flipped. The other 24 assert mathematics,
+        which no JVM flag can change.
+
+- [x] **Boxing tax.** Allocation of `sumBoxed` vs `sumPrimitive` over 100,000
       elements, measured after warmup:
       - `sumBoxed`: `2,400,024 bytes` · `sumPrimitive`: `24 bytes`
       - The `sumBoxed` figure is *not* the `Integer` boxes of the list — those
@@ -156,10 +162,23 @@ compressed oops on, Windows 11, in the forked test JVM that `build.sbt` pins to
                                    = 100,000 x 24
         ```
       - Explain the residual, if `sumPrimitive` is not exactly zero:
-        `______________________`
-        (Evidence to reason from, all measured: `bytesOf(())` costs 0 bytes,
-        `bytesOf` of an `Int`-valued body costs 16, of a `Long`-valued body 24.
-        The signature is `AllocationProbe.measure[A](body: => A)`.)
+        **the 24 bytes belong to the instrument, not to `sumPrimitive`.**
+        `measure[A](body: => A)` takes its body by name, and `A` is erased to
+        `Object`, so the `Long` that `sumPrimitive` returns is boxed into a
+        `java.lang.Long` *between* the two readings of the counter. The
+        tail-recursive walk itself allocates nothing at all.
+
+        The three measurements that isolate it, and they agree with Exercise 7
+        rather than with a guess:
+        ```text
+        bytesOf(())                    =   0     Unit boxes to a singleton
+        bytesOf(an Int-valued body)    =  16     = shallowSize(0, 1, 0, 0, 0)
+        bytesOf(a Long-valued body)    =  24     = shallowSize(0, 0, 1, 0, 0)
+        ```
+        The instrument has a floor, the floor depends on the *return type* of
+        what is measured, and the floor is 24 here. Every assertion built on this
+        probe must carry a tolerance for exactly that reason — which is why
+        `Exercise4BoxingSpec` asserts `< 2_048` rather than `== 0`.
 
 - [x] **GC observation.** Run the suite with `-Xlog:gc` and record:
       - Number of young collections: `3` — and `0` full collections.
@@ -217,7 +236,7 @@ compressed oops on, Windows 11, in the forked test JVM that `build.sbt` pins to
       above them and whose every member is documented.
 - [x] Commits follow `docs/git-conventions.md` (`b1-m1: <imperative summary>`),
       one commit per concept proven.
-- [ ] Annotated milestone tag `b1-m1-jvm-semantics` created, using the message
+- [x] Annotated milestone tag `b1-m1-jvm-semantics` created, using the message
       template in `docs/git-conventions.md`, with a real entry under `Learned:`.
 
 ### G. Oral Defence
