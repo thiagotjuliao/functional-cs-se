@@ -1018,36 +1018,6 @@ In the REPL, `java.lang.Integer.toBinaryString` is your microscope — but it do
 **not** zero-pad, which is how off-by-one errors survive inspection. Exercise 1
 asks you to write the padded version first, for exactly that reason.
 
----
-
-# Self-Check — You Have Not Finished This Annex Until You Can Answer
-
-Write the answers **in prose, without running code**, into `docs/checklist.md`.
-
-1. Read `11010110` as an unsigned 8-bit number, then as a signed one. Show the
-   arithmetic both times.
-
-2. Prove that `x & -x` isolates the lowest set bit, using only `-x == ~x + 1`.
-   Then state what it returns for `x == 0` and for `x == Int.MinValue`, and
-   whether those results are consistent with your proof.
-
-3. `-7 >> 1` is `-4` but `-7 / 2` is `-3`. Name the rounding mode each
-   implements, and reconstruct from first principles why the compiler emits
-   `(x + (x >>> 31)) >> 1` for `x / 2`.
-
-4. A colleague writes `def mod(x: Int, n: Int): Int = x & (n - 1)` and every test
-   passes. Name the precondition their tests failed to violate, and say what the
-   function returns for `n = 6, x = 9`.
-
-5. Why is the HAMT branching factor 32 rather than 8 or 128? Reason with numbers
-   about trie depth for one million elements, the width of the bitmap word, and
-   the cost of the array copy on insertion.
-
-6. In Part IV.21, explain precisely what breaks if `& 0xffffffffL` is omitted.
-   Give a concrete `(hi, lo)` pair that decodes wrongly, and say why.
-
----
-
 # Where To Go Next
 
 | If you want | Read |

@@ -94,9 +94,16 @@ The reference implementation of this contract is
    says which exercise builds a concept, and each exercise's Scaladoc cites the
    Part that explains it.
 
-10. **Close with a Self-Check** (questions answerable in prose, without running
-    code, at least one of which requires a derivation by hand) and a **Where To
-    Go Next** table pointing at the specific chapters of the curated sources.
+10. **Close with a "Where To Go Next" table** pointing at the specific chapters
+    of the curated sources.
+
+    Do **not** close with a Self-Check. Prose questions answered alone, into a
+    blank section of the checklist, are the solitary version of what the Step 4
+    challenges already do dialogically — and the solitary version does not get
+    used. A1 is the evidence: twenty-eight challenge-log entries written, six
+    Self-Check answers left blank, and the box ticked anyway. Where a Self-Check
+    question would have asked something the challenges do not, ask it as a
+    challenge instead.
 
 **Depth is never traded for accessibility.** The guide must reach exactly the
 rigour it would have reached anyway — it simply builds a staircase up to it

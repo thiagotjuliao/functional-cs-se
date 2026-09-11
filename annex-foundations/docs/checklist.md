@@ -26,9 +26,6 @@ unperformed measurement.
       the masked shift distance **in a REPL** rather than believing the guide.
 - [x] Read *Hacker's Delight* Ch. 2 (rightmost-bit manipulation) and Ch. 5
       (counting bits).
-- [x] Answer all six questions in the Self-Check section of the guide **in
-      writing**, without re-reading it. Append the answers to this file under
-      "Self-Check Answers".
 - [x] Derive `-x == ~x + 1` on paper, without case analysis on the sign bit.
 - [x] Convert three numbers by hand in each direction (decimal to binary and
       back), and read one negative 8-bit pattern as a signed value, showing the
@@ -257,21 +254,6 @@ This box closes when every exercise has an entry there.
 
 Recorded so far: E1 (3), E2 (3), E4 (3), E5 (3). E3 has no entry — it was closed on
 its test suite alone, without a Step 4 round.
-
----
-
-## Self-Check Answers — A1
-
-> Write your Self-Check answers here before requesting the annex audit.
-
-1.
-2.
-3.
-4.
-5.
-6.
-
----
 
 ## Annex Backlog
 
