@@ -122,9 +122,15 @@ set — under this same contract, tagged `a<n>-<slug>`.
 #### The Recall Set (`docs/quiz/<tag>.html`)
 
 Alongside the guide, a self-contained HTML page of multiple-choice questions,
-**anchored to the guide and to nothing else**. It grows Part by Part as the
-guide does, and is usable the moment a Part is read — long before the exercises
-exist.
+**anchored to the guide and to nothing else**. It ships **complete with the
+guide**, covering every numbered section, and is usable the moment a Part is read
+— long before the exercises exist.
+
+Complete is not a nicety. The guide is delivered whole at Step 1, so the
+instrument that tests it must be too: a reader who has just finished Part I needs
+somewhere to check Part I, and that is exactly the material an author is tempted
+to skip as "too obvious for multiple choice". Contract rule 1 assumes zero prior
+exposure, and the recall set inherits that assumption.
 
 The anchor is the whole design. Questions test the **mechanism the guide
 teaches**, never the solution of an exercise: a question that can be answered
@@ -150,6 +156,13 @@ Binding rules:
 * **Exercise solutions stay out.** The guide is the source; the exercises are
   not. A distractor drawn from a bug I actually wrote belongs in the challenge
   log, where it is a derivation, not here, where it would be an answer key.
+* **Base concepts only.** The recall set establishes the foundations the block
+  needs before its exercises can be attempted: how to read the notation, what
+  each operator does, where the documented traps are. Diagnosing a defect in a
+  block of code is a different skill, and it belongs to `error-patterns.md`.
+* **Every numbered section of the guide gets at least one question.** Coverage is
+  mechanically checkable: list the guide's sections, list the sections the
+  questions cite, and the two lists must agree.
 * **Three tiers**, labelled per question, following the Easy / Medium / Hard
   taxonomy of Step 3. Quantity and distribution are yours to choose.
 * **Filterable by Part and by tier**, so a Part can be drilled the day it is
@@ -174,7 +187,38 @@ When I signal that I have completed the exercises or the block's mini-project (w
 1. **JVM Bottleneck Audit:** Detail common engineering mistakes, anti-patterns, and low-level traps I might have fallen into (e.g., Escape Analysis failures, hidden memory retention, or thread contention).
 2. **Conceptual Challenges:** Ask 2 or 3 highly precise technical questions about my design choices so I can verify my own codebase's correctness.
 3. **The Challenge Log (`docs/challenge-log.md`):** The answers are an artifact, not a conversation. Record every challenge and its answer in the block's or annex's `docs/challenge-log.md` — one entry per question, carrying the derivation, the bytecode listing or the measurement that supports it, never the verdict alone. A green suite proves the code works and proves nothing about whether I can say *why*; this file is the evidence behind the checklist's **Oral Defence** box, and that box closes only when every exercise has an entry. Hold it to the same discipline as a theory guide: every number executed and verified before it is written, worked examples in aligned ```text blocks, the narrowest width that still demonstrates the point. Where I answered partially and the rest was drawn out, record the complete answer — the log is a reference, not a transcript or a grade. When a module is closed without a Step 4 round, say so as its own entry rather than letting the exercise go silently missing: an omission that leaves no trace is indistinguishable from an audit that had no questions worth asking.
-4. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
+4. **The Error Pattern Catalogue (`docs/error-patterns.md`):** The challenge log
+   records what I could not yet *derive*. This file records where I got the
+   composition wrong while already knowing the mechanism — a precedence assumed
+   instead of declared, a counter measuring the wrong thing, an off-by-one in a
+   limit. Those are a different failure and they leave no trace anywhere else:
+   they are fixed in conversation and vanish with it.
+
+   Maintain it **continuously**, as defects surface, not only at Step 4.
+
+   It is organised **by pattern, never by exercise and never chronologically**.
+   Nine individual mistakes are a diary and nobody rereads a diary; six recurring
+   shapes are a review checklist. When a new defect instantiates an existing
+   pattern, add the occurrence to that entry rather than opening a new one — the
+   repetition is the finding.
+
+   Every entry carries four fields, and the fourth is what makes the file worth
+   having:
+
+   * **what the pattern is**, named so it can be looked for;
+   * **the occurrences**, in a table, with what was written beside what was
+     meant;
+   * **the rule** that prevents it, stated as something checkable by eye;
+   * **why the compiler and the test suite do not catch it.** Most of these
+     compile cleanly under `-Wall -Werror` and pass a green suite, and a few pass
+     it *for the wrong reason* — record that explicitly when it happens.
+
+   Hold it to the same evidence discipline as the challenge log: every number
+   executed and verified, worked examples in aligned ```text blocks. And keep the
+   tone of a checklist rather than of a confession — the file exists to be read
+   before committing, not to grade anyone.
+
+5. **Unlock Next Level:** Once I confirm or respond to the conceptual challenge, update my progress and unlock the next module following this exact routine.
 
 ---
 

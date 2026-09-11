@@ -174,6 +174,90 @@
 const QUESTIONS = [
   // =============================================== Part I — Reading The Word
   {
+    tier: "easy", part: "I", src: "Part I.1 — Why base 2",
+    stem: `<p>Why do digital computers use base 2?</p>`,
+    options: [
+      { t: "Because a circuit has two stable states — a wire carrying voltage, or not", ok: true,
+        why: "That is the entire reason, and everything else follows mechanically. Decimal has ten symbols because we have ten fingers; a wire has two, so it gets two symbols. A single one is a <b>bit</b>, and eight make a <b>byte</b>." },
+      { t: "Because base 2 is the most space-efficient way to represent numbers", ok: false,
+        why: "It is not — by radix economy the theoretical optimum is base <em>e</em>, so base 3 scores better on that measure. Efficiency is not the reason; physical stability is." },
+      { t: "Because binary arithmetic is faster than decimal arithmetic", ok: false,
+        why: "This inverts cause and effect. Binary arithmetic is fast <em>because</em> it is what the hardware natively represents — the representation came first." },
+      { t: "By historical convention, from the first electronic computers", ok: false,
+        why: "There were decimal machines: the ENIAC represented numbers in base 10. Binary won on the physics of two stable states, not on precedent." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — Reading binary",
+    stem: `<p>The weights of an 8-bit word are <code>128 64 32 16 8 4 2 1</code>. What is <code>00001101</code>?</p>`,
+    options: [
+      { t: "<code>13</code>", ok: true,
+        why: "Add the weights of the positions holding a 1: <code>8 + 4 + 1 = 13</code>. That is the whole of reading binary — positional notation with base 2 instead of 10." },
+      { t: "<code>11</code>", ok: false,
+        why: "This reads the pattern as if it were decimal digits. Each position is worth a <b>power of two</b>, not a power of ten." },
+      { t: "<code>14</code>", ok: false,
+        why: "That would be <code>00001110</code> — <code>8 + 4 + 2</code>. Check which positions actually hold a 1; the rightmost bit here is set and the one beside it is not." },
+      { t: "<code>26</code>", ok: false,
+        why: "Twice the right answer, which happens if the weights are read one position to the left. Position indices count from the <b>right</b>, starting at zero." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — Reading binary",
+    stem: `<p>What is the largest value representable in 8 bits?</p>`,
+    options: [
+      { t: "<code>255</code>", ok: true,
+        why: "With <code>n</code> bits there are <code>2ⁿ</code> distinct patterns, and counting <b>from zero</b> the largest is <code>2ⁿ - 1</code>. All eight weights summed — <code>128+64+32+16+8+4+2+1</code> — give 255." },
+      { t: "<code>256</code>", ok: false,
+        why: "<code>256</code> is the <em>number of patterns</em>, not the largest one. The off-by-one comes from forgetting that zero occupies one of them." },
+      { t: "<code>127</code>", ok: false,
+        why: "That is the largest <b>signed</b> 8-bit value, where the top bit carries a negative weight (§I.6.2). Unsigned, all eight bits count as magnitude." },
+      { t: "<code>128</code>", ok: false,
+        why: "That is the weight of the top bit alone, not the sum of all of them." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3 — Decimal to binary",
+    stem: `<p>Write <code>100</code> in binary by greedily subtracting the largest weight that fits. Which bits end up set?</p>`,
+    options: [
+      { t: "Bits 6, 5 and 2 — <code>01100100</code>", ok: true,
+        why: "<code>100 - 64 = 36</code> (bit 6), <code>36 - 32 = 4</code> (bit 5), <code>4 - 4 = 0</code> (bit 2). Check: <code>64 + 32 + 4 = 100</code>. Weight 128 does not fit, and 16 and 8 are skipped because 36 minus 32 already leaves only 4." },
+      { t: "Bits 7 and 5 — <code>10100000</code>", ok: false,
+        why: "Bit 7 is weight 128, which is larger than 100 — the greedy step rejects it immediately. That pattern is 160." },
+      { t: "Bits 6, 5, 3 and 1 — <code>01101010</code>", ok: false,
+        why: "Those weights sum to <code>64 + 32 + 8 + 2 = 106</code>. After taking 64 and 32 the remainder is 4, and 4 is a single weight, not 8 plus 2." },
+      { t: "Bits 6, 4 and 2 — <code>01010100</code>", ok: false,
+        why: "<code>64 + 16 + 4 = 84</code>. The greedy step after 64 takes 32, not 16, because 32 still fits in the remainder of 36." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4 — Hexadecimal",
+    stem: `<p>Why is one hexadecimal digit exactly four bits, with no alignment arithmetic?</p>`,
+    options: [
+      { t: "Because <code>16 = 2⁴</code>", ok: true,
+        why: "The base being an exact power of two is what makes conversion pure substitution, four bits at a time: <code>1100 1010</code> becomes <code>ca</code>. Two hex digits are one byte, eight hex digits are one <code>Int</code>." },
+      { t: "Because hexadecimal has 16 symbols and a nibble has 16 values", ok: false,
+        why: "True but circular — it restates the count without naming the reason. The property that matters is that 16 is a <b>power of two</b>; base 10 also has a fixed symbol count and does not align with bits at all." },
+      { t: "Because bytes are eight bits and 8 is divisible by 4", ok: false,
+        why: "The alignment works for any width, not only for bytes — a 32-bit <code>Int</code> is exactly eight hex digits. It comes from the base, not from the word size." },
+      { t: "By convention, so that masks are easy to write", ok: false,
+        why: "The convenience is the consequence, not the cause. Octal (base 8) aligns too, at three bits per digit, for the same arithmetic reason." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4 — Hexadecimal",
+    stem: `<p>The guide says to see <code>0xff</code> as a bit pattern rather than as "two hundred fifty-five". As what pattern?</p>`,
+    options: [
+      { t: "Twenty-four zeros followed by eight ones — one byte of ones", ok: true,
+        why: "<code>0xff</code> is <code>00000000 00000000 00000000 11111111</code>, which is why it is <em>the</em> mask for \"keep the lowest byte\". Read as a magnitude it tells you nothing; read as a pattern it tells you exactly what the <code>&amp;</code> will keep." },
+      { t: "A single bit set at position 8", ok: false,
+        why: "That is <code>0x100</code>, which is 256. <code>0xff</code> is one less — every bit <em>below</em> position 8." },
+      { t: "All thirty-two bits set", ok: false,
+        why: "That is <code>0xffffffff</code>, which is <code>-1</code> as an <code>Int</code>. <code>0xff</code> is two hex digits, so eight bits." },
+      { t: "Alternating ones and zeros across the word", ok: false,
+        why: "That is <code>0x55555555</code> or <code>0xaaaaaaaa</code> — the SWAR masks of Part VI. Each hex <code>f</code> is four contiguous ones." }
+    ]
+  },
+  {
     tier: "easy", part: "I", src: "Part I.5 — Width",
     stem: `<p>What is <code>Int.MaxValue + 1</code>?</p>`,
     options: [
@@ -286,6 +370,118 @@ const QUESTIONS = [
     ]
   },
   // =============================================== Part II — The Operators
+  {
+    tier: "easy", part: "II", src: "Part II.7 — AND",
+    stem: `<p>With <code>a = 12 = 00001100</code> and <code>b = 10 = 00001010</code>, what is <code>a &amp; b</code>?</p>`,
+    options: [
+      { t: "<code>8</code> — <code>00001000</code>", ok: true,
+        why: "A result bit is 1 only where <b>both</b> inputs are 1, which here is position 3 alone. Set reading: <code>{2,3} ∩ {1,3} = {3}</code>, and bit 3 is worth 8." },
+      { t: "<code>14</code> — <code>00001110</code>", ok: false,
+        why: "That is <code>a | b</code>: 1 where <em>either</em> is 1. AND keeps only the shared positions." },
+      { t: "<code>6</code> — <code>00000110</code>", ok: false,
+        why: "That is <code>a ^ b</code>: 1 where they <em>differ</em>. AND is 1 where they agree on 1." },
+      { t: "<code>2</code> — <code>00000010</code>", ok: false,
+        why: "Position 1 is set in <code>b</code> but clear in <code>a</code>, so AND clears it. Only position 3 survives." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.7 — AND",
+    stem: `<p>The guide calls one use of <code>&amp;</code> the single most common in production code. Which, and what is the rule?</p>`,
+    options: [
+      { t: "Masking — a mask's <code>1</code>s mark the positions to <b>keep</b>, and AND zeroes everything else", ok: true,
+        why: "<code>x &amp; 0xff</code> keeps the lowest byte and discards the rest; <code>x &amp; 1</code> asks whether <code>x</code> is odd by keeping only bit 0. The mask is a picture of what survives." },
+      { t: "Clearing bits — a mask's <code>1</code>s mark the positions to <b>remove</b>", ok: false,
+        why: "Inverted. To clear the positions a mask marks you need <code>x &amp; ~mask</code> (§II.10), where the complement turns \"remove these\" into \"keep the others\"." },
+      { t: "Setting bits, by combining a word with a flag", ok: false,
+        why: "That is <code>|</code> (§II.8). AND can never turn a bit on — it only ever keeps or clears." },
+      { t: "Comparing two words for equality", ok: false,
+        why: "<code>a &amp; b</code> being non-zero says only that they share some set bit, not that they are equal. Equality is <code>==</code>, or <code>(a ^ b) == 0</code>." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.8 — OR",
+    stem: `<p>With <code>a = 12 = 00001100</code> and <code>b = 10 = 00001010</code>, what is <code>a | b</code>?</p>`,
+    options: [
+      { t: "<code>14</code> — <code>00001110</code>", ok: true,
+        why: "A bit is 1 where <b>either</b> input is 1: positions 1, 2 and 3. Set reading: <code>{2,3} ∪ {1,3} = {1,2,3}</code>, which is <code>2 + 4 + 8 = 14</code>." },
+      { t: "<code>22</code>", ok: false,
+        why: "That is <code>12 + 10</code>. OR is not addition — when both inputs have a bit set, OR produces one bit and addition produces a carry (see Part VI's entry on when the two coincide)." },
+      { t: "<code>8</code>", ok: false,
+        why: "That is <code>a &amp; b</code>, which keeps only the shared position. OR keeps every position set in either." },
+      { t: "<code>6</code>", ok: false,
+        why: "That is <code>a ^ b</code>, which drops the position where both agree on 1. OR keeps it." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.9 — XOR",
+    stem: `<p>With <code>a = 12 = 00001100</code> and <code>b = 10 = 00001010</code>, what is <code>a ^ b</code>?</p>`,
+    options: [
+      { t: "<code>6</code> — <code>00000110</code>", ok: true,
+        why: "A bit is 1 where the inputs <b>differ</b>: positions 1 and 2. Position 3 is set in both, so it cancels. Set reading: symmetric difference — members of exactly one of the two sets." },
+      { t: "<code>14</code>", ok: false,
+        why: "That is <code>a | b</code>, which keeps position 3 because it is set in both. XOR drops exactly the positions where they agree." },
+      { t: "<code>8</code>", ok: false,
+        why: "That is <code>a &amp; b</code> — the positions where both are 1, which is precisely what XOR discards." },
+      { t: "<code>2</code>", ok: false,
+        why: "Only one of the two differing positions. Both position 1 (set in <code>b</code> only) and position 2 (set in <code>a</code> only) survive." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.9 — XOR",
+    stem: `<p>XOR has a property the other operators lack. Which?</p>`,
+    options: [
+      { t: "It is its own inverse — <code>(x ^ k) ^ k == x</code> for every <code>x</code> and <code>k</code>", ok: true,
+        why: "Verified over 200,000 random pairs. Together with <code>x ^ x == 0</code> and <code>x ^ 0 == x</code>, this is what makes XOR the operator of stream ciphers, checksums, and the \"find the unpaired element\" trick — applying it twice undoes it." },
+      { t: "It is commutative", ok: false,
+        why: "<code>&amp;</code> and <code>|</code> are commutative too. Commutativity is not what distinguishes XOR." },
+      { t: "It distributes over AND", ok: false,
+        why: "Distributivity between <code>&amp;</code> and <code>|</code> is the Boolean-algebra property of §I.6 and §II.7–8, and it runs both ways there. The distinguishing property of XOR is invertibility." },
+      { t: "It never produces a negative result", ok: false,
+        why: "<code>1 ^ -1</code> is <code>-2</code>. XOR operates position-wise and has no opinion about the sign bit." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.10 — NOT",
+    stem: `<p>What is <code>~12</code>?</p>`,
+    options: [
+      { t: "<code>-13</code>", ok: true,
+        why: "Flipping every bit gives <code>-x - 1</code> — the master identity of §I.6.4 seen from the other side. Check the neighbours: <code>~0</code> is <code>-1</code>, <code>~(-1)</code> is <code>0</code>, <code>~5</code> is <code>-6</code>." },
+      { t: "<code>-12</code>", ok: false,
+        why: "That is arithmetic negation, which is <code>~x + 1</code>. The missing <code>+1</code> is the difference between flipping bits and negating, and confusing them is the E6 trap where <code>-s</code> impersonates a complement." },
+      { t: "<code>243</code>", ok: false,
+        why: "That is the pattern <code>11110011</code> read as an <b>unsigned 8-bit</b> value. In a 32-bit signed <code>Int</code>, the flip sets all the upper bits too." },
+      { t: "<code>-11</code>", ok: false,
+        why: "Off by one in the wrong direction. Test with <code>x = 0</code>: <code>~0</code> is <code>-1</code>, so the identity subtracts one rather than adding." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.10 — NOT",
+    stem: `<p>You have a <code>mask</code> whose <code>1</code>s mark the positions you want to <b>clear</b>. What is the standard idiom?</p>`,
+    options: [
+      { t: "<code>x &amp; ~mask</code>", ok: true,
+        why: "The complement turns \"these positions\" into \"every other position\", and AND keeps those. This is the idiom behind <code>excl</code> in E6 and behind removing a permission in §IV.18." },
+      { t: "<code>x ^ mask</code>", ok: false,
+        why: "XOR <b>toggles</b> the marked positions: it clears the ones that were set and <em>sets</em> the ones that were clear. Safe only when you already know every marked bit is set — which is the E8 finding about <code>removed</code>." },
+      { t: "<code>x | ~mask</code>", ok: false,
+        why: "OR only ever sets bits. This sets every position the mask does <em>not</em> mark and leaves the marked ones untouched — the opposite of the intent." },
+      { t: "<code>x - mask</code>", ok: false,
+        why: "Arithmetic subtraction happens to work only when every marked bit is already set in <code>x</code>; otherwise it borrows across positions and corrupts unrelated bits. Challenge 14 of the log is the long version of why." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.11 — Left shift",
+    stem: `<p><code>5 &lt;&lt; 1</code> is 10 and <code>5 &lt;&lt; 2</code> is 20. What is <code>5 &lt;&lt; 3</code>, and what is the general rule?</p>`,
+    options: [
+      { t: "<code>40</code> — each position shifted left doubles the value, so <code>x &lt;&lt; n == x * 2ⁿ</code>", ok: true,
+        why: "Verified over 100,000 cases without overflow. It is the same fact as \"appending a zero in decimal multiplies by ten\": shifting in a zero on the right multiplies by the base." },
+      { t: "<code>15</code> — shifting by <code>n</code> adds <code>n</code> to the value", ok: false,
+        why: "Check against the two given cases: <code>5 &lt;&lt; 1</code> would be 6, not 10. The relationship is multiplicative." },
+      { t: "<code>25</code> — shifting by <code>n</code> multiplies by <code>n</code>", ok: false,
+        why: "<code>5 &lt;&lt; 2</code> would then be 10, but it is 20. Each single position doubles, so <code>n</code> positions multiply by <code>2ⁿ</code>, not by <code>n</code>." },
+      { t: "<code>80</code>", ok: false,
+        why: "That is <code>5 &lt;&lt; 4</code>. Count the doublings: 5, 10, 20, 40." }
+    ]
+  },
   {
     tier: "easy", part: "II", src: "Part II.12 — Right shift",
     stem: `<p><code>-20 >> 2</code> gives <code>-5</code>. What does <code>-20 >>> 2</code> give?</p>`,
@@ -527,6 +723,36 @@ const QUESTIONS = [
         why: "The AND identifies <em>where</em> a carry arises, but a carry by definition affects the next position up. Without the shift it would be added back into the position that produced it." },
       { t: "<code>(a ^ b) &lt;&lt; 1</code>", ok: false,
         why: "XOR is the sum term, already used. Reusing it as the carry would double-count and never terminate." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.21 — Packing fields",
+    stem: `<p>Two 32-bit counters are packed into one <code>Long</code> so that a single CAS updates both:</p>
+<pre><code>val packed = (hi.toLong &lt;&lt; 32) | (lo.toLong &amp; 0xffffffffL)</code></pre>
+<p>The guide calls the mask mandatory rather than defensive. Why?</p>`,
+    options: [
+      { t: "Widening a negative <code>lo</code> sign-extends it to sixty-four ones, and the <code>|</code> then floods the high half", ok: true,
+        why: "§III.16 in production. With <code>hi = 7</code> and <code>lo = -1</code>, the unmasked version reads <code>hi</code> back as <code>-1</code>: the high field is destroyed, and since OR can only set bits the damage is unrecoverable." },
+      { t: "Without it the shift would overflow the <code>Long</code>", ok: false,
+        why: "Shifts do not overflow — bits past the width are discarded. And <code>hi.toLong &lt;&lt; 32</code> is well within 64 bits by construction." },
+      { t: "It keeps <code>lo</code> non-negative so the two fields compare correctly", ok: false,
+        why: "Nothing compares the fields here, and <code>lo</code> is meant to hold negatives. The mask exists to stop <code>lo</code>'s sign extension from reaching positions that belong to <code>hi</code>." },
+      { t: "It is required by <code>AtomicLong.compareAndSet</code>", ok: false,
+        why: "The CAS takes whatever 64-bit word it is given. The motivation for packing at all is atomicity with no wrapper allocation, but the mask is about the encoding, not the CAS." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.22 — Wire formats",
+    stem: `<p>Zig-zag plus LEB128 is not a teaching toy. Where does this exact combination appear in production?</p>`,
+    options: [
+      { t: "It is how Protocol Buffers encodes <code>sint32</code>", ok: true,
+        why: "And the same shape recurs across binary protocols: DWARF debug info, WebAssembly, MIDI, and UTF-8's continuation bytes all use a variable-length scheme with a continuation flag. The motivation is always that small values dominate real payloads and a fixed 4-byte integer wastes three of them." },
+      { t: "It is how UTF-8 encodes code points above U+FFFF", ok: false,
+        why: "UTF-8 is variable-length and uses continuation bits, so it is a cousin — but it has no zig-zag step, because code points are never negative." },
+      { t: "It is the compression used in gzip and DEFLATE", ok: false,
+        why: "Those are Huffman coding plus LZ77 — entropy coding over a dictionary, a different mechanism entirely. LEB128 does no statistical modelling." },
+      { t: "It is how the JVM encodes constant pool indices in a <code>.class</code> file", ok: false,
+        why: "Class file indices are fixed-width <code>u2</code> fields. The JVM's access flags are the bitmask idiom of §IV.18, but the constant pool does not use variable-length integers." }
     ]
   },
   // =============================================== Part V — Derivations
