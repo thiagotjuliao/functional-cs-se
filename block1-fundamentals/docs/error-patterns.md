@@ -23,7 +23,7 @@ compile cleanly under `-Wall -Werror`.
 | 1 | Bit-to-byte conversion written from memory | 3 | two of three |
 | 2 | Two quantities that coincide under the current configuration | 1 | no — a test passed for the wrong reason |
 | 3 | Off-by-one in a limit | 1 | no — the boundary has no call site |
-| 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no |
+| 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no — one latent since pinned, five documented |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
 | 6 | A contract no implementation of that signature can satisfy | 2 | no — contracts are prose, and the suite samples the interior |
 
@@ -151,26 +151,25 @@ constant could take while `Exercise7FootprintSpec` stays green, computed by
 replaying the suite's numeric assertions:
 
 ```text
-constant           correct   every value that ALSO passes the whole suite
-----------------   -------   --------------------------------------------
-HeaderBytes             12   9, 10, 11, 12
-ArrayHeaderBytes        16   13, 14, 15, 16
-ReferenceBytes           4   3, 4, 5, 6
-AlignmentBytes           8   8                       <- pinned
-IntegerBytes             4   4                       <- pinned
-LongBytes                8   5, 6, 7, 8, 9, 10, 11
-DoubleBytes              8   7, 8, 9, 10
-BooleanBytes             1   0, 1, 2, 3, 4
+constant           correct   as first written          after the repair
+----------------   -------   -----------------------   -----------------
+HeaderBytes             12   9, 10, 11, 12             9, 10, 11, 12
+ArrayHeaderBytes        16   13, 14, 15, 16            13, 14, 15, 16
+ReferenceBytes           4   3, 4, 5, 6                3, 4, 5, 6
+AlignmentBytes           8   8              <- pinned  8
+IntegerBytes             4   4              <- pinned  4
+LongBytes                8   5, 6, 7, 8, 9, 10, 11     5, 6, 7, 8, 9, 10, 11
+DoubleBytes              8   7, 8, 9, 10               7, 8, 9, 10
+BooleanBytes             1   0, 1, 2, 3, 4             1              <- pinned
 ```
 
-Six of the eight are underdetermined. `BooleanBytes` is the sharpest case: it may
-be **0** — a `Boolean` field costing nothing at all — and every assertion still
-passes, because `align8` rounds `12 + 0` and `12 + 4` into the same 16.
+Six of the eight were underdetermined. `BooleanBytes` was the sharpest case: it
+could be **0** — a `Boolean` field costing nothing at all — with every assertion
+still passing, because `align8` rounds `12 + 0` and `12 + 4` into the same 16.
 
-The two pinned constants show what pinning takes. `AlignmentBytes` is fixed
-because the `align` test walks `0 to 500` and checks `aligned % 8 == 0` at every
-one — a property, not a sample. `IntegerBytes` is fixed because it appears in two
-independent places, `shallowSize` and `arrayOfIntSize`, and
+The two originally pinned constants show what pinning takes. `AlignmentBytes` is
+fixed because the `align` test walks `0 to 500` and checks `aligned % 8 == 0` at
+every one — a property, not a sample. `IntegerBytes` is fixed because
 `arrayOfIntSize(1_000_000) == 4_000_016` multiplies it by a million, which is
 exactly what defeats the rounding.
 
@@ -179,6 +178,16 @@ were wrong. If no assertion names it, the constant is *documented*, not
 *verified*, and saying so in a comment costs nothing. Two ways to pin one:
 multiply it by something large enough to survive rounding, or assert a property
 over a range instead of a value at a point.
+
+**What was repaired.** `BooleanBytes` is now pinned by one added assertion,
+`shallowSize(0, 0, 0, 0, 8) == 24` — eight booleans instead of one, so a
+one-byte error becomes an eight-byte one and stops fitting inside what `align`
+rounds away. The remaining five carry the admission in their Scaladoc instead,
+each naming the assertion that observes it and the range it could still take.
+`HeaderBytes` names something stronger: it is **unpinnable in principle**,
+because it enters every expression with coefficient 1 and `align8(H - 1 + S)`
+can never differ from `align8(H + S)`. The model sees its residue class modulo
+8, never its value.
 
 **Why the build does not catch it.** `align` is a rounding function: it is
 deliberately non-injective, and every wrong value landing in the same 8-byte

@@ -25,6 +25,30 @@ import java.lang.management.ManagementFactory
   */
 object AllocationProbe:
 
+  /** The HotSpot-specific bean, resolved once at object initialisation.
+    *
+    * Three preconditions this `ThreadMXBean` type does not express, all of them
+    * recorded with their evidence in `docs/challenge-log.md`, entry 4:
+    *
+    *   - **The JVM must be forked.** Type identity here is the pair *(binary
+    *     name, defining loader)*, and a REPL or a layered sbt classloader
+    *     supplies its own `com.sun.management.ThreadMXBean`, so the cast below
+    *     compares two distinct interfaces that share a name and fails with a
+    *     `ClassCastException`. `build.sbt` sets `Test / fork := true`, which
+    *     makes every measurement in this module possible as a side effect of a
+    *     setting written for an unrelated reason.
+    *   - **It counts the calling thread only.** Allocation on any other thread —
+    *     a `Future`, an `ExecutorService`, `.par`, and from Block 3 onwards a
+    *     virtual thread — is invisible to it. A body that allocates hundreds of
+    *     megabytes off-thread measures as a few hundred bytes, with no defect
+    *     anywhere.
+    *   - **It can report `-1`.** `getCurrentThreadAllocatedBytes` returns `-1`
+    *     when per-thread allocation measurement is disabled, which
+    *     `setThreadAllocatedMemoryEnabled(false)` can do at runtime. Disabled
+    *     between the two readings of `measure`, it yields a large negative
+    *     delta. Neither this object nor its callers check
+    *     `isThreadAllocatedMemoryEnabled`.
+    */
   val bean: ThreadMXBean = ManagementFactory.getThreadMXBean.asInstanceOf[ThreadMXBean]
 
   /** Cumulative bytes allocated by the *current thread* since it started.

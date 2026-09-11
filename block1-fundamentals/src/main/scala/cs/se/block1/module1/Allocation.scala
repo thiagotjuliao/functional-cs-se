@@ -133,14 +133,105 @@ end Escape
   */
 object Footprint:
 
+  // The eight constants of the model. None of them is asserted directly: each is
+  // observed only through `shallowSize`, `arrayOfIntSize` and `listOfIntSize`,
+  // and `align` is a rounding function that erases any error smaller than eight
+  // bytes on the way out. Each doc below therefore names the assertion that
+  // would fail if the value were wrong — or states plainly that none would, and
+  // how wrong it could be. See `docs/error-patterns.md`, pattern 4, for the
+  // replay that produced these ranges, and `docs/challenge-log.md`, entry 9, for
+  // the technique that pins one.
+
+  /** Object header: an 8-byte mark word plus a 4-byte klass pointer.
+    *
+    * **Unpinned, and unpinnable.** Any value in `9, 10, 11, 12` passes the whole
+    * suite. Worse, no assertion on `shallowSize` could ever separate them: to
+    * distinguish `H` from `H - 1` some field sum `S` would have to put a multiple
+    * of 8 inside `(H - 1 + S, H + S]`, but whenever `H + S` is that multiple,
+    * `H - 1 + S` rounds up to it as well. The two agree for every `S`.
+    *
+    * This constant enters every expression with coefficient 1 and can never be
+    * multiplied, so the model observes its residue class modulo 8 and never its
+    * value. The 12 comes from the JVM, not from this suite.
+    */
   val HeaderBytes: Int = 12
+
+  /** Array header: the object header plus a 4-byte length field.
+    *
+    * **Unpinned.** Any value in `13, 14, 15, 16` passes, for the same reason as
+    * `HeaderBytes`: `arrayOfIntSize` adds it to the element bytes once, with
+    * coefficient 1, and the final alignment absorbs a difference of up to 7.
+    */
   val ArrayHeaderBytes: Int = 16
+
+  /** Width of one reference, with compressed oops enabled.
+    *
+    * **Unpinned.** Any value in `3, 4, 5, 6` passes. It appears with coefficient
+    * 2 in the cons-cell assertion `shallowSize(2, 0, 0, 0, 0) == 24`, so a
+    * one-unit error moves the sum by 2 — still inside the 8-byte window that
+    * `align` erases.
+    *
+    * Note that this is the constant whose accidental equality with
+    * `IntegerBytes` hid a real defect: `shallowSize(1, 0, 0, 0, 0)` and
+    * `shallowSize(0, 1, 0, 0, 0)` are both 16 only because both widths are 4
+    * here. See `docs/error-patterns.md`, pattern 2.
+    */
   val ReferenceBytes: Int = 4
+
+  /** Alignment granularity: every object's size is a multiple of this.
+    *
+    * **Pinned.** `Exercise7FootprintSpec` walks `align` over `0 to 500` and
+    * asserts `aligned % 8 == 0` at every point. That is a property over a range
+    * rather than a value at a point, which is one of the two ways to defeat the
+    * rounding — and the only constant here pinned that way.
+    */
   val AlignmentBytes: Int = 8
 
+  /** Width of a primitive `Int` field. Not the size of a boxed
+    * `java.lang.Integer`, which is `shallowSize(0, 1, 0, 0, 0)` = 16.
+    *
+    * **Pinned.** `arrayOfIntSize(1_000_000) == 4_000_016` multiplies it by a
+    * million, so a one-unit error moves the result by a million bytes. That is
+    * the other way to defeat the rounding: make the coefficient large enough
+    * that the error cannot hide inside 8 bytes.
+    */
   val IntegerBytes: Int = 4
+
+  /** Width of a primitive `Long` field: 64 bits, therefore 8 bytes.
+    *
+    * **Unpinned.** Any value in `5, 6, 7, 8, 9, 10, 11` passes. It is observed
+    * by `shallowSize(0, 0, 1, 0, 0) == 24` and `shallowSize(1, 1, 1, 1, 1) == 40`,
+    * both with coefficient 1.
+    *
+    * This constant was written as `16` in an earlier draft — the bit width
+    * halved by eye rather than by division. The suite caught it, but only
+    * because the spec author happened to assert an object with a `Long` field;
+    * see `docs/error-patterns.md`, pattern 1.
+    */
   val LongBytes: Int = 8
+
+  /** Width of a primitive `Double` field: IEEE-754 binary64, therefore 8 bytes.
+    *
+    * **Unpinned.** Any value in `7, 8, 9, 10` passes. It appears with
+    * coefficient 2 in `shallowSize(0, 0, 0, 2, 0) == 32`, which narrows the
+    * range but does not close it.
+    */
   val DoubleBytes: Int = 8
+
+  /** Storage width of a `Boolean` field. A `Boolean` carries one bit of
+    * information; the JVM gives it a whole byte, in objects and in `boolean[]`
+    * alike.
+    *
+    * **Pinned**, by `shallowSize(0, 0, 0, 0, 8) == 24`. Eight booleans turn a
+    * one-byte error into an eight-byte one, and eight bytes is exactly what
+    * `align` can no longer hide.
+    *
+    * Before that assertion existed this was the worst case in the model: any
+    * value in `0, 1, 2, 3, 4` passed the entire suite — including **zero**, a
+    * `Boolean` field costing nothing at all — because `align8(12 + 0)` and
+    * `align8(12 + 4)` are both 16. The derivation is in
+    * `docs/challenge-log.md`, entry 9.
+    */
   val BooleanBytes: Int = 1
 
   /** Round `bytes` up to the next multiple of `AlignmentBytes`.

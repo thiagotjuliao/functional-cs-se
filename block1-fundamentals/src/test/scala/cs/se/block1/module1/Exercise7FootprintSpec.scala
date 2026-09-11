@@ -42,6 +42,12 @@ class Exercise7FootprintSpec extends Module1Harness:
     assertEquals(Footprint.shallowSize(0, 0, 1, 0, 0), 24, "boxed java.lang.Long")
     assertEquals(Footprint.shallowSize(0, 0, 0, 0, 1), 16, "one boolean field")
     assertEquals(Footprint.shallowSize(1, 1, 1, 1, 1), 40, "12 + 4 + 4 + 8 + 8 + 1 = 37 -> 40")
+
+    // Eight booleans rather than one, so that a one-byte error becomes an
+    // eight-byte one and stops fitting inside what `align` rounds away. Without
+    // this line BooleanBytes may be 0, 1, 2, 3 or 4 with the whole suite green —
+    // including zero, a Boolean field costing nothing at all.
+    assertEquals(Footprint.shallowSize(0, 0, 0, 0, 8), 24, "eight booleans: 12 + 8 = 20 -> 24")
   }
 
   test("the List[Int] tax over Array[Int] is exactly tenfold") {
