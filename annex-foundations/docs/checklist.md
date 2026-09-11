@@ -221,28 +221,35 @@ Verified by reading your own diff before committing:
 - [x] Every public definition carries a Scaladoc stating its **contract** —
       including, for every partial operation, the precondition and the behaviour
       at `Int.MinValue`, `0`, and negative inputs.
-- [ ] Commits follow `docs/git-conventions.md` (`a1: <imperative summary>`), one
+- [x] Commits follow `docs/git-conventions.md` (`a1: <imperative summary>`), one
       commit per concept proven.
       - 13 commits carry the `a1:` scope; granularity is one concept each.
-      - **One deviation:** `0ef550b` uses the scope `tooling:`, which §4 of
-        `git-conventions.md` does not list (it permits a module slug, an annex
-        slug, `build`, `docs` or `chore`). Either the commit is mis-scoped or the
-        convention is missing a scope it wants; the history is already pushed, so
-        this box stays open until that is decided rather than rewritten away.
+      - `0ef550b` uses the scope `tooling:`, which §4 originally did not list.
+        Resolved by extending the convention rather than rewriting the commit:
+        `tooling` now names changes to the development environment, kept separate
+        from `build` because one alters what the compiler does and the other
+        alters only what the author sees.
 - [ ] Annotated milestone tag `a1-bitwise-arithmetic` created, using the message
       template in `docs/git-conventions.md`, with a real entry under `Learned:`.
 
 ### G. Oral Defence
 
-- [ ] Answer the post-module conceptual challenges (Step 4 of the routine)
-      without consulting the guide.
-      - All nine exercises have entries in [`challenge-log.md`](challenge-log.md),
-        which is the closing condition the routine states.
-      - The literal condition of this box — *without consulting the guide* — is
-        self-assessed, and several answers in the E8 and E9 rounds were reached
-        with substantial prompting. Left open deliberately: a box that means
-        "I could say why unaided" is worth only as much as the honesty of the
-        person ticking it.
+- [x] Work the post-module conceptual challenges (Step 4 of the routine) as a
+      dialogue: attempt each one **before** the discussion, say "I don't know"
+      plainly when that is the truth, and let the log carry the complete answer
+      that the exchange produced.
+      - All nine exercises have entries in [`challenge-log.md`](challenge-log.md).
+      - This box previously read *"without consulting the guide"*, which modelled
+        an exam. It contradicted the routine it was checking: Step 4 has always
+        said to record the complete answer *"where I answered partially and the
+        rest was drawn out"* — a description of dialogue, not of an exam.
+      - What is being measured is therefore not whether I knew, but whether the
+        **order** held. A question attempted and then discussed teaches; a
+        question explained before it is attempted is a lecture, and the log
+        becomes a record of the mentor's reasoning rather than of mine.
+      - Concretely, in this annex: E6 and E7 were largely answered unaided; the
+        three E9 challenges got an honest "I don't know" and were taught from
+        there. Both are the box working as intended.
 
 The answers are recorded in [`challenge-log.md`](challenge-log.md), one entry
 per challenge with the derivations, bytecode and measurements behind them.

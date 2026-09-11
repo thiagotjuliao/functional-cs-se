@@ -81,8 +81,23 @@ Learned:
 <scope>: <imperative summary>
 ```
 
-Where `<scope>` is the module slug (`b1-m2`), the annex slug (`a1`), `build`,
-`docs`, or `chore`.
+Where `<scope>` is one of:
+
+| scope | covers |
+| :--- | :--- |
+| module slug (`b1-m2`) | exercise implementations and module artifacts |
+| annex slug (`a1`) | the same, for an Annex Track entry |
+| `build` | `build.sbt`, plugins, compiler flags — anything the build reads |
+| `tooling` | the development environment: editor contracts, formatter config, IDE and language-server settings |
+| `docs` | theory guides, checklists, logs, conventions |
+| `chore` | repository housekeeping that fits none of the above |
+
+`tooling` and `build` are deliberately separate. A change to `build.sbt` alters
+what the *compiler* does and can break the build for anyone; a change to
+`.vscode/settings.json` or an IDE contract alters what the *author* sees and
+cannot. Collapsing both into `chore` would lose that distinction in
+`git log --oneline`, which is the one place this repository asks its history to
+be readable.
 Commit granularity follows the pedagogy, not the calendar: one commit per
 *concept proven*, so that `git log --oneline` reads as a syllabus.
 
