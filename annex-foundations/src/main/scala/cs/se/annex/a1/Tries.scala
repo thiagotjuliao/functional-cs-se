@@ -150,12 +150,14 @@ object VarIntCodec:
     * Must be a bijection on the whole of `Int` — in particular
     * `zigZagEncode(Int.MinValue)` must round-trip.
     */
-  def zigZagEncode(n: Int): Int = ???
+  def zigZagEncode(n: Int): Int =
+    (n << 1) ^ (n >> 31)
 
   /** The inverse of `zigZagEncode`. Must satisfy
     * `zigZagDecode(zigZagEncode(n)) == n` for every `Int`.
     */
-  def zigZagDecode(n: Int): Int = ???
+  def zigZagDecode(n: Int): Int =
+    (n >>> 1) ^ (-(n & 1))
 
   /** LEB128 bytes for the zig-zagged form of `n`.
     *
@@ -168,7 +170,18 @@ object VarIntCodec:
     * accumulating a `List[Byte]`, then convert — no `var`, no
     * `ArrayBuffer`.
     */
-  def encode(n: Int): IArray[Byte] = ???
+  def encode(n: Int): IArray[Byte] =
+    @scala.annotation.tailrec
+    def loop(n: Int, acc: List[Byte] = List()): List[Byte] =
+      val group = n & ((1 << 7) - 1)
+      val rem = n >>> 7
+      val flag = rem != 0
+      val byte = (if flag then (1 << 7) | group else group).toByte
+      val acc_ = acc :+ byte
+
+      if rem == 0 then acc_ else loop(rem, acc_)
+    val res = loop(zigZagEncode(n))
+    IArray.from(res)
 
   /** The number of bytes `encode(n)` will produce, computed **without**
     * encoding.
@@ -178,7 +191,13 @@ object VarIntCodec:
     * and here it is a check that you understand the format rather than merely
     * having transcribed it.
     */
-  def encodedSize(n: Int): Int = ???
+  def encodedSize(n: Int): Int =
+    val z = zigZagEncode(n)
+
+    PowersOfTwo.log2Floor(z) match
+      case None if z == 0 => 1
+      case Some(i) if z > 0 => Math.ceilDiv(i + 1, 7)
+      case _ => 5
 
   /** Decode one varint starting at `offset`.
     *
@@ -191,7 +210,21 @@ object VarIntCodec:
     * extension (guide, Part III.16). Omitting it is the classic silent codec bug,
     * and this exercise's suite will find it.
     */
-  def decodeAt(bytes: IArray[Byte], offset: Int): Option[(Int, Int)] = ???
+  def decodeAt(bytes: IArray[Byte], offset: Int): Option[(Int, Int)] =
+    @scala.annotation.tailrec
+    def loop(pos: Int, k: Int = 0, acc: Int = 0): Option[(Int, Int)] =
+      if k == 5 then None
+      else
+        val shift = k * 7
+        val byte = bytes(pos) & 0xff
+        val payload = byte & 0x7f
+        val cont = (byte & 0x80) != 0
+        val acc_ = acc + (payload << shift)
+
+        if (pos == bytes.length - 1) && cont then None
+        else if !cont then Some((zigZagDecode(acc_), pos + 1))
+        else loop(pos + 1, k + 1, acc_)
+    if offset >= bytes.length then None else loop(offset)
 
   /** Decode a buffer holding exactly one varint.
     *
@@ -199,5 +232,9 @@ object VarIntCodec:
     * decoder that silently ignores trailing input is a decoder that will
     * silently accept a corrupted frame.
     */
-  def decode(bytes: IArray[Byte]): Option[Int] = ???
+  def decode(bytes: IArray[Byte]): Option[Int] =
+    decodeAt(bytes, 0).flatMap {
+      case (v, offset) if offset == bytes.length => Some(v)
+      case _ => None
+    }
 end VarIntCodec
