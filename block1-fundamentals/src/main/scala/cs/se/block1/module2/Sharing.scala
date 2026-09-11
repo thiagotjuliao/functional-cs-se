@@ -1,5 +1,9 @@
 package cs.se.block1.module2
 
+import cs.se.block1.module1.Footprint
+
+import scala.annotation.unused
+
 /** Exercise 1 (Hard) — the cost model, and the first thing you write.
   *
   * This exercise is out of tier order on purpose. It contains no data structure,
@@ -38,7 +42,10 @@ object Sharing:
     * conclusion. A literal here is a number that stops being checked the moment
     * the model changes.
     */
-  val CellBytes: Int = ???
+  val CellBytes: Int = Footprint.align(
+    Footprint.HeaderBytes +
+      2 * Footprint.ReferenceBytes
+  )
 
   /** Heap cost of one binary tree node: a value reference and two child
     * references.
@@ -47,28 +54,37 @@ object Sharing:
     * lands inside padding the two-reference cell was already paying for, so the
     * node and the cell cost the same. Guide, Part I.3.
     */
-  val NodeBytes: Int = ???
+  val NodeBytes: Int = Footprint.align(
+    Footprint.HeaderBytes +
+      3 * Footprint.ReferenceBytes
+  )
 
   /** Cells allocated by `x :: xs`, where `xs` has `n` cells.
     *
     * The answer does not mention `n`. If yours does, re-read Part I.4: the old
     * list is not touched, not copied, and not read.
+    *
+    * That is why `n` carries `@unused`. The parameter is here so that this
+    * function has the same shape as `appendCells` and the two can be read side
+    * by side; the annotation is what keeps `-Wall -Werror` from rejecting the
+    * correct implementation. Treat the compiler's complaint as confirmation:
+    * an implementation that reads `n` is the one that is wrong.
     */
-  def prependCells(n: Int): Long = ???
+  def prependCells(@unused n: Int): Long = 1L
 
   /** Cells allocated by `xs :+ x`, where `xs` has `n` cells.
     *
     * The last cell's `tail` would have to change, and it cannot, so it is
     * rebuilt — which forces its parent to be rebuilt, all the way to the front.
     */
-  def appendCells(n: Int): Long = ???
+  def appendCells(n: Int): Long = n
 
   /** Cells allocated by `xs.reverse`, where `xs` has `n` cells.
     *
     * Note what is *not* allocated: the elements. Reverse rebuilds the spine and
     * shares every value it holds.
     */
-  def reverseCells(n: Int): Long = ???
+  def reverseCells(n: Int): Long = n
 
   /** Cells allocated by `xs.map(f)`, where `xs` has `n` cells.
     *
@@ -76,13 +92,15 @@ object Sharing:
     * measurement of `map(identity)` is the experiment that separates the two —
     * Exercise 8 runs it.
     */
-  def mapCells(n: Int): Long = ???
+  def mapCells(n: Int): Long = n
 
   /** Bytes for a list-shaped structure of `cells` cells. */
-  def cellBytes(cells: Long): Long = ???
+  def cellBytes(cells: Long): Long =
+    cells * CellBytes
 
   /** Bytes for a tree-shaped structure of `nodes` nodes. */
-  def nodeBytes(nodes: Long): Long = ???
+  def nodeBytes(nodes: Long): Long =
+    nodes * NodeBytes
 
   /** Depth of a perfectly balanced binary tree holding `n` values.
     *
@@ -101,7 +119,9 @@ object Sharing:
     * an off-by-one in a limit, which is pattern 3 of `error-patterns.md`, and
     * the suite does test it.
     */
-  def balancedDepth(n: Int): Int = ???
+  def balancedDepth(n: Int): Int =
+    if n <= 0 then 0
+    else 32 - java.lang.Integer.numberOfLeadingZeros(n)
 
   /** Nodes allocated by one `insert` into a balanced tree of `n` nodes, when the
     * value is not already present.
@@ -111,7 +131,7 @@ object Sharing:
     * exactly one, which is a fact §E of the checklist asks you to explain rather
     * than assert.
     */
-  def treeInsertNodes(n: Int): Long = ???
+  def treeInsertNodes(n: Int): Long = balancedDepth(n) + 1L
 
   /** How many times cheaper one `insert` is than copying the whole tree.
     *
@@ -121,6 +141,8 @@ object Sharing:
     *
     * Returns `0.0` for the empty tree, where there is nothing to share.
     */
-  def sharingRatio(n: Int): Double = ???
+  def sharingRatio(n: Int): Double =
+    if n == 0 then 0.0
+    else nodeBytes(n) / (treeInsertNodes(n) * NodeBytes).toDouble
 
 end Sharing
