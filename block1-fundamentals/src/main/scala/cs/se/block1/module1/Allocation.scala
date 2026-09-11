@@ -62,9 +62,20 @@ object Escape:
     * escape: no storing it anywhere, no returning it, no passing it to a method
     * the compiler cannot see through.
     *
+    * Domain: pairs of equal-length arrays. Within that domain the function is
+    * total. Unequal lengths are **not** a domain case but a defect at the call
+    * site — both arrays describe the same set of points, so they can only differ
+    * in length if the caller built them wrongly — and the `require` marks the
+    * boundary of the domain rather than handling an input. Encoding the
+    * violation in the return type instead (`Option[Double]`) would force every
+    * correct caller to handle an impossible case, and would invite the
+    * `.getOrElse(0.0)` that turns a loud defect into a silent wrong answer.
+    *
+    * The interpolated message costs one captured `Function0` per call, 24 bytes,
+    * whether or not the requirement holds; see `docs/challenge-log.md`, entry 6.
+    * That cost is constant in the input size and was accepted deliberately.
+    *
     * Constraints:
-    *   - `xs` and `ys` must have equal length; encode how you handle the
-    *     violation, and justify the choice;
     *   - no `var`, no `while`, no mutable accumulator;
     *   - keep the method small — over `-XX:FreqInlineSize` (325 bytecodes)
     *     nothing gets inlined and the whole experiment collapses.
@@ -88,6 +99,14 @@ object Escape:
     *
     * Implement it purely — `Array.tabulate` builds the array without a single
     * mutation at the source level.
+    *
+    * Same domain and same precondition as `sumNorms`, for the same reason.
+    *
+    * Note that `Array.tabulate` boxes the loop index: `Function1` has no
+    * specialised variant with a reference return type, so each call goes through
+    * the erased `apply(Object): Object`. That accounts for 3,197,952 of the
+    * 10,398,016 bytes recorded in `docs/checklist.md`, §E — a third of this
+    * function's allocation is not `Vec2` at all.
     */
   def collectVecs(xs: Array[Double], ys: Array[Double]): Array[Vec2] =
     require(
@@ -126,9 +145,23 @@ object Footprint:
 
   /** Round `bytes` up to the next multiple of `AlignmentBytes`.
     *
-    * Must be total for all non-negative inputs, and must be the identity on
-    * values that are already aligned. Bitwise arithmetic is welcome here — it
-    * is a preview of the codec work in Module 12.
+    * Total on `[0, Int.MaxValue - 7]`, and the identity on values that are
+    * already aligned.
+    *
+    * The upper bound is not a weakness of this implementation — it is forced by
+    * the signature. For the top seven non-negative `Int` values the answer is
+    * `2^31`, which no `Int` can hold, so `bytes + 7` wraps and the result comes
+    * back as `Int.MinValue`:
+    * {{{
+    * align(2147483640) = 2147483640   // Int.MaxValue - 7, already aligned
+    * align(2147483641) = -2147483648  // outside the domain
+    * align(Int.MaxValue) = -2147483648
+    * }}}
+    * An earlier draft of this contract claimed totality over every non-negative
+    * input. That claim is unsatisfiable by any `Int => Int`, and narrowing the
+    * documented domain is the honest repair. `arrayOfIntSize` faces the same
+    * arithmetic at a larger scale and answers it the other way, by moving to
+    * `Long`.
     */
   def align(bytes: Int): Int =
     (bytes + (AlignmentBytes - 1)) & ~(AlignmentBytes - 1)

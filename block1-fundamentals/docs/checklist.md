@@ -46,15 +46,55 @@ All nine exercises live in
 
 Verified by reading your own diff before committing:
 
-- [ ] Zero occurrences of `var` in `src/main/scala`.
-- [ ] Zero `while` loops and zero imperative `for` loops.
-- [ ] Zero `throw` and zero `try`/`catch` in exercise implementations.
-- [ ] Zero mutable collections (`scala.collection.mutable.*`).
-- [ ] Every function is total for its documented domain, or its partiality is
+- [x] Zero occurrences of `var` in `src/main/scala`. Swept: every hit is inside
+      a Scaladoc block.
+- [x] Zero `while` loops and zero imperative `for` loops. Swept: same, every hit
+      is prose. Both recursive walks (`Boxing.sumPrimitive`, `Escape.sumNorms`)
+      are `@tailrec`.
+- [x] Zero `throw` and zero `try`/`catch` in exercise implementations. Swept:
+      no occurrence of any of the three.
+
+      Two `require` calls do exist, in `Escape.sumNorms` and
+      `Escape.collectVecs`, and `require` throws. They are not a violation of
+      this box but the subject of the next one, where the decision is recorded.
+- [x] Zero mutable collections (`scala.collection.mutable.*`). Swept: no
+      occurrence. `Array` appears as a *primitive layout*, not as a collection
+      interface — `Array[Int]` is the control against which `List[Int]`'s 10×
+      tax is measured, and `Array[Double]` is the input to the escape-analysis
+      experiment.
+- [x] Every function is total for its documented domain, or its partiality is
       encoded in the return type.
-- [ ] The single permitted impurity is `AllocationProbe` / `Bench` reading the
+
+      Two functions needed a decision rather than a sweep, and one of them
+      needed the contract repaired:
+
+      - `Escape.sumNorms` / `collectVecs`. Domain: pairs of equal-length
+        arrays; total within it. Unequal lengths are a **defect at the call
+        site**, not a domain case — both arrays describe the same points, so
+        they differ in length only if the caller built them wrongly — and the
+        `require` marks the domain boundary rather than handling an input.
+        `Option[Double]` was rejected deliberately: it would force every correct
+        caller to handle an impossible case and invite the `.getOrElse(0.0)`
+        that converts a loud defect into a silent wrong answer. Now recorded in
+        the Scaladoc.
+      - `Footprint.align`. The contract claimed totality over **every**
+        non-negative `Int`, and that claim is unsatisfiable by any `Int => Int`:
+        for the top seven inputs the answer is `2^31`, so `bytes + 7` wraps and
+        `align(Int.MaxValue)` returns `Int.MinValue`. The domain is now
+        documented as `[0, Int.MaxValue - 7]` and pinned by a test, including an
+        assertion on the behaviour outside it. Recorded as pattern 6 in
+        [`error-patterns.md`](error-patterns.md), alongside `Vec2.norm`'s
+        promise of non-negativity, which `NaN` breaks the same way.
+      - `Bench.medianNanos` returns `-1L` for `iterations < 1`. Total, and the
+        sentinel is documented — but it is in-band signalling in the same `Long`
+        domain as a legitimate duration, which the type cannot distinguish. Left
+        as written and recorded, rather than closed silently.
+- [x] The single permitted impurity is `AllocationProbe` / `Bench` reading the
       JVM's own instrumentation — these are *measuring instruments*, and the
-      exception is deliberate.
+      exception is deliberate. Three limits of the instrument are documented in
+      [`challenge-log.md`](challenge-log.md), entry 4: it counts only the
+      calling thread, it requires a forked JVM, and it can return a negative
+      count if per-thread measurement is disabled between the two readings.
 
 ### E. Empirical Gate — Record The Numbers
 
@@ -161,7 +201,7 @@ compressed oops on, Windows 11, in the forked test JVM that `build.sbt` pins to
 - [x] All code formatted (`sbt scalafmtAll`) with no manual override.
 - [ ] Every public definition carries a Scaladoc stating its **contract**, not a
       restatement of its name.
-- [ ] Commits follow `docs/git-conventions.md` (`b1-m1: <imperative summary>`),
+- [x] Commits follow `docs/git-conventions.md` (`b1-m1: <imperative summary>`),
       one commit per concept proven.
 - [ ] Annotated milestone tag `b1-m1-jvm-semantics` created, using the message
       template in `docs/git-conventions.md`, with a real entry under `Learned:`.

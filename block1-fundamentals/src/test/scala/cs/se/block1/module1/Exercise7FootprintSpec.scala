@@ -20,6 +20,20 @@ class Exercise7FootprintSpec extends Module1Harness:
     }
   }
 
+  test("align holds to the top of its documented domain, and no further") {
+    // The domain ends at Int.MaxValue - 7 because the answer beyond it is 2^31,
+    // which no Int holds. This pins the boundary rather than leaving it to the
+    // reader to discover that the 0..500 walk above never approaches it.
+    val last = Int.MaxValue - 7
+    assertEquals(Footprint.align(last), last, "the last aligned value is its own image")
+    assertEquals(Footprint.align(last - 1), last, "one below rounds up to it")
+
+    // Documented as outside the domain: recorded so that a future change to the
+    // signature is confronted with the behaviour it would be replacing.
+    assertEquals(Footprint.align(last + 1), Int.MinValue, "outside the domain: wraps")
+    assertEquals(Footprint.align(Int.MaxValue), Int.MinValue, "outside the domain: wraps")
+  }
+
   test("shallowSize reproduces the real HotSpot layout") {
     assertEquals(Footprint.shallowSize(0, 0, 0, 0, 0), 16, "bare object: 12-byte header padded")
     assertEquals(Footprint.shallowSize(0, 0, 0, 2, 0), 32, "Vec2(x: Double, y: Double)")

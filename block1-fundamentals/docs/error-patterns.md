@@ -9,13 +9,13 @@ Every entry below was a real defect written during this module. None of them is
 ignorance of a mechanism. `LongBytes = 16` was written by someone who knows a
 `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
-That is why this file is organised by **pattern** rather than by exercise. Five
-individual mistakes are a diary and nobody rereads a diary. Five recurring
-shapes are a review checklist.
+That is why this file is organised by **pattern** rather than by exercise. Nine
+individual mistakes are a diary and nobody rereads a diary. Six recurring shapes
+are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
 instantiated it, the rule that prevents it, and — the field that makes this
-usable — **why the compiler and the test suite do not catch it**. All five
+usable — **why the compiler and the test suite do not catch it**. All six
 compile cleanly under `-Wall -Werror`.
 
 | # | Pattern | Occurrences | Caught by the build? |
@@ -25,6 +25,7 @@ compile cleanly under `-Wall -Werror`.
 | 3 | Off-by-one in a limit | 1 | no — the boundary has no call site |
 | 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
+| 6 | A contract no implementation of that signature can satisfy | 2 | no — contracts are prose, and the suite samples the interior |
 
 ---
 
@@ -233,9 +234,65 @@ zero and been read as a triumph of escape analysis.
 
 ---
 
+## 6. A contract no implementation of that signature can satisfy
+
+A Scaladoc promises a property "for every input". The implementation is correct
+and the promise is still false, because the input type contains values the
+promise never considered. The defect is in the contract, and no amount of work on
+the body will fix it.
+
+```text
+promised                             signature         where it fails
+----------------------------------   ---------------   ------------------------
+"non-negative for every input"       Vec2 => Double    any NaN component:
+                                                       NaN >= 0.0 is false, and
+                                                       so is NaN < 0.0
+"total for all non-negative inputs"  Int => Int        the top seven Ints: the
+                                                       answer is 2^31, and no
+                                                       Int holds it
+```
+
+Both were found by reading the contract against the extremes of its input type,
+not by any test. Measured:
+
+```text
+   align(2147483640)     =  2147483640      Int.MaxValue - 7, already aligned
+   align(2147483641)     = -2147483648      first input outside the domain
+   align(Int.MaxValue)   = -2147483648
+```
+
+Seven of the `2^31` non-negative inputs are wrong, and the property test above
+them walks `0 to 500`.
+
+**The rule.** Before writing "for every input", enumerate the extremes of the
+input *type* and check the promise against each by hand:
+
+```text
+   floating point   NaN, +Infinity, -Infinity, -0.0, subnormals
+   integers         MinValue, MaxValue, and the neighbourhood of each
+```
+
+If the promise fails at any of them, **narrow the documented domain** — that is a
+repair, not a retreat. A contract that admits its boundary is stronger than one
+that pretends not to have one, because the next reader can see where the edge is.
+
+**Why the build does not catch it.** Contracts live in prose, and the compiler
+does not read Scaladoc. The suites sample the *interior* of the domain and never
+approach the edges: `Exercise1Vec2Spec` draws components from `[-100, 100]`, and
+`Exercise7FootprintSpec` walks `align` over `0 to 500`. Both are entirely
+reasonable test ranges, and neither can see a failure that lives only at
+`10^154` or at `2^31 - 1`.
+
+Both occurrences are now repaired in the contract rather than the body, and both
+boundaries are pinned by a test — including, for `align`, an assertion on the
+behaviour *outside* the domain, so that a future change to the signature is
+confronted with what it would be replacing.
+
+---
+
 ## How to use this file
 
-Read it before committing, not after a defect. Five questions, one per pattern:
+Read it before committing, not after a defect. Six questions, one per pattern:
 
 1. Is there a width in this diff that I converted in my head?
 2. Does any call pass several same-typed arguments positionally?
@@ -244,3 +301,5 @@ Read it before committing, not after a defect. Five questions, one per pattern:
    wrong?
 5. Does any by-name argument construct state that should have been constructed
    once?
+6. Does any Scaladoc say "every input", and does it hold at `NaN`, at
+   `MaxValue`, at `MinValue`?
