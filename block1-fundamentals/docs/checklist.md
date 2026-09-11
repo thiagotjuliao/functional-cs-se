@@ -306,9 +306,21 @@ writing a line of `MyList`.
       must match your Exercise 1 implementation. Derived as `1`, `n` and `n`:
       the prepend shares the whole old list, and the other two rebuild the
       spine while sharing every element it holds.
-- [ ] State, in one line each, what `O(1)`, `O(n)` and `O(log n)` predict about
+- [x] State, in one line each, what `O(1)`, `O(n)` and `O(log n)` predict about
       the *ratio* of costs when `n` doubles. This is the whole of §7 and it is
       what Exercise 5 measures.
+      - **O(1)** — the ratio is `1`: the cost is invariant in `n`, so doubling
+        `n` changes nothing to measure.
+      - **O(n)** — the ratio is `2`: the cost doubles with `n`, and `O(n^2)`
+        quadruples, which is the pair Exercise 5 separates.
+      - **O(log n)** — the ratio is not a constant at all. Doubling `n` adds one
+        *level*, an additive `+1` on a total that keeps growing, so the ratio
+        descends toward `1`: `1.200` at `n = 16`, `1.091` at `1,024`, `1.048`
+        at `2^20`, `1.032` at `2^30`.
+      - The consequence, and the reason Exercise 9 measures depth rather than
+        ratios: at large `n` the doubling test cannot tell `O(log n)` from
+        `O(1)`, because `1.03` against `1.00` is smaller than the measurement
+        noise. For a logarithm you count levels, not ratios.
 
 ### B. Implementation — Exercises
 
