@@ -61,7 +61,7 @@ class Exercise4FoldsSpec extends Module2Harness:
   }
 
   test("foldLeft survives a million elements and foldRight does not") {
-    val big = Building.byPrepend(1_000_000)
+    val big = cells(1_000_000)
     assertEquals(big.foldLeft(0L)((acc, _) => acc + 1L), 1_000_000L, "foldLeft must be @tailrec")
 
     val overflowed =

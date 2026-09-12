@@ -330,7 +330,7 @@ All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
 - [x] **E1 `Sharing`** *(Hard — do this first)* — the cost model: cells
       allocated and shared per operation, balanced depth, and the tree sharing
       ratio. Pure arithmetic, no data structure, no measurement.
-- [ ] **E2 `MyList`** *(Easy)* — the `enum` ADT, `isEmpty`, `length`,
+- [x] **E2 `MyList`** *(Easy)* — the `enum` ADT, `isEmpty`, `length`,
       `headOption`, and the variance that makes `Nil` serve every element type.
 - [ ] **E3 `Combinators`** *(Easy)* — `map`, `filter`, `reverse`.
 - [ ] **E4 `Folds`** *(Easy)* — `foldLeft`, `foldRight`, `append`, `concat`, and

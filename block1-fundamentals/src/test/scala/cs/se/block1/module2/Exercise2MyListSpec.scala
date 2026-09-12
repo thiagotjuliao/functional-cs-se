@@ -56,7 +56,7 @@ class Exercise2MyListSpec extends Module2Harness:
   }
 
   test("length is tail-recursive: a million cells must not overflow the stack") {
-    val big = Building.byPrepend(1_000_000)
+    val big = cells(1_000_000)
     assertEquals(big.length, 1_000_000, "if this overflows, length is not @tailrec")
   }
 

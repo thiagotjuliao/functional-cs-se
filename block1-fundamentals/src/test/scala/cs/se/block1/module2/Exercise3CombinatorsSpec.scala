@@ -56,7 +56,7 @@ class Exercise3CombinatorsSpec extends Module2Harness:
   }
 
   test("reverse is tail-recursive at a million cells") {
-    val big = Building.byPrepend(1_000_000)
+    val big = cells(1_000_000)
     assertEquals(
       big.reverse.headOption,
       Some(999_999),

@@ -23,7 +23,8 @@ import scala.util.Random
   *
   * Note the ordering dependency, which is deliberate: `Exercise1SharingSpec`
   * needs nothing but arithmetic and can go green before any data structure
-  * exists. Every other suite needs `MyList.apply` from Exercise 2.
+  * exists. Every other suite needs `MyList.apply` from Exercise 2 and nothing
+  * beyond its own exercise — see `cells` for the helper that keeps that true.
   */
 abstract class Module2Harness extends munit.FunSuite:
 
@@ -36,6 +37,24 @@ abstract class Module2Harness extends munit.FunSuite:
     * job and its Scaladoc explains which floor applies.
     */
   protected def probeBytes[A](body: => A): Long = AllocationProbe.measure(body)._2
+
+  /** The list `0 until n`, built straight from `MyList.Cons`.
+    *
+    * The stack-depth tests of Exercises 2, 3 and 4 need a list of a million
+    * cells, which is far more than `MyList.apply` should be handed as varargs.
+    * The obvious source is `Building.byPrepend` — and that is Exercise 5, three
+    * exercises later, so reaching for it would leave three suites unrunnable
+    * until an unrelated exercise is finished. Building it here keeps the
+    * ordering promised above: `MyList.apply` from Exercise 2, and nothing else.
+    *
+    * Written with an accumulator so that the harness itself cannot be the thing
+    * that overflows the stack in a test about overflowing the stack.
+    */
+  protected def cells(n: Int): MyList[Int] =
+    @scala.annotation.tailrec
+    def loop(i: Int, acc: MyList[Int]): MyList[Int] =
+      if i < 0 then acc else loop(i - 1, MyList.Cons(i, acc))
+    loop(n - 1, MyList.Nil)
 
   /** Run `body` enough times for C2 to compile and optimise it. */
   protected def warmup[A](times: Int)(body: => A): Unit =
