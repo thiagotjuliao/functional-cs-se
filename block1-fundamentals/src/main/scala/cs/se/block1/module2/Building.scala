@@ -1,5 +1,7 @@
 package cs.se.block1.module2
 
+import cs.se.block1.module2.MyList.*
+
 /** Exercise 5 (Medium) — two ways to build the same list, and the doubling test
   * that tells them apart.
   *
@@ -31,7 +33,11 @@ object Building:
     *
     * `n <= 0` yields the empty list.
     */
-  def byAppend(n: Int): MyList[Int] = ???
+  def byAppend(n: Int): MyList[Int] =
+    if n < 0 then Nil
+    else
+      (0 until n).foldLeft(Nil: MyList[Int]):
+        case (ls, a) => ls.appended(a)
 
   /** The same list, built by prepending and reversing once at the end.
     *
@@ -42,7 +48,13 @@ object Building:
     * now you know why it is written that way rather than being written the way
     * it reads.
     */
-  def byPrepend(n: Int): MyList[Int] = ???
+  def byPrepend(n: Int): MyList[Int] =
+    if n < 0 then Nil
+    else
+      (0 until n)
+        .foldLeft(Nil: MyList[Int]):
+          case (ls, a) => ls.prepended(a)
+        .reverse
 
   /** The ratio of the two, as the doubling test consumes it.
     *
@@ -53,6 +65,8 @@ object Building:
     *
     * Returns `0.0` when `costAtN` is zero.
     */
-  def doublingRatio(costAtN: Long, costAt2n: Long): Double = ???
+  def doublingRatio(costAtN: Long, costAt2n: Long): Double =
+    if costAtN == 0 then 0.0
+    else costAt2n / costAtN.toDouble
 
 end Building

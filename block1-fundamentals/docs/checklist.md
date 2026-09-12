@@ -335,7 +335,7 @@ All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
 - [x] **E3 `Combinators`** *(Easy)* — `map`, `filter`, `reverse`.
 - [x] **E4 `Folds`** *(Easy)* — `foldLeft`, `foldRight`, `append`, `concat`, and
       the stack-depth difference between the two folds.
-- [ ] **E5 `Building`** *(Medium)* — `byAppend` and `byPrepend`, and the
+- [x] **E5 `Building`** *(Medium)* — `byAppend` and `byPrepend`, and the
       doubling table that proves their complexity classes.
 - [ ] **E6 `MyTree`** *(Medium)* — the BST `enum`: `insert`, `contains`, `size`,
       `depth`.
@@ -399,19 +399,58 @@ ran it.
       - Where prediction and measurement differ, the difference is itself a
         result. Account for it: `______________________`
 
-- [ ] **The doubling table.** Build a list of `n` elements both ways and record
+- [x] **The doubling table.** Build a list of `n` elements both ways and record
       the bytes, for `n` = 2,000 / 4,000 / 8,000 / 16,000:
 
       | `n` | `byAppend` | × prev | `byPrepend` | × prev |
       | ---: | ---: | ---: | ---: | ---: |
-      | 2,000 | `______` | — | `______` | — |
-      | 4,000 | `______` | `______` | `______` | `______` |
-      | 8,000 | `______` | `______` | `______` | `______` |
-      | 16,000 | `______` | `______` | `______` | `______` |
+      | 2,000 | `96,059,944` | — | `155,944` | — |
+      | 4,000 | `384,123,944` | `3.999` | `315,944` | `2.026` |
+      | 8,000 | `1,536,251,944` | `3.999` | `635,944` | `2.013` |
+      | 16,000 | `6,144,508,128` | `4.000` | `1,275,944` | `2.006` |
 
       - The two `× prev` columns are the proof. State the complexity class each
         one demonstrates, and why the ratio is the evidence rather than the
-        absolute number: `______________________`
+        absolute number: `byAppend quadruples per doubling, which is O(n^2);`
+        `byPrepend doubles, which is O(n). The ratio is the evidence because it`
+        `is a property of the algorithm, while the absolute number is a`
+        `property of this machine — 24-byte cells under compressed oops, and a`
+        `16-byte Integer for each boxed element. Run the same code on a JVM`
+        `without compressed oops and every byte count changes; the ratios do`
+        `not move.`
+
+      Both columns close to the byte, which is worth recording because each
+      term names something in the source:
+
+      ```text
+      byPrepend(n)  =  48n  +  32n  -  4,056   bytes
+      byAppend(n)   =  24n^2 + 32n  -  4,056   bytes
+
+      n         measured          model             delta
+      -------   ---------------   ---------------   -----
+        2,000        96,059,944        96,059,944       0
+        4,000       384,123,944       384,123,944       0
+        8,000     1,536,251,944     1,536,251,944       0
+       16,000     6,144,508,128     6,144,507,944     184
+
+        2,000           155,944           155,944       0
+        4,000           315,944           315,944       0
+        8,000           635,944           635,944       0
+       16,000         1,275,944         1,275,944       0
+      ```
+
+      - `24n^2` — and the square is literal, not asymptotic. `appended` is
+        `concat(Cons(x, Nil))`, and `concat` reverses before it prepends, so
+        appending to a list of `k` cells costs `2k + 1`. Summed over
+        `k = 0 .. n-1` that is `1 + 3 + 5 + ... + (2n - 1)`, the sum of the
+        first `n` odd numbers, which is exactly `n^2`.
+      - `48n` — `2n` cells: `n` prepends and one final `reverse`. The same
+        double spine as `map` and `filter`, for the same `@tailrec` reason.
+      - `32n - 4,056` — boxing, in both. Two `Integer` per element at 16 bytes
+        each: one in `Cons(x, Nil)`, one crossing `Function2`, which has no
+        specialised variant with a reference return type. The subtraction is
+        the `Integer.valueOf` cache: values `0..127` are shared and cost
+        nothing. Module 1, §19.
 
 - [ ] **Tree sharing.** On a balanced tree of `2^20 − 1` nodes:
       - whole tree: `______ bytes` · one `insert`: `______ bytes`
