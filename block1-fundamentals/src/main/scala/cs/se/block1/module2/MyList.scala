@@ -132,8 +132,32 @@ object MyList:
 
     /** A new list with `f` applied to every element.
       *
-      * Allocates `n` cells and shares every element `f` returns unchanged —
-      * Exercise 1 predicted the number, Exercise 8 measures it.
+      * `Sharing.mapCells(n)` predicts `n`, and `n` is the number of cells in
+      * the *result* — the floor any implementation must pay. A `@tailrec`
+      * implementation pays it twice. The accumulator builds the list backwards,
+      * so a second pass is needed to restore the order, and one of the two
+      * spines is garbage before the method returns. Measured at n = 100,000,
+      * with `AllocationProbe` on the forked JVM:
+      *
+      * {{{
+      * reverse   2,400,000 bytes   1.00 n cells   the model exactly
+      * filter    4,808,392 bytes   2.00 n cells   two spines, one discarded
+      * map       6,522,656 bytes   2.72 n cells   two spines, plus boxing
+      * }}}
+      *
+      * The 0.72 above `filter` is not spine. It is `f`'s result crossing the
+      * erased `A => B` boundary and being boxed on the way back — Module 1,
+      * §19 — which is why the model counts cells and not bytes.
+      *
+      * Paying `2n` is the right trade here rather than a defect. §D of the
+      * checklist requires `MyList` recursion to be `@tailrec`, and an
+      * implementation allocating exactly `n` must reach the end of the list
+      * before it can build its first cell: the shape of `foldRight`, with the
+      * same stack. Scala's own `List.map` escapes the dilemma by mutating the
+      * tail pointer of the cell it just built, inside a `while` loop — which
+      * §D forbids in this module and CLAUDE.md permits only inside a
+      * micro-library's engine. The discarded spine is cheap to collect: it
+      * dies in the nursery, and a copying collector charges only for survivors.
       */
     def map[B](f: A => B): MyList[B] =
       @scala.annotation.tailrec
@@ -141,14 +165,19 @@ object MyList:
         as match
           case Nil => acc
           case Cons(h, t) => loop(t, acc.prepended(f(h)))
-      loop(xs).reverse
+      loop(xs.reverse)
 
-    /** The elements satisfying `p`, in their original order. */
+    /** The elements satisfying `p`, in their original order.
+      *
+      * Two spines for the same reason as `map`, measured at exactly `2.00 n`
+      * cells when every element is kept. See `map` for why that is the correct
+      * trade under §D rather than a defect.
+      */
     def filter(p: A => Boolean): MyList[A] =
       @scala.annotation.tailrec
       def loop(as: MyList[A], acc: MyList[A] = Nil): MyList[A] =
         as match
-          case Nil => Nil
+          case Nil => acc
           case Cons(h, t) if p(h) => loop(t, acc.prepended(h))
           case Cons(_, t) => loop(t, acc)
       loop(xs).reverse
@@ -196,7 +225,7 @@ object MyList:
     def foldRight[B](z: B)(f: (A, B) => B): B =
       xs match
         case Nil => z
-        case Cons(h, t) => t.foldRight(f(h, z))(f)
+        case Cons(h, t) => f(h, t.foldRight(z)(f))
 
     /** `xs` followed by `ys`.
       *
