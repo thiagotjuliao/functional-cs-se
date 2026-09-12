@@ -332,8 +332,8 @@ All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
       ratio. Pure arithmetic, no data structure, no measurement.
 - [x] **E2 `MyList`** *(Easy)* — the `enum` ADT, `isEmpty`, `length`,
       `headOption`, and the variance that makes `Nil` serve every element type.
-- [ ] **E3 `Combinators`** *(Easy)* — `map`, `filter`, `reverse`.
-- [ ] **E4 `Folds`** *(Easy)* — `foldLeft`, `foldRight`, `append`, `concat`, and
+- [x] **E3 `Combinators`** *(Easy)* — `map`, `filter`, `reverse`.
+- [x] **E4 `Folds`** *(Easy)* — `foldLeft`, `foldRight`, `append`, `concat`, and
       the stack-depth difference between the two folds.
 - [ ] **E5 `Building`** *(Medium)* — `byAppend` and `byPrepend`, and the
       doubling table that proves their complexity classes.
