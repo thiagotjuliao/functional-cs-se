@@ -23,6 +23,33 @@ metals.sbt
 !.vscode/settings.json
 !.vscode/extensions.json
 
+# --- Metals worksheets ---
+
+# A `*.worksheet.sc` is a scratchpad: Metals evaluates it on save and prints the
+# results as inline decorations. It has to live inside a source directory to
+# inherit that build target's classpath, which puts it in the middle of tracked
+# sources — but sbt does not compile it (`unmanagedSources` takes `.scala` and
+# `.java` only), so nothing in it is covered by the correctness gates.
+# Untracked is the honest state for a file the gates do not see.
+#
+# Put worksheets under `src/test/scala`, never `src/main/scala`. Metals hands
+# mdoc the scalacOptions of whichever build target owns the directory, and mdoc
+# wraps every statement in a `$doc.binder(...)` call that discards a value. Under
+# `Compile`'s `-Werror` that generated line is an error and the worksheet
+# evaluates to nothing at all — silently, with the reason visible only in
+# `.metals/metals.log`:
+#
+#     error: No warnings can be incurred under -Werror
+#     warning: test.worksheet.sc:12 (mdoc generated code)
+#      unused value of type Int
+#
+# `Test / scalacOptions` carries `-Wall` without `-Werror`, which is the same
+# exemption build.sbt already grants exploratory spikes. A worksheet is one.
+#
+# Delete this rule if a worksheet ever becomes a teaching artifact rather than a
+# scratchpad; then it belongs under docs/ with the rest of them.
+*.worksheet.sc
+
 # --- Misplaced tool output ---
 
 # Coursier builds its Windows cache path from %LOCALAPPDATA%. A process that
