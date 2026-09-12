@@ -36,7 +36,9 @@ object MyList:
     * it backwards; fixing that is the first appearance of Part V.17 in your own
     * code, and the fix must not be quadratic.
     */
-  def apply[A](items: A*): MyList[A] = ???
+  def apply[A](items: A*): MyList[A] =
+    items.reverse.foldLeft(Nil):
+      case (acc, a) => Cons(a, acc)
 
   extension [A](xs: MyList[A])
 
@@ -46,7 +48,9 @@ object MyList:
       * the whole list to answer a question the first cell already settles, and
       * it is the defect Part V.19 is about.
       */
-    def isEmpty: Boolean = ???
+    def isEmpty: Boolean = xs match
+      case Nil => true
+      case _ => false
 
     /** Number of cells.
       *
@@ -54,7 +58,13 @@ object MyList:
       * `@tailrec` or the suite will find the limit for you at a million
       * elements.
       */
-    def length: Int = ???
+    def length: Int =
+      @scala.annotation.tailrec
+      def loop(as: MyList[A], acc: Int = 0): Int =
+        as match
+          case Nil => acc
+          case Cons(_, t) => loop(t, acc + 1)
+      loop(xs)
 
     /** The first element, if there is one.
       *
@@ -63,41 +73,85 @@ object MyList:
       * when each is the right tool, not to pick one and pretend the other has no
       * use.
       */
-    def headOption: Option[A] = ???
+    def headOption: Option[A] = xs match
+      case Nil => None
+      case Cons(h, _) => Some(h)
 
-    /** The first element.
+    /** The first element. **Defined only on a non-empty list.**
       *
-      * `Nil.head` has no answer, and what you do about that is a decision you
-      * must make and document here rather than inherit. Three defensible
-      * choices, with what each costs:
+      * `Nil.head` has no answer, and three choices were open. Returning
+      * `Option[A]` is total, but that method already exists above as
+      * `headOption`, and making this one a second copy of it forces every
+      * caller to handle a case that is sometimes impossible. Throwing is loud
+      * and immediate. The domain was narrowed instead: the contract is that
+      * the caller has already established non-emptiness, exactly as
+      * `Escape.sumNorms` documents equal lengths in Module 1.
       *
-      *   - throw: loud and immediate, but it leaves the purity gate, and §D
-      *     forbids `throw` in this module;
-      *   - return `Option[A]`: total, but then this method is `headOption` and
-      *     every caller handles a case that is sometimes impossible;
-      *   - narrow the domain: document that the caller must have established
-      *     non-emptiness, exactly as `Escape.sumNorms` documents equal lengths
-      *     in Module 1.
+      * `require` states that narrowed domain at the boundary, and the match is
+      * marked `@unchecked` because the `Nil` branch it would otherwise demand
+      * is already excluded by the line above it — an exhaustivity warning here
+      * would be the compiler asking about a case the precondition has ruled
+      * out.
       *
-      * Pick one, write the reason into this Scaladoc, and defend it in §G.
+      * Note what that costs, since §D of the checklist forbids `throw` in this
+      * module: `require` raises `IllegalArgumentException`, so the narrowing is
+      * enforced by a throw wearing a different name. Whether that is a
+      * violation of the gate or the one mechanism the gate must admit is the
+      * question §G asks.
+      *
       * Guide, Part V.21.
       */
-    def head: A = ???
+    def head: A =
+      require(
+        requirement = !xs.isEmpty,
+        message = "`head` can only be called on non empty lists."
+      )
+      (xs: @unchecked) match
+        case Cons(h, _) => h
 
-    /** Everything after the first cell. `Nil.tail` faces the same question as
-      * `head`, and must be answered the same way.
+    /** Everything after the first cell. **Defined only on a non-empty list.**
+      *
+      * `Nil.tail` faces the same question as `head` and is answered the same
+      * way: the domain is narrowed, `require` states it, and the match is
+      * `@unchecked` because the precondition has already excluded `Nil`. See
+      * `head` for the reasoning and for what the choice costs against §D.
       */
-    def tail: MyList[A] = ???
+    def tail: MyList[A] =
+      require(
+        !xs.isEmpty,
+        "`tail` can only be called on non empty lists."
+      )
+      (xs: @unchecked) match
+        case Cons(_, t) => t
+
+    /** `xs` with `x` prepended.
+      * This operation takes constant time `O(1)`.
+      */
+    def prepended(x: A): MyList[A] =
+      Cons(x, xs)
 
     /** A new list with `f` applied to every element.
       *
       * Allocates `n` cells and shares every element `f` returns unchanged —
       * Exercise 1 predicted the number, Exercise 8 measures it.
       */
-    def map[B](f: A => B): MyList[B] = ???
+    def map[B](f: A => B): MyList[B] =
+      @scala.annotation.tailrec
+      def loop(as: MyList[A], acc: MyList[B] = Nil): MyList[B] =
+        as match
+          case Nil => acc
+          case Cons(h, t) => loop(t, acc.prepended(f(h)))
+      loop(xs).reverse
 
     /** The elements satisfying `p`, in their original order. */
-    def filter(p: A => Boolean): MyList[A] = ???
+    def filter(p: A => Boolean): MyList[A] =
+      @scala.annotation.tailrec
+      def loop(as: MyList[A], acc: MyList[A] = Nil): MyList[A] =
+        as match
+          case Nil => Nil
+          case Cons(h, t) if p(h) => loop(t, acc.prepended(h))
+          case Cons(_, t) => loop(t, acc)
+      loop(xs).reverse
 
     /** The same elements, in the opposite order.
       *
@@ -105,7 +159,13 @@ object MyList:
       * it is the operation that makes `byPrepend` in Exercise 5 linear rather
       * than quadratic.
       */
-    def reverse: MyList[A] = ???
+    def reverse: MyList[A] =
+      @scala.annotation.tailrec
+      def loop(as: MyList[A], acc: MyList[A] = Nil): MyList[A] =
+        as match
+          case Nil => acc
+          case Cons(h, t) => loop(t, acc.prepended(h))
+      loop(xs)
 
     /** Left fold: `f(f(f(z, a1), a2), a3)`.
       *
@@ -113,7 +173,13 @@ object MyList:
       * call, so the call is the last thing that happens — which is precisely
       * what `foldRight` cannot arrange. Guide, Part V.18.
       */
-    def foldLeft[B](z: B)(f: (B, A) => B): B = ???
+    def foldLeft[B](z: B)(f: (B, A) => B): B =
+      @scala.annotation.tailrec
+      def loop(as: MyList[A], acc: B = z): B =
+        as match
+          case Nil => acc
+          case Cons(h, t) => loop(t, f(acc, h))
+      loop(xs)
 
     /** Right fold: `f(a1, f(a2, f(a3, z)))`.
       *
@@ -127,7 +193,10 @@ object MyList:
       * secretly reversed the list, and hiding the cost is worse than paying it.
       * Module 3 is about removing this limit properly.
       */
-    def foldRight[B](z: B)(f: (A, B) => B): B = ???
+    def foldRight[B](z: B)(f: (A, B) => B): B =
+      xs match
+        case Nil => z
+        case Cons(h, t) => t.foldRight(f(h, z))(f)
 
     /** `xs` followed by `ys`.
       *
@@ -136,21 +205,31 @@ object MyList:
       * of that from Part III.11 before implementing, because it is the single
       * most useful instance of the path rule.
       */
-    def concat(ys: MyList[A]): MyList[A] = ???
+    def concat(ys: MyList[A]): MyList[A] =
+      @scala.annotation.tailrec
+      def loop(as: MyList[A], acc: MyList[A] = ys): MyList[A] =
+        as match
+          case Nil => acc
+          case Cons(h, t) => loop(t, acc.prepended(h))
+      loop(xs.reverse)
 
     /** `xs` with `x` appended at the back.
       *
       * `O(n)`, unavoidably, and the exercise is to know that rather than to
       * avoid it. This is the operation Part V.17 warns about inside a fold.
       */
-    def appended(x: A): MyList[A] = ???
+    def appended(x: A): MyList[A] =
+      xs.concat(Cons(x, Nil))
 
     /** Conversion to the standard library, for test assertions only.
       *
       * This is the one permitted crossing in §D: `scala.List` may appear here
       * and nowhere else in this module's implementation.
       */
-    def toScalaList: List[A] = ???
+    def toScalaList: List[A] =
+      xs.foldLeft(scala.List.empty[A]):
+        case (ls, a) => a :: ls
+      .reverse
 
   end extension
 
