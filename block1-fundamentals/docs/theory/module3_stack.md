@@ -797,14 +797,36 @@ this machine, default stack    sumNaive survives to  14,335
 8 MiB stack                    depth                520,945
 ```
 
-A 40× range from one flag. Which means:
+A 40× range from one flag. And a second range, inside a single process, from
+nothing you control at all — ten searches for the same boundary, in order:
+
+```text
+run  1    32,768    and the very next call to deep(32,768) fails
+run  2    24,575    the interpreted frame
+run  3+   61,653    the C2-compiled frame, stable to within 8 frames
+```
+
+**A compiled frame is 2.51× smaller than an interpreted one**, so the boundary
+rises by that factor as the JIT does its work — and the first search straddles
+the transition, returning a number that was true for part of it and false for
+the rest. That first row is the dangerous one: it is not noise, it is a
+measurement of a quantity that changed while it was being measured.
+
+Which means:
 
 * **Never write an assertion on an absolute depth.** `assert(survives(50_000))`
   passes on one machine and fails on another, and it is testing `-Xss`.
+* **Warm the function before measuring it.** Module 2's `SharingProof.bytesOf`
+  says it for the heap — *a cold measurement measures the interpreter* — and
+  here it decides a factor of 2.51 rather than a few per cent.
 * **Assert the *class* instead:** that the tail-recursive version survives an
   input the naive one cannot, that the ratio between them is large, that a
   transformation did not change a returned value. Exercise 1's harness exists so
   the specs can say those things without saying a number.
+* **And leave a margin even then.** `found + 1` is a margin of one frame on a
+  quantity that drifts by eight between consecutive warm calls. A boundary
+  asserted to the frame is the same mistake as an absolute depth, only harder to
+  see.
 
 This is Module 2's argument about ratios against absolutes, moved to a different
 resource. It is the same lesson and it keeps arriving.

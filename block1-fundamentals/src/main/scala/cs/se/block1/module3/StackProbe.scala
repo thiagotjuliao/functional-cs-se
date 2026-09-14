@@ -37,7 +37,11 @@ object StackProbe:
     * the stack is fully unwound by the time the handler runs. Say it in your
     * own words, and say what would make it indefensible elsewhere.
     */
-  def survives[A](body: => A): Boolean = ???
+  def survives[A](body: => A): Boolean =
+    try
+      val _ = body
+      true
+    catch case _: StackOverflowError => false
 
   /** The largest `n` in `[0, limit]` for which `f(n)` survives.
     *
@@ -51,9 +55,33 @@ object StackProbe:
     * Must be a tail recursion. `limit` is the exclusive upper bound of the
     * search, not a claim about the answer.
     *
+    * '''Warm `f` before searching, or the number is already false when you
+    * return it.''' Module 2's `SharingProof.bytesOf` carries the same sentence
+    * for the heap — ''a cold measurement measures the interpreter'' — and it
+    * applies here with more force, because a compiled frame is smaller than an
+    * interpreted one and the boundary moves while you are standing on it.
+    * Measured on this machine, ten searches in a row over the same `f`:
+    *
+    * {{{
+    * run  1    32,768    and deep(32,768) fails immediately afterwards
+    * run  2    24,575    the interpreted frame
+    * run  3+   61,653    the C2-compiled frame, stable to within 8 frames
+    * }}}
+    *
+    * A factor of 2.51 between an interpreted frame and a compiled one, and the
+    * first run straddles the transition: it reports a boundary that was true
+    * for part of the search and false for the rest. Warm up until the answer
+    * repeats, and say in the Scaladoc how you decided it had.
+    *
     * Returns `-1` if `f(0)` itself does not survive.
     */
-  def maxDepth(limit: Int)(f: Int => Any): Int = ???
+  def maxDepth(limit: Int)(f: Int => Any): Int =
+    @scala.annotation.tailrec
+    def loop(n: Int = 0): Int =
+      if n > limit then limit
+      else if !survives(f(n)) then n - 1
+      else loop(n + 1)
+    loop()
 
   /** Run `body` on a fresh platform thread with a stack of `kib` kibibytes and
     * return its result.
