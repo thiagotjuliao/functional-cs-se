@@ -61,6 +61,37 @@ object SharingProof:
     val ls = MyList((0 until n)*)
     bytesOf(ls.reverse)
 
+  /** Measured bytes allocated by `xs.map(identity)` on a list of `n` cells.
+    *
+    * The one prediction Exercise 1 makes that no measurement here confronts.
+    * `Sharing.mapCells` says this is the exercise that does it — ''a
+    * measurement of `map(identity)` is the experiment that separates the two''
+    * — and the two it separates are the **spine**, which the model counts, and
+    * the **elements**, which it explicitly does not.
+    *
+    * `identity` is what makes the experiment work rather than an arbitrary
+    * choice of `f`. It is the only function whose own allocation is
+    * unarguably zero, so whatever is measured above the spine was spent
+    * getting a value *through* `f` rather than by `f`. Whether that is zero is
+    * the question; predict it before running it, and predict it knowing that
+    * `A => B` is erased.
+    *
+    * Two different floors apply and conflating them is the trap:
+    *
+    *   - the instrument's, which is zero here for the same reason it is zero
+    *     in the four measurements above — the body returns a reference;
+    *   - the model's. `mapCells(n)` counts the cells the result *retains*, and
+    *     `MyList.map` is `@tailrec`. That is the same split `appendCells` and
+    *     `appendAllocatedCells` were separated to make explicit, and `map` has
+    *     no second function for it.
+    *
+    * State which of the two you are comparing against before calling the
+    * comparison an agreement.
+    */
+  def measureMap(n: Int): Long =
+    val ls = MyList((0 until n)*)
+    bytesOf(ls.map(identity))
+
   /** Measured bytes allocated by one `insert` into a balanced tree of `n` nodes.
     *
     * Build the tree with `MyTree.fromRange`, warm the insert, then measure a

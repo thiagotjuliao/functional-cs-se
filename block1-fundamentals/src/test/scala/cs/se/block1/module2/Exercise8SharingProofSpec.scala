@@ -88,6 +88,57 @@ class Exercise8SharingProofSpec extends Module2Harness:
     assert(ratio > 10_000.0, s"the two ends should differ by orders of magnitude; got $ratio")
   }
 
+  test("map(identity) pays for the spine twice, and for something that is not spine") {
+    val retained = Sharing.cellBytes(Sharing.mapCells(N))
+    val measured = SharingProof.measureMap(N)
+    val excess = measured - 2L * retained
+
+    report("map: spine retained (model)", retained)
+    report("map: two spines", 2L * retained)
+    report("measured map(identity)", measured)
+    report("excess over two spines", excess)
+    report("excess per element", f"${excess.toDouble / N}%.2f bytes")
+
+    // The floor no implementation can go under: the result holds n cells, and
+    // none of them existed before the call. `reverse` sits exactly here.
+    assert(
+      measured >= retained,
+      s"measured $measured against a result of $retained bytes of cells — a map that " +
+        "allocates less than it returns is sharing a spine it must have rebuilt"
+    )
+
+    // And the floor this implementation actually pays, for the reason
+    // `MyList.map` documents: the accumulator builds the list backwards, so
+    // restoring the order costs a second pass, and one of the two spines is
+    // garbage before the method returns.
+    assert(
+      measured >= 2L * retained,
+      s"measured $measured against two spines of ${2L * retained} — an implementation " +
+        "reaching n cells under §D would be the interesting result, not a passing test"
+    )
+
+    // A deliberately loose ceiling. It is not here to pin the constant: it is
+    // here to fail if a *third* spine appears, which is the defect a refactor
+    // of `map` would introduce silently. The exact excess is the experiment,
+    // and it belongs in `challenge-log.md` rather than in an assertion that
+    // would encode this machine's Integer size into the suite.
+    assert(
+      measured < 3L * retained,
+      s"measured $measured against a ceiling of ${3L * retained} — at three spines the " +
+        "question is no longer what f costs but what map is doing with the list"
+    )
+
+    // The experiment itself. `identity` allocates nothing, so a positive
+    // excess is not f's doing: it is the cost of a value crossing an erased
+    // `A => B` and coming back. Zero would be the other result, and it would
+    // mean something specific about how the call was compiled. Either way the
+    // number is the entry, not the assertion.
+    assert(
+      excess >= 0L,
+      s"excess $excess is negative, which means the two spines are not both being allocated"
+    )
+  }
+
   test("one tree insert costs the path, not the tree") {
     val n = 1_048_575
     val predicted = Sharing.nodeBytes(Sharing.treeInsertNodes(n))
