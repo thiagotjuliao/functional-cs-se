@@ -797,6 +797,7 @@ unchanged, which is the argument the doubling table makes below.
       Neither could have been caught by running anything — the suite was green
       through both.
 
-      One item is carried rather than closed: no assertion separates the old
-      `contains` from the new one, because every test asks what it returns and
-      none asks what it costs. Recorded in entry 23.
+      Nothing is carried. The one item that was — no assertion separating the
+      old `contains` from the new — is now two tests in `Exercise6MyTreeSpec`,
+      validated by reverting the implementation and confirming they fail while
+      the other five stay green. The suite is 67 tests.

@@ -1464,9 +1464,51 @@ to 2,048 is 10 left turns, 1 right turn and the final node:
 `10 + 2 + 2 = 14`, over 12 nodes. A first pass that divided by two reported 7
 and was wrong for exactly that reason.
 
-One assertion is still owed. The suite passes on both the old implementation and
-the new one, because every test asks what `contains` returns and none asks what
-it costs. Until a test separates them, the repair is protected by nothing.
+### The assertions that separate the two
+
+Written, and validated the only way such a test can be: by reverting `contains`
+to the pre-fix implementation and confirming they fail. Two tests, asserting
+different regressions, neither subsuming the other.
+
+**`contains` asks the Ordering, not `==`.** A `Key` whose `equals` is never true
+and whose `Ordering` is ordinary. The tree is built by the `Ordering`, so it
+must be searched by the same relation; an implementation reaching for `==` finds
+nothing at all. Contrived, but the conflict is not: `equals` and `compare`
+disagree for any type ordered on a subset of its fields, which is every record
+sorted by a key.
+
+**`contains` descends one side.** A counting `Ordering`, and two guards:
+
+```text
+                         comparisons   ceiling 2 x (depth + 1) = 28
+----------------------   -----------   ----------------------------
+balanced, above max               26   within
+balanced, below min               12   within
+balanced, present                 14   within
+degenerate, above max          8,192   > 100 x the balanced cost
+degenerate, below min              1   asserted exactly
+```
+
+The `> 0` guard catches an implementation that does not consult the ordering at
+all; the ceiling catches one that consults it and still walks both subtrees.
+The old code fails the first, a hypothetical `O(n)` search with correct
+comparisons would fail the second. The last row asserts pattern 11's trap
+directly, so the cheapest-query-on-a-right-spine finding is documented by a test
+rather than only by prose.
+
+Run against the pre-fix `contains`:
+
+```text
+==> X contains asks the Ordering, not ==
+      8 was inserted and cannot be found
+==> X contains descends one side, so its cost follows depth and not size
+      contains(above the maximum) consulted the Ordering zero times
+
+Failed: Total 7, Failed 2, Errors 0, Passed 5
+```
+
+**Five of the seven stayed green**, which is the finding restated as evidence:
+the original suite could not tell the two implementations apart, and now it can.
 
 ---
 

@@ -84,4 +84,124 @@ class Exercise6MyTreeSpec extends Module2Harness:
     )
   }
 
+  // ---------------------------------------------------------------------------
+  // What `contains` costs, as distinct from what it returns.
+  //
+  // Every test above asks what `contains` answers, and a search that visits
+  // every node answers all of them correctly. That is not a hypothetical: the
+  // first implementation did exactly that — `(v == x) || l.contains(x) ||
+  // r.contains(x)` — and this suite was green through it, with an `O(depth)`
+  // contract in the Scaladoc and an `O(n)` traversal under it.
+  //
+  // The two tests below are the ones that separate the two implementations.
+  // They assert different regressions and neither subsumes the other.
+  // Challenge-log entry 23.
+  // ---------------------------------------------------------------------------
+
+  /** A key whose `equals` is never true, and whose `Ordering` is ordinary.
+    *
+    * The two notions of sameness are deliberately in conflict, because the
+    * tree was built by the `Ordering` and must therefore be searched by it. A
+    * `contains` that reaches for `==` cannot find anything here; one that uses
+    * the `Ordering`'s trichotomy is unaffected.
+    *
+    * Contrived on purpose, but the conflict is not: `equals` and `compare`
+    * disagree for any type ordered on a subset of its fields, which is every
+    * record sorted by a key.
+    */
+  private final class Key(val v: Int):
+    override def equals(other: Any): Boolean = false
+    override def hashCode: Int = v
+    override def toString: String = s"Key($v)"
+
+  private given Ordering[Key] = Ordering.by(_.v)
+
+  test("contains asks the Ordering, not ==") {
+    val values = List(8, 4, 12, 2, 6, 10, 14)
+    val t = values.foldLeft(MyTree.Leaf: MyTree[Key])((acc, x) => acc.insert(Key(x)))
+
+    assertEquals(
+      t.size,
+      values.size,
+      "insert already uses the Ordering; if this fails, that changed"
+    )
+
+    values.foreach { x =>
+      assert(
+        t.contains(Key(x)),
+        s"$x was inserted and cannot be found. `equals` is false for every Key here, so a " +
+          "`contains` that tests equality instead of trichotomy finds nothing at all"
+      )
+    }
+    List(0, 1, 7, 15, 100).foreach { x =>
+      assert(!t.contains(Key(x)), s"$x was never inserted and must not be found")
+    }
+  }
+
+  test("contains descends one side, so its cost follows depth and not size") {
+    val n = 4_096
+    val counter = java.util.concurrent.atomic.AtomicLong(0)
+    given counting: Ordering[Int] = (a, b) =>
+      counter.incrementAndGet()
+      Integer.compare(a, b)
+
+    def comparisons(t: MyTree[Int], x: Int): Long =
+      counter.set(0)
+      t.contains(x)(using counting)
+      counter.get
+
+    val balanced = MyTree.fromRange(0, n)
+    val degenerate = MyTree.fromMyList(Building.byPrepend(n))
+    assertEquals(balanced.size, n)
+    assertEquals(degenerate.size, n)
+
+    // A node costs one comparison when the search goes left and two when it
+    // goes right or stops, so a descent of d nodes costs at most 2d.
+    val ceiling = 2L * (balanced.depth + 1)
+    val aboveMax = comparisons(balanced, n)
+    val belowMin = comparisons(balanced, -1)
+    val present = comparisons(balanced, n / 2)
+
+    report("balanced depth", balanced.depth)
+    report(
+      "balanced comparisons: above max / below min / present",
+      s"$aboveMax / $belowMin / $present"
+    )
+
+    List("above the maximum" -> aboveMax, "below the minimum" -> belowMin, "present" -> present)
+      .foreach { (label, got) =>
+        assert(
+          got > 0,
+          s"contains($label) consulted the Ordering zero times — it is not searching by order"
+        )
+        assert(
+          got <= ceiling,
+          s"contains($label) cost $got comparisons over a tree $n deep in size and " +
+            s"${balanced.depth} deep in path; a descent cannot exceed $ceiling. A search that " +
+            "visits both subtrees is O(n) behind an O(depth) contract"
+        )
+      }
+
+    // And the same call on a degenerate tree must cost what that tree's shape
+    // says, which is the whole subject of Exercise 9. If this ratio collapses,
+    // `contains` has stopped reading the invariant.
+    val degenerateAboveMax = comparisons(degenerate, n)
+    report("degenerate comparisons above max", degenerateAboveMax)
+    assert(
+      degenerateAboveMax > 100L * aboveMax,
+      s"the degenerate tree cost $degenerateAboveMax against the balanced tree's $aboveMax. " +
+        "Two structures holding the same values, one of them 4,096 deep, must not cost the same"
+    )
+
+    // Probing below the minimum of a right spine is that tree's *cheapest*
+    // query, not its worst — error-patterns.md pattern 11, twice recorded.
+    // Asserted here so the trap is documented by a test and not only by prose.
+    assertEquals(
+      comparisons(degenerate, -1),
+      1L,
+      "a value below the minimum stops at the root's empty left child; if this is not 1, the " +
+        "search is not stopping where the invariant says it may"
+    )
+  }
+
 end Exercise6MyTreeSpec
