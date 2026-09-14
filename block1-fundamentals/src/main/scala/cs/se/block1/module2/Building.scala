@@ -7,8 +7,8 @@ import cs.se.block1.module2.MyList.*
   *
   * Both functions below must return exactly the same list. They are pure, they
   * compile identically, and they differ by one operator. At `n = 16,000` the
-  * measured gap in allocated bytes is about 2,400×, and one of them allocates
-  * three gigabytes.
+  * measured gap in allocated bytes is about 4,800×, and one of them allocates
+  * six gigabytes.
   *
   * The point of the exercise is not to learn that `:+` is slow. It is to learn
   * the **doubling test**: double `n`, look at the ratio of the costs, and read

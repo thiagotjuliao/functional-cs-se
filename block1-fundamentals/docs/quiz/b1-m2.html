@@ -253,7 +253,7 @@ const QUESTIONS = [
       { t: "The list must be traversed to find its length first.", ok: false,
         why: "No length is needed. The cost is in rebuilding cells, not in measuring the list." },
       { t: "It does not — Scala's <code>:+</code> mutates the last cell internally.", ok: false,
-        why: "Nothing is mutated. The measured 2,400,104 bytes over 100,000 elements is exactly the 100,000 fresh cells this cascade produces." }
+        why: "Nothing is mutated. The cascade produces 100,000 fresh cells, which at 24 bytes each is the 2,400,000 bytes the result retains — and a stack-safe implementation allocates more than it retains, which is a separate question from this one." }
     ]
   },
   {
@@ -289,9 +289,9 @@ const QUESTIONS = [
     stem: `<p>You double <code>n</code> and the allocated bytes multiply by about 4, three times running. What is the complexity class?</p>`,
     options: [
       { t: "<code>O(n²)</code>", ok: true,
-        why: "§7. Quadrupling per doubling is the signature of a squared term, and the measured append column — 3.964, 3.994, 3.998 — converges on exactly 4." },
+        why: "§7. Quadrupling per doubling is the signature of a squared term, and the measured append column — 3.999, 3.999, 4.000 — converges on exactly 4." },
       { t: "<code>O(n)</code>", ok: false,
-        why: "Linear cost doubles when n doubles. The measured prepend column does that: 1.881, 2.012, 2.006." },
+        why: "Linear cost doubles when n doubles. The measured prepend column does that: 2.026, 2.013, 2.006." },
       { t: "<code>O(log n)</code>", ok: false,
         why: "Logarithmic cost goes up by a fixed step per doubling, not by a factor at all." },
       { t: "<code>O(n log n)</code>", ok: false,
@@ -300,7 +300,7 @@ const QUESTIONS = [
   },
   {
     tier: "hard", part: "II", src: "Part II.7 — The doubling test",
-    stem: `<p>Building a 16,000-element list by repeated <code>append</code> allocated 3,073,467,896 bytes — about 3 GB. What makes this defect hard to catch in review?</p>`,
+    stem: `<p>Building a 16,000-element list by repeated <code>append</code> allocated 6,144,508,128 bytes — about 6 GB. What makes this defect hard to catch in review?</p>`,
     options: [
       { t: "There is no nested loop to see: the inner <code>O(n)</code> traversal is hidden inside the <code>:+</code> operator.", ok: true,
         why: "§7 and §17. The quadratic is a single fold over a single collection; the second traversal lives inside an operator that reads as one step. The only visible clue is one character of difference from the linear version." },
@@ -369,17 +369,31 @@ const QUESTIONS = [
     ]
   },
   {
-    tier: "medium", part: "III", src: "Part III.12 — Reverse, map",
-    stem: `<p><code>xs.map(identity)</code> over 100,000 objects. What is allocated?</p>`,
+    tier: "hard", part: "III", src: "Part III.12 — Reverse, map",
+    stem: `<p><code>xs.map(identity)</code> over a <code>MyList[Int]</code> of 100,000 elements. How many cells are <em>allocated</em>?</p>`,
     options: [
-      { t: "100,000 cells and zero elements.", ok: true,
-        why: "§12. <code>map</code> rebuilds the spine and shares the contents — <code>identity</code> returns the same object it was given. The measured 2,411,000 bytes is the spine plus the function and builder objects." },
-      { t: "100,000 cells and 100,000 elements.", ok: false,
-        why: "The elements are whatever the function returns; <code>identity</code> returns the originals. Copying the spine and copying the contents are different things." },
+      { t: "200,000 — the result's spine, and a second one built and discarded.", ok: true,
+        why: "§12, right-hand column. A stack-safe <code>map</code> accumulates backwards, so restoring the order costs a second pass; one of the two spines is garbage before the method returns. Same shape as <code>:+</code> in §11." },
+      { t: "100,000 — one cell per element of the result.", ok: false,
+        why: "§12, left-hand column — that is what the result <em>retains</em>, not what the operation spends. The two coincide only for an operation that produces no garbage, and <code>reverse</code> is the only one here that does." },
       { t: "Nothing — <code>identity</code> is optimised away.", ok: false,
         why: "<code>map</code> does not know its function is the identity, and must build a new list because the result type could have been different." },
       { t: "One cell — the result shares the old spine.", ok: false,
         why: "A mapped list cannot share the old spine: each cell's head may differ, so each cell must be new. Only prepend leaves the spine untouched." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.12 — Reverse, map",
+    stem: `<p>Over a <code>MyList[Int]</code>, <code>map(identity)</code> and <code>filter(_ => true)</code> both return the same elements in the same order, and both rebuild the spine twice. Which of them allocates elements?</p>`,
+    options: [
+      { t: "<code>map</code> allocates one fresh <code>Integer</code> per element; <code>filter</code> allocates none.", ok: true,
+        why: "§12. <code>Function1</code> is specialised for <code>Int</code>, so <code>identity</code> unboxes its argument and the <code>int</code> coming back must be boxed again to enter the cell: 1,597,952 bytes over 100,000 elements, which is all but the 128 the <code>Integer</code> cache shares. <code>filter</code>'s predicate returns a primitive and the element is re-prepended as the <em>same reference</em>." },
+      { t: "Neither — <code>identity</code> returns the object it was given.", ok: false,
+        why: "The obvious first answer, and §12 is written against it. <code>identity</code> does return its argument, but what crosses a specialised <code>Function1[Int, Int]</code> is an <code>int</code>, not the <code>Integer</code> that was sitting in the cell." },
+      { t: "Both, once per element — anything crossing a function boundary is boxed.", ok: false,
+        why: "<code>filter</code> never passes the element through a function at all. Its predicate takes the element and returns a <code>Boolean</code>; the element is placed into the new cell directly." },
+      { t: "<code>map</code>, but only for the 128 values in the <code>Integer</code> cache.", ok: false,
+        why: "Backwards. The cache is exactly what is <em>not</em> allocated: those 128 values are shared, which is why the measurement is (100,000 - 128) x 16 and not 100,000 x 16. §19 of Module 1." }
     ]
   },
   {

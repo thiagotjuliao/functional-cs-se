@@ -161,10 +161,14 @@ objects — but all `n` cells are freshly allocated.
 Measured over a 100,000-element list:
 
 ```text
-   x :: xs        ->          24 bytes
-   xs :+ x        ->   2,400,104 bytes        = 100,000 x 24, plus overhead
-   ratio          ->     100,004 x
+   x :: xs        ->          24 bytes        =       1 x 24
+   xs :+ x        ->   4,800,024 bytes        = 200,001 x 24
+   ratio          ->     200,001 x
 ```
+
+The `200,001` is not a typo for `100,000`. Rebuilding the spine retains `n`
+cells, and a stack-safe implementation allocates `2n + 1` to produce them —
+§12 separates the two columns, and §11 shows where the second `n` comes from.
 
 One hundred thousand times the cost, for what reads like the same operation with
 the arguments in a different order. This asymmetry is not a wart to be worked
@@ -254,11 +258,28 @@ Bytes allocated, measured:
 ```text
    n        append-built     x prev     prepend+reverse    x prev     ratio
    ------   --------------   ------     ---------------    ------     -------
-    2,000       48,557,792      -                168,016      -         289.0
-    4,000      192,484,672    3.964               316,024    1.881       609.1
-    8,000     768,731,896     3.994               635,944    2.012     1,208.8
-   16,000   3,073,467,896     3.998             1,275,944    2.006     2,408.8
+    2,000       96,059,944      -                155,944      -         616.0
+    4,000      384,123,944    3.999               315,944    2.026     1,215.8
+    8,000    1,536,251,944    3.999               635,944    2.013     2,415.7
+   16,000    6,144,508,128    4.000             1,275,944    2.006     4,815.7
 ```
+
+Every figure above is also *derivable*, which matters more than its being
+measured: a number you can only measure cannot be checked, and a number you can
+recompute can.
+
+```text
+append-built(n)   =  24n^2 + 32n - 4,056
+prepend+reverse(n) =  80n - 4,056
+```
+
+The two models close on every row to the byte, save 184 bytes in six gigabytes
+on the last. `24n^2` is the literal square: `appended` reverses before it
+prepends, so appending to a list of `k` cells costs `2k + 1` cells, and summing
+`1 + 3 + ... + (2n-1)` over the whole build gives exactly `n^2` — the sum of the
+first `n` odd numbers. `80n` is `2n` cells for the prepend-then-reverse pair.
+The `32n - 4,056` is boxing in both: two `java.lang.Integer` per element at 16
+bytes, less the 128 values `Integer.valueOf` shares from its cache.
 
 Read the two `x prev` columns and you have *proved* the complexity classes
 without writing a proof:
@@ -268,7 +289,7 @@ without writing a proof:
 * and the ratio between them doubles each row, which is what `n²/n = n` looks
   like from the outside.
 
-Note the absolute number in the last row: **three gigabytes allocated to build a
+Note the absolute number in the last row: **six gigabytes allocated to build a
 sixteen-thousand-element list.** Nothing in that code looks expensive. There is
 no nested loop to spot in review.
 
@@ -346,10 +367,22 @@ Append rebuilds every cell, as §4 showed, and the measurement confirms the mode
 exactly:
 
 ```text
-   bytesOf(xs :+ x)  =  2,400,104 bytes
-   100,000 x 24      =  2,400,000
-   difference        =        104      the builder's own bookkeeping
+   bytesOf(xs :+ x)   =  4,800,024 bytes
+   retained  100,000 x 24  =  2,400,000      the rebuilt spine
+   allocated 200,001 x 24  =  4,800,024      what the thread actually spent
 ```
+
+The model in §4 predicts the first line and the probe reports the second, and
+neither is wrong. `appended` delegates to `concat`, and `concat` opens by
+reversing: it must walk the list forwards while emitting backwards, so it builds
+an intermediate spine of `n` cells and discards it before returning. Staying
+`@tailrec` is what costs the second spine. The alternatives are a non-tail
+recursion, which holds a frame per cell and overflows at this `n`, or the
+mutable builder `scala.List` uses and this module forbids.
+
+Keep the two numbers apart by name: **retained** is a property of the result,
+**allocated** is a property of the run. They coincide only for an operation that
+produces no garbage — `reverse` is the one, and it measures `n` cells exactly.
 
 The rule that generalises both cases, and the one worth memorising:
 
@@ -365,13 +398,38 @@ For a tree, the path is the depth, and that is the next Part.
 Apply the rule and you can predict the rest without measuring:
 
 ```text
-   operation           new cells     measured over n = 100,000
-   -----------------   -----------   -------------------------
-   x :: xs             1                     24 bytes
-   xs :+ x             n              2,400,104 bytes
-   xs.reverse          n              2,400,000 bytes
-   xs.map(f)           n              2,411,000 bytes
+   operation      cells retained   cells allocated   measured over n = 100,000
+   ------------   --------------   ---------------   -------------------------
+   x :: xs        1                1                          24 bytes
+   xs :+ x        n                2n + 1               4,800,024 bytes
+   xs.reverse     n                n                    2,400,000 bytes
+   xs.map(f)      n                2n + boxing          6,397,952 bytes
 ```
+
+**The rule predicts the middle column, not the right one**, and the gap between
+them is the single most useful thing in this Part.
+
+The rule says what the result *keeps*. An allocator counts what the operation
+*spends*, and the two coincide only where an operation produces no garbage.
+`reverse` is that operation, and it lands on `n` cells exactly. The other two
+do not, for a reason that is a consequence of purity rather than a defect:
+
+* `:+` must rebuild the spine and must stay stack-safe, so it walks forwards and
+  emits backwards, materialising an intermediate spine and dropping it — `2n`
+  cells allocated to retain `n`, plus one for the new element.
+* `map` pays the same double spine, and then pays again per element:
+  `4,800,000` for the two spines and `1,597,952` for one fresh
+  `java.lang.Integer` per element above the `Integer` cache. `Function1` is
+  specialised for `Int`, so even `map(identity)` unboxes its argument and must
+  box the result on the way into the cell. `filter` pays no box at all: its
+  predicate returns a primitive and the element is re-prepended as the same
+  reference.
+
+Every figure above is measured over the `MyList` built in this module, not over
+`scala.List`. The distinction is invisible for `::` and `reverse`, whose costs
+are decided by *shape*, and decisive for `:+`, whose cost is decided by
+*algorithm*: the standard library reaches `n` cells through a mutable
+`ListBuffer`, which the module's purity gate forbids here.
 
 `reverse` lands on `n × 24` exactly, because it builds `n` cells and shares every
 element. `map` costs a little more than `reverse` because the function and the

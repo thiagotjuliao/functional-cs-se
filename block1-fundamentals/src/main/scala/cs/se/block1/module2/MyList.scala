@@ -141,13 +141,34 @@ object MyList:
       *
       * {{{
       * reverse   2,400,000 bytes   1.00 n cells   the model exactly
-      * filter    4,808,392 bytes   2.00 n cells   two spines, one discarded
-      * map       6,522,656 bytes   2.72 n cells   two spines, plus boxing
+      * map       6,397,952 bytes   2.67 n cells   two spines, plus one box
+      * filter            2.00 n cells             two spines, and no box
       * }}}
       *
-      * The 0.72 above `filter` is not spine. It is `f`'s result crossing the
-      * erased `A => B` boundary and being boxed on the way back — Module 1,
-      * §19 — which is why the model counts cells and not bytes.
+      * Both figures are asserted by `Exercise8SharingProofSpec`, against
+      * `Sharing.reverseCells` and `Sharing.mapCells`. `filter` carries no
+      * absolute because nothing measures it: the cell count is derived, and an
+      * unanchored byte count is pattern 12 of `error-patterns.md`.
+      *
+      * The 0.67 above `filter` is not spine, and the comparison between the two
+      * is the whole lesson. Both return the same elements in the same order,
+      * and only `map` pays:
+      *
+      * {{{
+      * two spines        2 x 100,000 x 24   4,800,000
+      * one Integer each  (100,000 - 128) x 16   1,597,952
+      *                                      ---------
+      *                                        6,397,952   measured, to the byte
+      * }}}
+      *
+      * `filter`'s `p(h)` returns a primitive and the element is re-prepended as
+      * the *same reference*. `map`'s `f(h)` returns a `B`: `Function1` is
+      * specialised for `Int`, so `identity` unboxes its argument and the `int`
+      * that comes back must be boxed again to enter the cell. A fresh
+      * `java.lang.Integer` per element, minus the 128 the `Integer` cache
+      * shares — Module 1, §19 — and `identity` allocated none of them.
+      *
+      * That is why the model counts cells and not bytes.
       *
       * Paying `2n` is the right trade here rather than a defect. §D of the
       * checklist requires `MyList` recursion to be `@tailrec`, and an

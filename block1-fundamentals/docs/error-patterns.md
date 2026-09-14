@@ -25,14 +25,15 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 3 | Off-by-one in a limit | 1 | no — the boundary has no call site |
 | 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no — one latent since pinned, five documented |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
-| 6 | A contract no implementation of that signature can satisfy | 2 | no — contracts are prose, and the suite samples the interior |
+| 6 | A contract no implementation of that signature can satisfy | 3 | no — contracts are prose, and one of them is a checklist clause |
 | 7 | A unit declared in the name and nowhere the machine reads | 1 | no — both sides of the confusion are `Long` |
 | 8 | An exact integer answer routed through `Double` | 2 | no — the suite stopped two powers of two short |
 | 9 | A structural guarantee carried by traversal order instead of by construction | 3 | the shape yes, the price no |
 | 10 | A quantity compared against a model of a neighbouring quantity | 4 | no — the tolerances were wide enough to swallow the gap |
 | 11 | A fixture that cannot exhibit the property under test | 1 | no — and the failure it finally produced blamed the wrong file |
+| 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
 
-Patterns 1–6 were found in **Module 1**, 7 to 11 in **Module 2**. The file was
+Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
 day its defect appears.
@@ -297,6 +298,10 @@ promised                             signature         where it fails
 "total for all non-negative inputs"  Int => Int        the top seven Ints: the
                                                        answer is 2^31, and no
                                                        Int holds it
+"zero warnings suppressed by         Int => Long       a correct prependCells
+ annotation" (checklist B1-M2 §C)    (prependCells)    cannot read n, and
+                                                       -Werror rejects an
+                                                       unread parameter
 ```
 
 Both were found by reading the contract against the extremes of its input type,
@@ -330,10 +335,27 @@ approach the edges: `Exercise1Vec2Spec` draws components from `[-100, 100]`, and
 reasonable test ranges, and neither can see a failure that lives only at
 `10^154` or at `2^31 - 1`.
 
-Both occurrences are now repaired in the contract rather than the body, and both
-boundaries are pinned by a test — including, for `align`, an assertion on the
-behaviour *outside* the domain, so that a future change to the signature is
-confronted with what it would be replacing.
+The first two occurrences are now repaired in the contract rather than the body,
+and both boundaries are pinned by a test — including, for `align`, an assertion
+on the behaviour *outside* the domain, so that a future change to the signature
+is confronted with what it would be replacing.
+
+**The third occurrence is repaired the same way, and it is worth separating
+because the contract is not in a Scaladoc.** It is a clause of the deliverables
+checklist, which is a contract like any other and can be unsatisfiable like any
+other. `Sharing.prependCells(n: Int): Long` exists to be read beside
+`appendCells(n: Int): Long`; the parallel *is* the lesson, and the whole point is
+that only one of the two mentions `n`. A correct prepend costs one cell whatever
+the list's length, so the body cannot read its parameter — and under `-Werror`
+an unread parameter is not a warning but an error. Either the signature loses
+the parameter and the lesson with it, or the clause admits an annotation.
+
+The repair is the clause, not the code: §C now records two suppressions and what
+each is for, rather than claiming a zero it cannot have. Note also what the
+annotation buys beyond silence — `Sharing`'s own Scaladoc says it: *"Treat the
+compiler's complaint as confirmation: an implementation that reads `n` is the one
+that is wrong."* The suppression marks the correct implementation rather than
+excusing a defective one.
 
 ---
 
@@ -603,8 +625,8 @@ fromSorted.depth / fromBalanced     a path length             nodes allocated, w
   .depth                                                      the path plus a new leaf
 ```
 
-Measured, at `n = 100,000` and a tree of `2^20 - 1`, on JDK 26, forked, after
-warm-up:
+Measured, at `n = 100,000` and a tree of `2^20 - 1`, on JDK 21.0.9 HotSpot,
+forked, after warm-up:
 
 ```text
 operation      model       measured    the difference is
@@ -697,3 +719,121 @@ so the suite failed earlier and this defect stayed latent behind another one.
 Had the formula been fixed first, the failure message would have read *"the
 insert is not copying the path it walks"* — a diagnosis pointing squarely at
 `MyTree.insert`, which was correct throughout.
+---
+
+## 12. A measurement recorded where nothing can re-run it
+
+A number is written into a Scaladoc or a guide as a measured fact, and no test
+reads it. It is not wrong when written. It becomes wrong silently, because
+nothing in the build is able to disagree with it — and a claim that cannot be
+refuted is not evidence, whatever it was when it was taken.
+
+This is the decay version of pattern 10. There, a quantity was compared against
+a model of a neighbouring quantity and the tolerance swallowed the gap. Here
+there is no comparison at all, so there is nothing for a tolerance to be too
+wide for.
+
+`MyList.map`'s Scaladoc carries a three-row table of measurements, of which the
+first row is anchored and the other two are not. The difference is invisible on
+the page, which is the whole problem:
+
+| | Where | What is written | What anchors it |
+| :-- | :--- | :--- | :--- |
+| — | `MyList.map` | `reverse 2,400,000 bytes — 1.00 n cells` | `Exercise8SharingProofSpec` asserts it against `reverseCells` within 1% |
+| 1 | `MyList.map` | `filter 4,808,392 bytes — 2.00 n cells` | nothing |
+| 2 | `MyList.map` | `map 6,522,656 bytes — 2.72 n cells` | nothing, until `measureMap` — and it was wrong by 124,704 bytes |
+| 3 | `Building` | `at n = 16,000 the gap is about 2,400×, and one of them allocates three gigabytes` | nothing |
+
+The first row is the contrast, not an occurrence: it sits in the same table, in
+the same sentence, and it is the only one the build can contradict.
+
+Occurrences 1 and 2 were produced in `playground.scala`, which is gitignored and
+now empty.
+
+**Occurrence 2 has since been settled, and it settles the argument.** The
+residue was the tell: two spines plus one `Integer` per element above the cache
+accounted for all but 124,704 bytes of the recorded figure, and that remainder
+corresponded to nothing the model predicts. `SharingProof.measureMap` was
+written, and the true value is the decomposition with no residue at all:
+
+```text
+two spines          2 x 100,000 x 24        4,800,000
+one Integer each    (100,000 - 128) x 16    1,597,952
+                                            ---------
+model                                       6,397,952
+measured                                    6,397,952     exact
+recorded in the Scaladoc                    6,522,656     +124,704
+```
+
+The number had been wrong the whole time. Nothing reported it, because nothing
+read it — which is the pattern, stated as a measurement rather than as a
+worry.
+
+**Occurrence 3 is what the pattern costs when nobody goes looking.** Both of its numbers are wrong now, and
+wrong by exactly the same factor:
+
+```text
+                        written      recorded in the checklist   ratio
+--------------------   ----------   -------------------------   -----
+gap at n = 16,000        2,400 x                     4,816 x     2.00
+byAppend at n = 16,000       3 GB                      6.14 GB   2.00
+```
+
+Exactly half, both of them, which identifies the cause rather than leaving it a
+coincidence. They were written against a model in which appending to a list of
+`k` cells allocates `k` cells. It allocates `2k + 1`: `appended` delegates to
+`concat`, and `concat` opens with `loop(xs.reverse)`. That is
+`appendAllocatedCells` against `appendCells` — pattern 10 again — frozen into
+prose where nothing re-checks it. The measurement that corrected it, in
+`Exercise8SharingProofSpec`, did not and could not correct the sentence.
+
+All three were corrected in one pass, and the sweep that found them is the
+evidence for the rule below — the same two figures had propagated into the
+theory guide and the recall set, where nothing read them either:
+
+```text
+where                            was                    is
+------------------------------   --------------------   --------------------
+MyList.map Scaladoc              6,522,656              6,397,952, asserted
+MyList.map Scaladoc              filter 4,808,392       2.00 n cells, derived
+Building Scaladoc                2,400x / three GB      4,800x / six GB
+module2_structures.md §4          :+ = 2,400,104         4,800,024
+module2_structures.md §11         difference = 104       retained vs allocated
+module2_structures.md §12         map(f) = 2,411,000     6,397,952
+module2_structures.md §7          append col. halved     the measured table
+quiz b1-m2 §II.7                  3 GB, 3.964/1.881      6 GB, 3.999/2.026
+quiz b1-m2 §III.12                "identity shares"     the box, as measured
+Exercise5BuildingSpec comment    3.964, 1.881           3.999, 2.026
+```
+
+Two of those are worth naming separately. The guide's §7 table was measured
+against an `append` that allocates `n` cells rather than `2n + 1`, so its whole
+column was half — and it closed with *"Exercise 5 makes you reproduce this
+table from your own structure"*, which no correct implementation under §D could
+do. And the recall set's §III.12 question taught the opposite of the
+measurement: that `map(identity)` shares its contents. A wrong answer key is
+the worst form this pattern takes, because it is the one artifact a reader
+consults *in order to be corrected*.
+
+**The rule.** A number in an artifact needs a named source that can be run
+again. Three forms are acceptable, and the test is whether you can point at one
+of them by eye:
+
+  - an assertion that reads it, so the suite fails when it drifts;
+  - a committed harness that reproduces it, named at the number;
+  - the arithmetic that derives it, so it can be recomputed from the layout
+    rather than re-measured.
+
+A number whose source was a scratch file is none of the three. Either promote
+the scratch file to a test or delete the number — and prefer a *ratio* in prose
+to an absolute, because the ratio survives a change of machine and is what the
+sentence was trying to say anyway.
+
+**Why the build does not catch it.** Scaladoc is a comment. `-Wall -Werror`
+reads the code beside it and has no opinion about the sentence, and the suite
+asserts what it is given: `Exercise5BuildingSpec` closes on
+`lastGap > firstGap * 4.0`, a *relative* widening that is exactly the right
+assertion for the complexity class and is completely indifferent to whether the
+gap is 2,400× or 4,816×. The suite is green, the test is correct, the
+complexity class it proves is correct, and the number three lines above the
+function is off by a factor of two.

@@ -55,12 +55,12 @@ class Exercise5BuildingSpec extends Module2Harness:
 
     // Quadrupling per doubling is O(n^2). The band is wide because the first
     // step carries the most constant-factor noise; the reference run measured
-    // 3.964, 3.994, 3.998.
+    // 3.999, 3.999, 4.000.
     appendRatios.foreach { r =>
       assert(r > 3.0 && r < 5.0, s"byAppend should quadruple per doubling; got $r")
     }
 
-    // Doubling per doubling is O(n). Reference: 1.881, 2.012, 2.006.
+    // Doubling per doubling is O(n). Reference: 2.026, 2.013, 2.006.
     prependRatios.foreach { r =>
       assert(r > 1.5 && r < 2.6, s"byPrepend should double per doubling; got $r")
     }
