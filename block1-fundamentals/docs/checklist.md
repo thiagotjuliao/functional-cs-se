@@ -818,6 +818,9 @@ Build it before you need it.
 
 - [ ] Read `docs/theory/module3_stack.md` in full.
 - [ ] Work `docs/quiz/b1-m3.html`, filtering by Part as you finish each one.
+      33 questions over all 27 sections — coverage checked mechanically, by
+      listing the guide's sections against the sections the questions cite.
+      7 easy, 16 medium, 10 hard.
 - [ ] Read JVM Specification §2.5.2 and §2.6, and §2.6.5 on why the JVM has no
       tail-call instruction.
 - [ ] Before writing any code, classify these six expressions by hand, and say

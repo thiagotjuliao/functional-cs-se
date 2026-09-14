@@ -1,0 +1,747 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1-M3 — Stack Optimization · Recall Set</title>
+<style>
+  :root {
+    --bg: #fbfaf8;      --panel: #ffffff;   --ink: #1b1a18;
+    --muted: #6b6862;   --line: #e3e0da;    --accent: #7a4b2a;
+    --ok-bg: #eef5ec;   --ok-line: #7fa86c; --ok-ink: #33552a;
+    --no-bg: #fbeeea;   --no-line: #c07a63; --no-ink: #7a3320;
+    --code-bg: #f4f2ee;
+    --easy: #5d7a8c;    --medium: #8a6d3b;  --hard: #8c4a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161a;    --panel: #1f1e23;   --ink: #e8e4dd;
+      --muted: #9b958c; --line: #34323a;    --accent: #d5a37a;
+      --ok-bg: #1c2a1b;  --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+      --no-bg: #2c1c19;  --no-line: #9a5c48; --no-ink: #e0a08c;
+      --code-bg: #17161a;
+      --easy: #8fb0c4;  --medium: #c8a468;  --hard: #cc8080;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161a;      --panel: #1f1e23;   --ink: #e8e4dd;
+    --muted: #9b958c;   --line: #34323a;    --accent: #d5a37a;
+    --ok-bg: #1c2a1b;   --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+    --no-bg: #2c1c19;   --no-line: #9a5c48; --no-ink: #e0a08c;
+    --code-bg: #17161a;
+    --easy: #8fb0c4;    --medium: #c8a468;  --hard: #cc8080;
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 0 20px 80px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header { padding: 44px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 25px; margin: 0 0 8px; letter-spacing: -0.01em; font-weight: 620; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .sub code { font-size: 12.5px; }
+
+  .note {
+    margin: 22px 0 0; padding: 13px 16px; border-left: 2px solid var(--accent);
+    background: var(--panel); font-size: 13.5px; color: var(--muted);
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  .bar .grow { flex: 1 1 auto; }
+  .bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
+  button.f {
+    font: inherit; font-size: 13px; padding: 5px 11px; cursor: pointer;
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  button.f[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+  button.f:hover { color: var(--ink); }
+  #score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #score b { color: var(--ink); font-weight: 620; }
+
+  .q {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 20px 22px; margin: 20px 0;
+  }
+  .meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .tier {
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    font-weight: 680; padding: 2px 7px; border-radius: 3px; border: 1px solid;
+  }
+  .tier.easy   { color: var(--easy);   border-color: var(--easy); }
+  .tier.medium { color: var(--medium); border-color: var(--medium); }
+  .tier.hard   { color: var(--hard);   border-color: var(--hard); }
+  .src { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stem { margin: 0 0 15px; }
+  .stem p { margin: 0 0 10px; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 11px 13px; overflow-x: auto; margin: 11px 0;
+    font: 12.5px/1.55 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg); padding: 1px 4px; border-radius: 3px;
+    font: 0.9em/1 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .opt {
+    display: block; width: 100%; text-align: left; font: inherit;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 10px 13px; margin: 7px 0; cursor: pointer;
+  }
+  .opt:hover:not([disabled]) { border-color: var(--accent); }
+  .opt[disabled] { cursor: default; }
+  .opt .k { color: var(--muted); font-weight: 620; margin-right: 8px; }
+  .opt.correct { background: var(--ok-bg); border-color: var(--ok-line); }
+  .opt.wrong   { background: var(--no-bg); border-color: var(--no-line); }
+
+  .why {
+    margin: 9px 0 3px; padding: 11px 14px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid;
+  }
+  .why.correct { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+  .why.wrong   { background: var(--no-bg); border-color: var(--no-line); color: var(--no-ink); }
+  .why pre { background: rgba(127,127,127,0.10); border-color: transparent; }
+  .why code { background: rgba(127,127,127,0.14); }
+  .why b { font-weight: 660; }
+
+  footer {
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--muted);
+  }
+  #empty { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>B1-M3 — Stack Optimization · Recall Set</h1>
+  <p class="sub">Anchored to <code>docs/theory/module3_stack.md</code>. Every question cites the section that teaches it; every distractor is a wrong answer that section already documents.</p>
+  <div class="note">
+    <strong>Mechanism only — no exercise is solved here.</strong> This set tests what the
+    guide teaches, so it is usable the moment you finish reading a Part, long before
+    the exercises. Multiple choice measures recognition; the
+    <code>challenge-log.md</code> measures derivation, and it is the one that closes
+    the Oral Defence. Use this to sharpen discrimination between near-identical
+    alternatives — a call that is last on the page against one in tail
+    position, a ceiling laziness removes against one it leaves standing, a
+    depth bound the code keeps against one the caller keeps — and never as a
+    substitute for writing a derivation out.
+  </div>
+</header>
+
+<div class="bar">
+  <button class="f" data-tier="all"    aria-pressed="true">All</button>
+  <button class="f" data-tier="easy"   aria-pressed="false">Easy</button>
+  <button class="f" data-tier="medium" aria-pressed="false">Medium</button>
+  <button class="f" data-tier="hard"   aria-pressed="false">Hard</button>
+  <span class="sep"></span>
+  <button class="f" data-part="all"  aria-pressed="true">All parts</button>
+  <button class="f" data-part="I"    aria-pressed="false">I</button>
+  <button class="f" data-part="II"   aria-pressed="false">II</button>
+  <button class="f" data-part="III"  aria-pressed="false">III</button>
+  <button class="f" data-part="IV"   aria-pressed="false">IV</button>
+  <button class="f" data-part="V"    aria-pressed="false">V</button>
+  <button class="f" data-part="VI"   aria-pressed="false">VI</button>
+  <button class="f" data-part="VII"  aria-pressed="false">VII</button>
+  <button class="f" data-part="VIII" aria-pressed="false">VIII</button>
+  <span class="grow"></span>
+  <span id="score">answered <b>0</b>/<b>0</b> · correct <b>0</b></span>
+  <button class="f" id="reset">Reset</button>
+</div>
+
+<main id="list"></main>
+<div id="empty" hidden>No questions match this filter.</div>
+
+<footer>
+  Extend as new Parts are written, keeping every distractor sourced from the
+  guide rather than invented — and keeping exercise solutions out.
+</footer>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    tier: "easy", part: "I", src: "Part I.1 — The question",
+    stem: `<p><code>sumNaive</code> and <code>sumAcc</code> compute the same sum, agree on every input both survive, and one of them stops working at about 14,335. What is the difference between them?</p>`,
+    options: [
+      { t: "Where the addition happens: <code>sumNaive</code> adds after the recursive call returns, so every frame must wait.", ok: true,
+        why: "§1 and §2. The pending addition is what the frame exists to remember, so the frames accumulate. The accumulator version adds before the call and keeps nothing." },
+      { t: "<code>sumAcc</code> allocates less on the heap.", ok: false,
+        why: "Neither allocates anything on the heap. §4: this module's resource is the stack, and <code>-Xmx</code> is irrelevant to it." },
+      { t: "<code>sumNaive</code> is slower, so it times out.", ok: false,
+        why: "It does not time out, it throws <code>StackOverflowError</code>. §2 — the failure is a fixed region being exhausted, not a clock." },
+      { t: "<code>sumAcc</code> uses <code>Long</code> and avoids overflow.", ok: false,
+        why: "Both return <code>Long</code>, and §1 shows them agreeing at n = 10,000. Arithmetic overflow is a different question from stack exhaustion." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — What a frame is",
+    stem: `<p>Which of these does a JVM frame <em>not</em> hold?</p>`,
+    options: [
+      { t: "The objects the method allocated.", ok: true,
+        why: "§2 and §4. Objects live on the heap; the frame holds <em>references</em> to them among its locals. That split is why a recursion can exhaust the stack with gigabytes of heap free." },
+      { t: "The method's local variables, including its parameters.", ok: false,
+        why: "§2 lists exactly this. The locals are most of what makes one frame bigger than another." },
+      { t: "An operand stack for the bytecode to compute on.", ok: false,
+        why: "§2. It is the scratch space instructions push and pop." },
+      { t: "The return address.", ok: false,
+        why: "§2. It is how control gets back to the caller." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3 — How deep you can go",
+    stem: `<p>Depth was measured at four stack sizes and the bytes-per-frame column came out 20.0, 17.8, 16.8, 16.1 — descending. What does the descent mean?</p>`,
+    options: [
+      { t: "There is a fixed overhead: some stack is already in use before the measured recursion starts.", ok: true,
+        why: "§3. Fitting a line gives 16.00 bytes per frame plus 52,798 bytes of stack already held by sbt, MUnit and the JVM's entry frames. The overhead is a larger share of a small stack, which is what bends the ratio." },
+      { t: "Frames get cheaper as the recursion gets deeper.", ok: false,
+        why: "A frame's size is fixed by the method, not by how many are already pushed. §3 — the descent is an artefact of dividing by a total that includes a constant." },
+      { t: "The JIT compiles the method after a while and shrinks its frame.", ok: false,
+        why: "§3 measures a fitted line of 16.00 with a residual of at most 40 frames in 13,000. A tier change mid-measurement would not produce a straight line." },
+      { t: "The measurement is noisy at small stack sizes.", ok: false,
+        why: "It is not noise: the model with an intercept predicts all four rows, the last two exactly. §3." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3 — How deep you can go",
+    stem: `<p>The same experiment on a method with four extra <code>Long</code> parameters reached 32,768 where the simple one reached 40,959. Why?</p>`,
+    options: [
+      { t: "More locals make a larger frame, so the same stack holds fewer of them.", ok: true,
+        why: "§3. Frame size is a property of the method, which is why you cannot compute a safe depth from the stack size alone." },
+      { t: "<code>Long</code> arithmetic is slower, so it hits a timeout sooner.", ok: false,
+        why: "The measurement is a depth, not a duration. §3 binary-searches for the largest surviving n." },
+      { t: "The extra parameters are boxed, so the heap runs out first.", ok: false,
+        why: "Primitive parameters are not boxed, and heap exhaustion raises <code>OutOfMemoryError</code> rather than <code>StackOverflowError</code>. §4." },
+      { t: "The JVM reserves stack per parameter regardless of type.", ok: false,
+        why: "It reserves space for the locals the method actually declares, sized by their types — which is exactly why the two methods differ. §3." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.4 — Stack is not heap",
+    stem: `<p>A recursion 14,336 deep overflows on a machine with a terabyte of free heap. Which flag would change that?</p>`,
+    options: [
+      { t: "<code>-Xss</code>, which sets the thread stack size.", ok: true,
+        why: "§4 and §23. The stack is fixed at thread creation and never grows; 8 MiB bought 520,945 frames where 256 KiB bought 13,123." },
+      { t: "<code>-Xmx</code>, by giving the JVM more memory to work with.", ok: false,
+        why: "§4 states this outright: <code>-Xmx2g</code> does nothing here. The heap and the stack are different regions with different exhaustion signals." },
+      { t: "<code>-XX:+UseG1GC</code>, because a better collector reclaims frames sooner.", ok: false,
+        why: "Frames are not collected at all. §4 — a frame is reclaimed by the method returning, which no collector is involved in." },
+      { t: "None; the limit is fixed by the JVM specification.", ok: false,
+        why: "§3 measured a 40x range across stack sizes on one machine. The specification leaves the size to the implementation." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.5 — Tail position",
+    stem: `<p>In which of these is the call to <code>f</code> in tail position?</p>`,
+    options: [
+      { t: "<code>x match { case _ => f(x) }</code>", ok: true,
+        why: "§5. The result of each branch is the result of the method, so a call in a branch's result is in tail position. Contrast the row above it in the table: <code>f(x) match { ... }</code> is not, because there <code>f(x)</code> is the scrutinee." },
+      { t: "<code>1 + f(x)</code>", ok: false,
+        why: "§5, and the obvious wrong instinct the section warns about: being last on the page is not being in tail position. The <code>+</code> is still waiting when <code>f</code> returns." },
+      { t: "<code>try f(x) catch { ... }</code>", ok: false,
+        why: "§5. The handler must stay installed while <code>f</code> runs, so the frame cannot be released." },
+      { t: "<code>f(x) match { case ... => ... }</code>", ok: false,
+        why: "§5. <code>f(x)</code> is the scrutinee — the <code>match</code> consumes its result, so something happens after it returns." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.5 — Tail position",
+    stem: `<p>In <code>f(g(x))</code>, which calls are in tail position?</p>`,
+    options: [
+      { t: "<code>f</code> is; <code>g</code> is not.", ok: true,
+        why: "§5's table, last row. <code>f</code>'s result is handed straight back; <code>g</code>'s result is consumed by <code>f</code> first. Follow the value." },
+      { t: "Both are — the whole expression is the method's result.", ok: false,
+        why: "The expression is, but <code>g</code>'s result is not: <code>f</code> consumes it. §5 — if anything consumes the value first, the call is not in tail position." },
+      { t: "<code>g</code> is, because it is evaluated last before returning.", ok: false,
+        why: "<code>g</code> is evaluated <em>first</em>, and its value is then passed to <code>f</code>. Evaluation order and tail position are different questions. §5." },
+      { t: "Neither, because nested calls are never tail calls.", ok: false,
+        why: "§5 lists this case explicitly as a mixed one. Nesting rules out the inner call, not the outer." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.6 — What @tailrec compiles to",
+    stem: `<p>Disassembled, <code>sumAcc</code> contains no <code>invoke</code> instruction at all. What replaced it?</p>`,
+    options: [
+      { t: "Stores into the parameter slots followed by <code>goto 0</code>.", ok: true,
+        why: "§6 shows the listing: <code>istore</code>, <code>lstore</code> into the locals, then <code>goto 0</code>. The recursive call became a jump, and a jump pushes nothing." },
+      { t: "An <code>invokestatic</code>, which the JVM optimises away at run time.", ok: false,
+        why: "There is no call in the bytecode at all — the transformation happens in the Scala compiler, before the JVM sees it. §6." },
+      { t: "A loop built by the JIT once the method becomes hot.", ok: false,
+        why: "§6: the listing is what <code>javap</code> prints from the class file, which exists before anything runs. The JIT is not involved." },
+      { t: "A tail-call instruction that the JVM provides for this purpose.", ok: false,
+        why: "The JVM has no tail-call instruction — the guide's reading list cites JVM Spec §2.6.5 for what is absent, and that absence is why the compiler must build the loop itself." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.6 — What @tailrec compiles to",
+    stem: `<p>Why do the tail-recursive version and the <code>while</code> version both survive n = 10,000,000?</p>`,
+    options: [
+      { t: "After compilation there is nothing left to tell them apart.", ok: true,
+        why: "§6. Tail recursion is a loop whose loop variables are named and immutable in the source; the compiled shape is the same, and §9 makes the translation between them mechanical." },
+      { t: "The JVM grows the stack when a method is called often enough.", ok: false,
+        why: "§4: the stack never grows; its size is fixed at thread creation." },
+      { t: "The recursion is only shallow because <code>Long</code> addition is associative.", ok: false,
+        why: "Associativity decides whether the accumulator gives the same <em>answer</em> (§8, §21), not whether it builds frames." },
+      { t: "Both are inlined by the compiler.", ok: false,
+        why: "Inlining removes a fixed number of calls (§27). Neither of these has a fixed number — they run ten million times." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.7 — What @tailrec refuses",
+    stem: `<p>Two mutually recursive methods, <code>isEven</code> and <code>isOdd</code>, both call each other in tail position. <code>@tailrec</code> rejects them. What does the compiler actually say?</p>`,
+    options: [
+      { t: "That <code>isEven</code> contains <em>no recursive calls</em>.", ok: true,
+        why: "§7 quotes it. From the transformation's point of view that is literally true: it looks for calls to <code>isEven</code> inside <code>isEven</code> and finds none. <code>isOdd</code> is just some other method." },
+      { t: "That the calls are not in tail position.", ok: false,
+        why: "They are in tail position, and the compiler does not claim otherwise. §7 — the refusal is about the mechanism, not the placement." },
+      { t: "That the methods are neither private nor final.", ok: false,
+        why: "That is a different refusal, for a different reason — §7's overridability case, and §20." },
+      { t: "Nothing; it compiles and silently gives up the optimisation.", ok: false,
+        why: "§6: <code>@tailrec</code> is an assertion, not a hint. It transforms the method or refuses to compile, with no silent middle." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.7 — What @tailrec refuses",
+    stem: `<p>Why does <code>@tailrec</code> refuse a method that a subclass could override?</p>`,
+    options: [
+      { t: "The recursive call would be virtual, so turning it into a jump could jump to the wrong body.", ok: true,
+        why: "§7. A subclass could replace the method, and <code>goto 0</code> re-enters <em>this</em> body unconditionally. The fix is <code>final</code>, <code>private</code>, an <code>object</code>, or a local <code>def</code>." },
+      { t: "Because overriding is forbidden in functional programming.", ok: false,
+        why: "Nothing forbids it. The refusal is about the soundness of one specific transformation. §7." },
+      { t: "Because the subclass might not be tail recursive.", ok: false,
+        why: "Closer, but the problem is sharper than that: the jump would never reach the subclass's body at all, tail recursive or not. §7." },
+      { t: "Because the JVM cannot inline virtual calls.", ok: false,
+        why: "Inlining is a different mechanism entirely, and §27 is where it appears. <code>@tailrec</code> does not inline anything." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.8 — The accumulator",
+    stem: `<p>What is the accumulator, stated in terms of frames?</p>`,
+    options: [
+      { t: "The information the frames were holding, made explicit and moved into a parameter.", ok: true,
+        why: "§8: <em>the parameter is the stack</em>. A non-tail recursion remembers a pending operation per frame; the accumulator performs it immediately instead." },
+      { t: "A cache of results already computed, to avoid recomputing them.", ok: false,
+        why: "That is memoisation, a different technique for a different problem. §8 — the accumulator does not avoid work, it reorders it." },
+      { t: "A mutable variable threaded through the recursion.", ok: false,
+        why: "It is a parameter, immutable for the whole of its call's life. §9 makes exactly this point about what the translation buys." },
+      { t: "The base case's return value.", ok: false,
+        why: "The base case <em>returns</em> the accumulator, which is not the same as being it. §8's trace shows it changing at every step." }
+    ]
+  },
+  {
+    tier: "easy", part: "III", src: "Part III.9 — while becomes tail recursion",
+    stem: `<p>In the mechanical translation of a <code>while</code> loop, what do the loop's mutable variables become?</p>`,
+    options: [
+      { t: "The helper's parameters.", ok: true,
+        why: "§9's table: vars become parameters, the condition becomes the <code>if</code>, the body's updates become the arguments, the trailing value becomes the base case." },
+      { t: "Fields of an enclosing object.", ok: false,
+        why: "That would keep the mutation and merely move it. §9 and §12 — the point is that each iteration gets its own immutable binding." },
+      { t: "Elements of an accumulating list.", ok: false,
+        why: "Only if the loop was building a list. A counter is an accumulator too and stays a single value. §9." },
+      { t: "Closures captured by the recursive call.", ok: false,
+        why: "Nothing is captured: the values are passed. §9's correspondence is exact and involves no closures." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.10 — Two variables",
+    stem: `<p>The imperative Fibonacci needs a temporary <code>t</code> because <code>a = b</code> would destroy <code>a</code> before it is read. The recursive version needs no temporary. Why not?</p>`,
+    options: [
+      { t: "<code>b</code> and <code>a + b</code> are both evaluated from the current values before either is bound.", ok: true,
+        why: "§10. The arguments are computed, then the call binds them — so there is no moment at which one has been updated and the other has not. A whole class of ordering bug becomes unrepresentable." },
+      { t: "Scala evaluates arguments lazily, so the old values survive.", ok: false,
+        why: "Arguments are evaluated eagerly by default; the by-name parameter of §15 is the exception and is written <code>=&gt; B</code>. The reason here is ordering, not laziness." },
+      { t: "The recursion copies the whole frame, so the old values are still there.", ok: false,
+        why: "A tail-recursive call reuses one frame and overwrites the slots (§6). The safety comes from evaluating before binding, not from copying." },
+      { t: "It does need one; the compiler inserts it invisibly.", ok: false,
+        why: "§6's listing shows the compiler computing both new values into fresh locals before overwriting the parameters — which is the mechanism, and it is why the source does not need to say it." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.11 — break and continue",
+    stem: `<p>What is the functional replacement for <code>continue</code>?</p>`,
+    options: [
+      { t: "A recursive call that passes the accumulator along unchanged.", ok: true,
+        why: "§11. The skip branch and the normal branch differ only in what they pass: in a loop, control flow decides which statements run; in a recursion, it decides which arguments are passed." },
+      { t: "A base case that returns without recursing.", ok: false,
+        why: "That is <code>break</code> — it ends the walk. <code>continue</code> keeps walking. §11's table." },
+      { t: "Throwing and catching a control-flow exception.", ok: false,
+        why: "Nothing in §11 needs an exception, and §D of the checklist forbids <code>throw</code> in this module outside the probe." },
+      { t: "Filtering the input before the recursion begins.", ok: false,
+        why: "That is a second traversal of the input to avoid a branch in the first. §11's version costs one walk." }
+    ]
+  },
+  {
+    tier: "easy", part: "III", src: "Part III.12 — A var in a loop",
+    stem: `<p>You see a <code>var</code> declared before a loop and mutated inside it. What are you looking at?</p>`,
+    options: [
+      { t: "An accumulator that has not been given a name yet.", ok: true,
+        why: "§12, and the translation is §9 with no creative step in it. The loop counters are accumulators too — they accumulate how far along the walk is." },
+      { t: "A performance optimisation that the recursion would lose.", ok: false,
+        why: "§6: the two compile to the same shape. There is nothing to lose." },
+      { t: "Code that cannot be written functionally.", ok: false,
+        why: "§9 gives the mechanical translation. The one genuine exception in this repository is a micro-library's internal engine, which §12 names." },
+      { t: "A variable whose scope is too wide.", ok: false,
+        why: "True but beside the point. §12's claim is stronger: it has a specific functional counterpart, and the translation is mechanical." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.13 — Why foldRight cannot be tail recursive",
+    stem: `<p>Why can <code>foldRight</code> not be made tail recursive directly?</p>`,
+    options: [
+      { t: "The recursive call is an argument to <code>f</code>, so <code>f</code> consumes its result.", ok: true,
+        why: "§13, applying §5's rule. And it is forced by meaning rather than by writing: <code>f(a1, ...)</code> needs <code>f(a2, f(a3, z))</code>, which lies at the far end of the list." },
+      { t: "Because <code>f</code> might not be associative.", ok: false,
+        why: "Associativity decides whether rewriting it as a <code>foldLeft</code> gives the same answer (§21), not whether the original is tail recursive." },
+      { t: "Because the list is singly linked and cannot be walked backwards.", ok: false,
+        why: "Part of the reason it must reach the end first, but the tail-position failure is about <code>f</code> consuming the call's result. §13." },
+      { t: "Because <code>MyList</code> is covariant.", ok: false,
+        why: "Variance is Module 2's subject and has nothing to do with frames." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.14 — reverse and foldLeft",
+    stem: `<p><code>foldRightSafe</code> measured 4,800,040 bytes against <code>foldLeft</code>'s 2,399,640 over n = 100,000. What is the 2,400,400-byte difference?</p>`,
+    options: [
+      { t: "One reversed spine — 100,000 cells at 24 bytes.", ok: true,
+        why: "§14. The fix runs <code>foldLeft</code> over <code>xs.reverse</code>, and Module 2's cost model prices a reverse at exactly n cells." },
+      { t: "The frames that the recursion would have pushed, now allocated on the heap.", ok: false,
+        why: "No frames are stored anywhere: the loop uses one. What was bought is a spine, and §14 calls the trade converting stack into heap — not relocating frames." },
+      { t: "Boxing of the accumulator, once per element.", ok: false,
+        why: "Both sides box the accumulator equally, which is why it cancels in the difference. The delta is spine. §14." },
+      { t: "The closures created by the swapped lambda.", ok: false,
+        why: "One lambda is allocated once, not per element. 2,400,400 bytes is 100,017 cells." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.14 — reverse and foldLeft",
+    stem: `<p>The fix is written <code>xs.reverse.foldLeft(z)((b, a) =&gt; f(a, b))</code>. Why is the argument swap a trap rather than a detail?</p>`,
+    options: [
+      { t: "When <code>A</code> and <code>B</code> are the same type the wrong order type-checks and silently computes something else.", ok: true,
+        why: "§14 and §21. <code>foldLeft</code> hands you (accumulator, element) and <code>f</code> wants (element, accumulator). A suite that folds with <code>+</code> cannot see the difference — which is why the specs fold with subtraction." },
+      { t: "Because <code>reverse</code> already changed the order, so swapping reverses it twice.", ok: false,
+        why: "The swap is what makes the reversal come out right. Omitting it is the bug, not doubling it." },
+      { t: "Because <code>foldLeft</code> is not stack-safe when its lambda is swapped.", ok: false,
+        why: "<code>foldLeft</code> is a loop either way. The defect is in the value, not the stack. §14." },
+      { t: "It is not a trap; the compiler rejects the wrong order.", ok: false,
+        why: "It rejects it only when the types differ. §21 says exactly when it does not: <code>A</code> and <code>B</code> the same, which is most test fixtures." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.15 — Laziness",
+    stem: `<p><code>foldRightLazy</code> takes its second argument by name. Which ceiling does that remove?</p>`,
+    options: [
+      { t: "Only the ceiling for an <code>f</code> that can decline to evaluate it — <code>exists</code>, <code>find</code>, <code>||</code>.", ok: true,
+        why: "§15. A search that succeeds at element 3 of a million costs three frames. An <code>f</code> that always forces its second argument still walks to the end and still overflows." },
+      { t: "Every <code>foldRight</code> ceiling, at no cost.", ok: false,
+        why: "§15 is explicit that it does not: the by-name parameter removes the ceiling only for operations that can short-circuit. That is why the standard library carries both fixes." },
+      { t: "None; by-name parameters only affect evaluation order.", ok: false,
+        why: "Declining to evaluate means the recursion underneath never happens, which is a depth difference rather than an ordering one. §15." },
+      { t: "The heap ceiling, by avoiding the reversed spine.", ok: false,
+        why: "It does avoid the spine, which is a real advantage — but a spine was never a ceiling. §14's cost is <code>O(n)</code> heap, and the heap grows." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.16 — Trampoline",
+    stem: `<p>Where does a trampoline keep the chain of pending calls?</p>`,
+    options: [
+      { t: "In heap-allocated closures, one per step, driven by a <code>@tailrec</code> loop.", ok: true,
+        why: "§16. <code>run</code> only ever calls itself, which is also why the mutual-recursion refusal of §7 disappears — and it is the one technique with no depth limit at all." },
+      { t: "On the stack, but with smaller frames.", ok: false,
+        why: "Frame size is not what changes; the calls stop being calls. §16." },
+      { t: "In a mutable queue inside the runtime.", ok: false,
+        why: "The structure is a value the step returns — <code>Done</code> or <code>More</code> — and nothing mutable is involved. §16." },
+      { t: "Nowhere: the compiler eliminates them.", ok: false,
+        why: "They cost an object and an indirect call per step, and defeat inlining. §16 states the price, and Block 3 Module 7 measures it." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.17 — Rotation",
+    stem: `<p>Rotating the root of a tree with two thousand nodes allocated 48 bytes. Why so little?</p>`,
+    options: [
+      { t: "Only the two nodes whose links change are rebuilt; the subtrees are shared by reference.", ok: true,
+        why: "§17, which is Module 2's path rule again: allocate what changes, share what hangs below it. 48 bytes is 2 nodes at 24." },
+      { t: "The rotation is lazy and the cost is paid on the next read.", ok: false,
+        why: "Nothing here is lazy. The measurement is of the rotation itself, completed. §17." },
+      { t: "The tree was small enough to fit in the young generation.", ok: false,
+        why: "The generation an object lands in does not change how many bytes were allocated. §17's number is node count times node size." },
+      { t: "Rotations mutate the existing nodes in place.", ok: false,
+        why: "Then they would allocate nothing, and the old tree would be destroyed. The whole module forbids it, and 48 bytes is two new nodes." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.17 — Rotation",
+    stem: `<p>Which property makes a rotation <em>legal</em> rather than merely shape-changing?</p>`,
+    options: [
+      { t: "The in-order walk is unchanged.", ok: true,
+        why: "§17, measured: [1, 2, 3] before and after. It changes the shape and not the contents, so every BST invariant survives it. Anything that changed the in-order walk would not be a rotation." },
+      { t: "The depth strictly decreases.", ok: false,
+        why: "Rotating the other way increases it, and §17 says a rotation with nothing to lift is a no-op. Depth is what you rotate <em>for</em>, not what makes it valid." },
+      { t: "The number of nodes is unchanged.", ok: false,
+        why: "Necessary and not sufficient: Module 2's <code>treeMap</code> with a non-monotone <code>f</code> also preserves node count, and destroys the invariant." },
+      { t: "The root's value is unchanged.", ok: false,
+        why: "The root's value is exactly what a rotation changes — the left child becomes the root. §17's diagram." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.18 — The AVL invariant",
+    stem: `<p>Why do two of the four AVL cases need two rotations instead of one?</p>`,
+    options: [
+      { t: "A single rotation on an inner-leaning child moves the problem rather than fixing it.", ok: true,
+        why: "§18. The left-right and right-left cases rotate the child first to turn them into the outer cases, then rotate the root." },
+      { t: "Because the tree is too deep for one rotation to reach.", ok: false,
+        why: "A rotation is local to a node and its child whatever the depth. §17 — it allocates two nodes regardless of size." },
+      { t: "Because the balance factor is ±2 rather than ±1.", ok: false,
+        why: "All four cases start at ±2. What separates them is which way the child leans. §18's table." },
+      { t: "To keep the in-order walk unchanged, which one rotation would break.", ok: false,
+        why: "One rotation never breaks the in-order walk — that is §17's law, and it holds for each of the two." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.19 — What rebalancing allocates",
+    stem: `<p>What keeps an AVL insert at <code>O(log n)</code> allocation rather than letting rebalancing cascade?</p>`,
+    options: [
+      { t: "An insert performs at most one rotation, single or double, however large the tree.", ok: true,
+        why: "§19. So the cost is the path, plus the new leaf, plus at most two rebuilt nodes — and §19 notes that this is a property of insert and not of delete." },
+      { t: "Rotations are free because they share their subtrees.", ok: false,
+        why: "They allocate two nodes each (§17). Cheap is not free, and if they cascaded, two per level would still be <code>O(depth)</code> extra." },
+      { t: "The balance factor is cached in each node, so no walking is needed.", ok: false,
+        why: "Real AVL implementations do cache it, and this module's <code>MyTree</code> has nowhere to. That is a cost question, not what bounds the rotations." },
+      { t: "Because the tree is rebuilt from scratch on each insert.", ok: false,
+        why: "That would be <code>O(n)</code>, and it would share nothing. §19's count is depth + 1 + O(1) nodes." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.20 — @tailrec on an overridable method",
+    stem: `<p>Which of these four situations gives you an actual guarantee?</p>`,
+    options: [
+      { t: "Annotated, and the method is final, private, or local.", ok: true,
+        why: "§20's table. The annotated-and-overridable row is a compile error; the two unannotated rows look identical in review and are not guarantees — one is transformed by luck, the other has a ceiling nobody has measured." },
+      { t: "Unannotated but genuinely tail recursive.", ok: false,
+        why: "§20: transformed today, silently, by luck. Nothing tells you when an edit stops that being true. §7 — if you want a guarantee you must ask for it." },
+      { t: "Annotated on a public method of an open class.", ok: false,
+        why: "That does not compile. §7 and §20 — it is the trap you are allowed to fall into, because the error stops you." },
+      { t: "Any method whose recursion is bounded by depth.", ok: false,
+        why: "That is §22's trap, and the bound is a promise the caller keeps until something guarantees it." }
+    ]
+  },
+  {
+    tier: "hard", part: "VI", src: "Part VI.21 — The accumulator that changes the answer",
+    stem: `<p>Folding <code>[1, 2, 3]</code> with subtraction: <code>foldRight</code> gives 2 and <code>foldLeft</code> gives −6. What does that establish?</p>`,
+    options: [
+      { t: "Rewriting a foldRight as a foldLeft is sound only when <code>f</code> is associative and <code>z</code> is its identity.", ok: true,
+        why: "§21, measured: 1 − (2 − (3 − 0)) = 2 against ((0 − 1) − 2) − 3 = −6. True for + and *, false for −, /, string concatenation, <code>::</code> and function composition." },
+      { t: "That one of the two implementations has a bug.", ok: false,
+        why: "Both are correct. They are different functions, which is the point — and §8 warns that the accumulator applies operations in the opposite order." },
+      { t: "That subtraction is not a valid fold operation.", ok: false,
+        why: "It is perfectly valid for either fold. What it is not is interchangeable between them. §21." },
+      { t: "That the argument order in the lambda was swapped.", ok: false,
+        why: "That is the <em>second</em> form of the trap, in §21's own fix. These two numbers come from correct implementations of two different folds." }
+    ]
+  },
+  {
+    tier: "hard", part: "VI", src: "Part VI.22 — Depth-bounded is not size-bounded",
+    stem: `<p>Module 2 allowed <code>MyTree</code>'s recursion to stay non-<code>@tailrec</code> because it is bounded by depth. When is that argument false?</p>`,
+    options: [
+      { t: "When the tree is degenerate — sorted input gives depth 4,096 for 4,096 nodes.", ok: true,
+        why: "§22, with Module 2's measurement: balanced 13, sorted 4,096. A depth-bounded recursion on a degenerate tree is a size-bounded recursion wearing a reassuring word." },
+      { t: "When the tree holds boxed values rather than primitives.", ok: false,
+        why: "Boxing is a heap question. §4 — the two resources are separate." },
+      { t: "Never; depth is a structural property of a tree.", ok: false,
+        why: "§22: the depth of a plain BST is a property of the <em>input</em>, not of the structure. §18 exists to take that property away from the input." },
+      { t: "When the recursion is not annotated.", ok: false,
+        why: "The annotation is not available here — the recursion is not in tail position. What bounds it is the depth, and the question is whether the depth is bounded." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.23 — A stack limit is a property of the machine",
+    stem: `<p>Why must a spec never assert an absolute recursion depth?</p>`,
+    options: [
+      { t: "Because it would be testing <code>-Xss</code>: the same function reached 13,123 and 520,945 frames on one machine.", ok: true,
+        why: "§23, a 40x range from one flag. Assert the class instead — that the tail-recursive version survives what the naive one cannot, and that a transformation did not change a value." },
+      { t: "Because the JIT makes depths unpredictable between runs.", ok: false,
+        why: "§3's fit is exact at the last two stack sizes. The variation is across configurations, not across runs." },
+      { t: "Because <code>StackOverflowError</code> cannot be caught reliably.", ok: false,
+        why: "It is caught in exactly one place by design (§D of the checklist), and the measurement depends on catching it." },
+      { t: "Because absolute numbers are always bad in tests.", ok: false,
+        why: "Too broad. Module 2 asserts exact byte counts where the model predicts them; §23's objection is specific to a quantity set by a JVM flag." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.24 — The JDK and Scala's collections",
+    stem: `<p><code>scala.collection.immutable.List.foldRight</code> is one line. What is it?</p>`,
+    options: [
+      { t: "<code>reverse.foldLeft</code>, with the arguments swapped in the lambda.", ok: true,
+        why: "§24 — §14's fix with §21's swap written out. The library pays a whole extra spine on every <code>foldRight</code> rather than ship a function with a fifteen-thousand-element ceiling. Verified: it survives a million." },
+      { t: "A naive recursion, since the standard library assumes small lists.", ok: false,
+        why: "It survives a million elements, which a naive recursion does not. §24." },
+      { t: "A trampoline over <code>TailCalls</code>.", ok: false,
+        why: "<code>TailCalls</code> exists in the library, but <code>foldRight</code> does not use it — it does not need to, since reverse-and-foldLeft suffices. §24." },
+      { t: "A <code>while</code> loop that mutates the tail pointer.", ok: false,
+        why: "That is <code>List.map</code>, which §24 also describes — and which the purity gate forbids in this module." }
+    ]
+  },
+  {
+    tier: "easy", part: "VII", src: "Part VII.25 — Virtual threads",
+    stem: `<p>What changes about the stack when a task runs on a virtual thread?</p>`,
+    options: [
+      { t: "It lives on the heap and grows on demand, bounded by <code>-Xmx</code> rather than <code>-Xss</code>.", ok: true,
+        why: "§25. It costs what it uses, so an idle one is nearly free — and deep recursion becomes a heap concern, which means Module 1's instruments can see it again." },
+      { t: "It disappears: virtual threads do not use stacks.", ok: false,
+        why: "They have stacks; the stacks are copied in and out as the thread mounts and unmounts a carrier. §25." },
+      { t: "It becomes unlimited, so <code>StackOverflowError</code> cannot happen.", ok: false,
+        why: "§25 is careful here: the problem is converted into memory pressure rather than removed." },
+      { t: "It is shared between all virtual threads on a carrier.", ok: false,
+        why: "Each has its own; sharing would break §4's first row, which is that stacks are per-thread." }
+    ]
+  },
+  {
+    tier: "easy", part: "VIII", src: "Part VIII.26 — @tailrec, final, private",
+    stem: `<p>Why is a <code>def</code> inside a <code>def</code> the idiom this repository uses for every tail-recursive walk?</p>`,
+    options: [
+      { t: "Nothing outside the method can name it, so it cannot be overridden and the question never arises.", ok: true,
+        why: "§26. It is the strongest and cheapest of the four options, and it scopes the helper's parameters to where they mean something — <code>loop(as, acc)</code> makes no sense outside <code>length</code>." },
+      { t: "Local definitions compile to faster bytecode.", ok: false,
+        why: "§6: the transformation produces the same loop wherever the definition sits. The gain is that the refusal in §7 cannot apply." },
+      { t: "Because <code>@tailrec</code> only works on local definitions.", ok: false,
+        why: "§26 lists four places it works: private, final, local, and object methods." },
+      { t: "Because it avoids allocating a closure.", ok: false,
+        why: "A local <code>def</code> that captures nothing allocates nothing either way, and that is not the reason §26 gives." }
+    ]
+  },
+  {
+    tier: "medium", part: "VIII", src: "Part VIII.27 — inline",
+    stem: `<p>How does <code>inline def</code> relate to <code>@tailrec</code>?</p>`,
+    options: [
+      { t: "They are opposite ends of one question: <code>@tailrec</code> makes unboundedly many calls cost one frame; <code>inline</code> makes a fixed number cost none.", ok: true,
+        why: "§27. Inlining removes the call entirely rather than converting it to a jump, and it only works where the expansion is finite." },
+      { t: "<code>inline</code> is a more powerful <code>@tailrec</code> and replaces it.", ok: false,
+        why: "§27 says it is not a substitute: a recursive <code>inline def</code> must terminate at compile time, or the compiler reports an expansion limit." },
+      { t: "They cannot be combined, because inlining removes tail positions.", ok: false,
+        why: "Neither claim appears in §27, and the section's point is that they address different quantities." },
+      { t: "<code>inline</code> is a run-time optimisation performed by the JIT.", ok: false,
+        why: "It is a compile-time expansion in the Scala compiler. The JIT inlines too, but that is a different mechanism and not what <code>inline def</code> means. §27." }
+    ]
+  }
+];
+
+// Every question must offer exactly one correct option. A violation is an
+// authoring error, and it is louder as a console failure than as a silently
+// repaired quiz that then teaches the wrong thing.
+QUESTIONS.forEach((q, i) => {
+  const n = q.options.filter(o => o.ok).length;
+  if (n !== 1) console.error(`question ${i + 1} (${q.src}) has ${n} correct options`);
+});
+
+const list  = document.getElementById("list");
+const empty = document.getElementById("empty");
+const score = document.getElementById("score");
+let tier = "all", part = "all";
+let answered = 0, correct = 0;
+
+const shown = () => QUESTIONS.filter(q =>
+  (tier === "all" || q.tier === tier) && (part === "all" || q.part === part));
+
+function render() {
+  list.textContent = "";
+  const qs = shown();
+  empty.hidden = qs.length > 0;
+
+  qs.forEach((q, idx) => {
+    const card = document.createElement("article");
+    card.className = "q";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span class="tier ${q.tier}">${q.tier}</span><span class="src">${q.src}</span>`;
+    card.appendChild(meta);
+
+    const stem = document.createElement("div");
+    stem.className = "stem";
+    stem.innerHTML = `<p><b>${idx + 1}.</b></p>` + q.stem;
+    card.appendChild(stem);
+
+    const letters = ["A", "B", "C", "D"];
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = (idx * 7 + i * 13 + q.stem.length) % (i + 1);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    let done = false;
+    const buttons = [];
+    order.forEach((oi, pos) => {
+      const o = q.options[oi];
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.type = "button";
+      b.innerHTML = `<span class="k">${letters[pos]}</span>${o.t}`;
+      buttons.push({ b, o });
+      b.addEventListener("click", () => {
+        if (done) return;
+        done = true;
+        answered++;
+        if (o.ok) correct++;
+        updateScore();
+        buttons.forEach(x => { x.b.disabled = true; });
+        b.classList.add(o.ok ? "correct" : "wrong");
+        const why = document.createElement("div");
+        why.className = "why " + (o.ok ? "correct" : "wrong");
+        why.innerHTML = (o.ok ? "<b>Correct.</b> " : "<b>No.</b> ") + o.why;
+        b.insertAdjacentElement("afterend", why);
+        if (!o.ok) {
+          const right = buttons.find(x => x.o.ok);
+          right.b.classList.add("correct");
+          const rw = document.createElement("div");
+          rw.className = "why correct";
+          rw.innerHTML = "<b>The answer.</b> " + right.o.why;
+          right.b.insertAdjacentElement("afterend", rw);
+        }
+      });
+      card.appendChild(b);
+    });
+
+    list.appendChild(card);
+  });
+  updateScore();
+}
+
+function updateScore() {
+  score.innerHTML = `answered <b>${answered}</b>/<b>${shown().length}</b> · correct <b>${correct}</b>`;
+}
+
+function wire(attr, set) {
+  document.querySelectorAll(`button.f[data-${attr}]`).forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(`button.f[data-${attr}]`).forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      set(b.dataset[attr]);
+      answered = 0; correct = 0;
+      render();
+    });
+  });
+}
+wire("tier", v => { tier = v; });
+wire("part", v => { part = v; });
+
+document.getElementById("reset").addEventListener("click", () => {
+  answered = 0; correct = 0; render();
+});
+
+render();
+</script>
+</body>
+</html>
