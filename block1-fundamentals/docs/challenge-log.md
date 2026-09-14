@@ -995,7 +995,7 @@ The repaired implementation generates the midpoints recursively into a
 guarantee is the concatenation:
 
 ```scala
-(mid #:: midPoints(lo, mid - 1)) #::: midPoints(mid + 1, hi)
+mid #:: midPoints(lo, mid - 1) #::: midPoints(mid + 1, hi)
 ```
 
 **The answer given: depth 15, a strictly ascending chain.** Correct. Measured,
@@ -1013,6 +1013,23 @@ traversal of a search tree *is* — and `insert` on a sorted sequence produces t
 chain. The set of values is identical, the multiset is identical, and the depth
 differs by a factor of nearly four. Nothing about the swap is visible at the call
 site.
+
+The parentheses in the table are the author's, not the source's, and they are
+worth one line of their own. The line as committed carries none:
+
+```text
+written                                          parses as
+----------------------------------------------   ------------------------------------------------
+mid #:: mids(lo,mid-1) #::: mids(mid+1,hi)       mid #:: (mids(lo,mid-1) #::: mids(mid+1,hi))
+```
+
+Both `#::` and `#:::` end in a colon, so both are **right**-associative, and
+equal precedence groups to the right. The grouping is therefore not the one the
+eye reads left to right — and here it does not matter, because
+`mid #:: (l #::: r)` and `(mid #:: l) #::: r` denote the same sequence. That is
+luck rather than design: the two spellings coincide only because `mid` sits at
+the front of both. Declaring the grouping costs one pair of parentheses and
+removes the need to know the rule.
 
 ### 17. Is the pre-order version correct by luck or by construction? Name the property that guarantees the balance.
 

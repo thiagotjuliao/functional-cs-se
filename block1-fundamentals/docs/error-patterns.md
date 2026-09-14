@@ -498,6 +498,13 @@ Inserting the pre-order of a binary search tree reconstructs that tree exactly.
 The distance between the correct version and the 15-deep one is a single swap of
 the operands around `#:::`.
 
+The parentheses in the table above are added for legibility; the source carries
+none, and both `#::` and `#:::` end in a colon and are therefore
+right-associative, so `mid #:: l #::: r` groups as `mid #:: (l #::: r)`. Here
+that is harmless — the two groupings denote the same sequence — but it is
+harmless by coincidence, not by design. Challenge 16 of
+[`challenge-log.md`](challenge-log.md) carries the parse.
+
 **The rule.** When the invariant is structural, let the constructor carry it.
 Checkable by eye: if a function computes the shape — it picks a midpoint, it
 recurses on the halves — and then emits a **flat sequence**, the shape it just
