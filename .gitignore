@@ -50,6 +50,19 @@ metals.sbt
 # scratchpad; then it belongs under docs/ with the rest of them.
 *.worksheet.sc
 
+# --- Playground mains ---
+
+# The `.scala` counterpart of a worksheet, for when a spike needs a real `@main`
+# rather than inline decorations: the same throwaway experiment, run with
+# `sbt fundamentals/Test/runMain`. Unlike a worksheet it *is* compiled, so it
+# must sit under `src/test/scala`, where `Test / scalacOptions` drops `-Werror`.
+#
+# It is untracked for the reason the worksheet is: nothing in it is covered by
+# the correctness gates, and a `@main` in the test scope that no spec calls is
+# exactly the kind of file that rots unnoticed. A result worth keeping goes into
+# a spec assertion or into `docs/`, not into a playground.
+playground.scala
+
 # --- Misplaced tool output ---
 
 # Coursier builds its Windows cache path from %LOCALAPPDATA%. A process that
