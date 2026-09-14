@@ -131,3 +131,70 @@ Search these exact phrases; the speakers matter more than the venue:
   land faster than prose does.
 - *"amortized analysis banker's method"* — preparation for Annex A2, not for
   this module.
+---
+
+## Module 3 — Stack Optimization & Control Flow Elimination
+
+### Primary Specifications
+
+- **JVM Specification §2.5.2, *Java Virtual Machine Stacks*.** Two pages, and
+  they are the source for everything in Part I: what a frame contains, that the
+  stack may be fixed or dynamic, and that exhaustion raises
+  `StackOverflowError` rather than being recoverable in general.
+- **JVM Specification §2.6, *Frames*.** Local variable array, operand stack,
+  and why frame size is a property of the *method* rather than of the JVM —
+  which is why the guide's §3 measures two different methods and gets two
+  different depths.
+- **JVM Specification §2.6.5.** Read this for what is *absent*: there is no
+  tail-call instruction, which is why `@tailrec` must transform the method into
+  a loop rather than ask the JVM for anything.
+
+### Books
+
+- **Bird & Wadler, *Introduction to Functional Programming*, ch. 4.**
+  Accumulator passing derived rather than demonstrated — the transformation of
+  the guide's §8, with the proof that it preserves the function.
+- **Okasaki, *Purely Functional Data Structures*, ch. 3.** Balanced trees
+  without mutation. §3.2 is red-black; the AVL treatment is the natural
+  companion to Exercise 9, and the chapter's framing — *rebuilding the path is
+  the price of persistence* — is Module 2's rule restated for a balanced
+  structure.
+- **Sedgewick & Wayne, *Algorithms*, §3.3.** The four rotation cases drawn
+  rather than described. Read the pictures; ignore the Java, which mutates.
+- **Abelson & Sussman, *SICP*, §1.2.1.** The distinction between a *recursive
+  process* and a *recursive procedure*, which is the whole of the guide's Part
+  II in two pages and forty years earlier.
+
+### Papers
+
+- **Hutton, *A tutorial on the universality and expressiveness of fold*.** Why
+  `foldRight` is the fundamental one and `foldLeft` the derived one, which is
+  the opposite of the order this module needs them in — worth reading precisely
+  for that tension.
+- **Bjarnason, *Stackless Scala With Free Monads* (2012).** The trampoline of
+  the guide's §16, built properly. Read it after Exercise 6's
+  `foldRightComposed` has shown you what problem it solves.
+- **Steele, *Debunking the "Expensive Procedure Call" Myth* (1977).** The
+  argument that a tail call *is* a goto, made when the claim was still
+  controversial.
+
+### Source To Read
+
+- **`scala.collection.immutable.List.foldRight`.** One line, and it is §14's
+  fix with the argument swap of §21 written out. Verified here: it survives a
+  million elements, so it is not the naive recursion.
+- **`scala.collection.immutable.List.map`.** A `while` loop mutating the tail
+  pointer of the cell it just built. The purity gate forbids this in `module3`;
+  the library's justification is that the mutation never escapes, which is the
+  same argument `CLAUDE.md` makes for a micro-library engine.
+- **`scala.util.control.TailCalls`.** The standard library's trampoline, about
+  forty lines. Compare its shape against the guide's §16 sketch.
+
+### Terms Worth A Video Rather Than A Chapter
+
+- *tail call elimination* — for the animation of a frame being reused
+- *AVL rotation* — for the four cases moving, which is much clearer than prose
+- *JEP 444 virtual threads* — Ron Pressler on why a stack on the heap changes
+  the arithmetic of §25
+- *continuation passing style* — the generalisation of the accumulator, and
+  where Block 3 goes next

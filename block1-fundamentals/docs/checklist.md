@@ -802,3 +802,159 @@ unchanged, which is the argument the doubling table makes below.
       old `contains` from the new — is now two tests in `Exercise6MyTreeSpec`,
       validated by reverting the implementation and confirming they fail while
       the other five stay green. The suite is 67 tests.
+---
+
+## Module 3 — Stack Optimization & Control Flow Elimination
+
+**Milestone tag:** `b1-m3-stack-optimization`
+
+The exercise order is deliberate, for the same reason it was in Module 2 and for
+a sharper one here. **E1 comes first**, because it is the only instrument in the
+module: the stack cannot be sampled the way `AllocationProbe` samples the heap,
+so every depth claim in every later exercise is produced by E1 or by nothing.
+Build it before you need it.
+
+### A. Theory Comprehension
+
+- [ ] Read `docs/theory/module3_stack.md` in full.
+- [ ] Work `docs/quiz/b1-m3.html`, filtering by Part as you finish each one.
+- [ ] Read JVM Specification §2.5.2 and §2.6, and §2.6.5 on why the JVM has no
+      tail-call instruction.
+- [ ] Before writing any code, classify these six expressions by hand, and say
+      for each whether the call to `f` is in tail position and why:
+      `f(x)` · `1 + f(x)` · `if p then f(x) else 0` · `f(x) match { ... }` ·
+      `try f(x) catch { ... }` · `f(g(x))`. Guide §5.
+      Your answers: `______________________`
+- [ ] Predict, before running E2, the relationship between the largest `n` that
+      `sumNaive` survives and the largest that `sumAcc` survives. State it as a
+      *class*, not a number, and say why a number would be the wrong form of
+      answer. Guide §23.
+      Your answer: `______________________`
+
+### B. Implementation — Exercises
+
+All nine live in `src/main/scala/cs/se/block1/module3/`, one spec each under
+`src/test/scala/cs/se/block1/module3/`, over a shared `Module3Harness`.
+
+- [ ] **E1 `StackProbe`** *(do this first)* — `survives`, `maxDepth` by binary
+      search, and `onStack` to run a body on a thread of a chosen stack size.
+      The instrument every later exercise reports through.
+- [ ] **E2 `TailShapes`** — `sumNaive`, `sumAcc` and `sumLoop`: three spellings
+      of one function, agreeing on every input all three survive, and separated
+      by a ceiling only one of them has.
+- [ ] **E3 `Arithmetic`** — `gcd`, `power`, `digits`, `collatzLength`: tail
+      recursion where the accumulator is not merely a running total.
+- [ ] **E4 `Loops`** — `factorial`, `fibonacci`, `reverseDigits`: `while` loops
+      transcribed by the rule in §9, the `var`s becoming parameters.
+- [ ] **E5 `EarlyExit`** — `indexOf`, `forall`, `exists`, `takeWhile` over
+      `MyList`: the branch that returns instead of recursing.
+- [ ] **E6 `SafeFold`** — `foldRightSafe` over `MyList`, agreeing with
+      `foldRight` wherever both survive, surviving where it does not, and paying
+      exactly one spine for the privilege.
+- [ ] **E7 `LazyFold`** — `foldRightLazy` with a by-name second argument, and
+      `existsLazy` proving it stops at the first hit rather than at the end.
+- [ ] **E8 `Rotations`** — `rotateLeft`, `rotateRight`, and the law that makes a
+      rotation legal: the in-order walk is unchanged.
+- [ ] **E9 `Avl`** — `balanceFactor`, `rebalance`, `insertBalanced`, and the
+      depth bound that survives sorted input.
+
+### C. Correctness Gate
+
+- [ ] `sbt fundamentals/test` — **all tests green**, zero ignored, zero skipped.
+- [ ] `sbt fundamentals/compile` succeeds under `-Wall -Werror`. If a warning is
+      suppressed, name it here and say whether the exercise's own signature
+      forced it, as Module 2's §C had to for `@unused`.
+- [ ] `sbt scalafmtCheckAll` passes.
+- [ ] Modules 1 and 2 still pass: 28 + 39 tests. This module adds to the suite.
+- [ ] Every `@tailrec` in `module3` is on a `private`, `final`, or method-local
+      definition. An annotation that compiles is not the same as a definition
+      nobody can override out from under it. Guide §26.
+
+### D. Purity Gate
+
+- [ ] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module3`, with
+      **one documented exception**: `StackProbe`'s search is a measuring
+      instrument and may use local mutability, exactly as `AllocationProbe` and
+      `Bench` do in Module 1. Name the lines here: `______________________`
+- [ ] Zero `while` loops in `src/main/scala/cs/se/block1/module3`, including in
+      `StackProbe`. The instrument gets mutability, not control flow — this
+      module is about eliminating `while`, and an instrument that uses one to
+      measure the elimination is an embarrassment rather than an exception.
+- [ ] Every recursive function that walks a whole structure is `@tailrec`, or
+      the exercise is about why it cannot be. E6, E7 and E8 are the second kind
+      and each must say so in its Scaladoc.
+- [ ] `StackOverflowError` is caught in exactly one place — `StackProbe` — and
+      its Scaladoc says why catching an `Error` is defensible there and nowhere
+      else.
+
+### E. Empirical Gate — Record The Numbers
+
+Produced by *your* `StackProbe`, on this machine, with the JVM configuration
+named. An unrecorded measurement is an unperformed measurement.
+
+- [ ] **The ceiling.** Largest `n` surviving on the default test thread:
+      - `sumNaive`: `______` · `sumAcc` at `n = 10,000,000`: `______`
+      - `MyList.foldRight`: `______` · `MyList.foldLeft` at 200,000: `______`
+      - The guide measured 14,335 and 14,990 for the first and third. If yours
+        differ by more than a few percent, say what differs:
+        `______________________`
+
+- [ ] **The frame.** Run `maxDepth` on threads of 256 KiB, 512 KiB, 1 MiB and
+      8 MiB, fit `stack = a × depth + b`, and record both coefficients:
+
+      | stack | max depth | bytes/frame |
+      | ---: | ---: | ---: |
+      | 256 KiB | `______` | `______` |
+      | 512 KiB | `______` | `______` |
+      | 1 MiB | `______` | `______` |
+      | 8 MiB | `______` | `______` |
+
+      - `a` = `______ bytes/frame` · `b` = `______ bytes` of stack already used
+      - Why `b` is not zero: `______________________`
+
+- [ ] **The trade.** `foldRightSafe` against `foldLeft` over `n = 100,000`:
+      - `foldLeft`: `______ bytes` · `foldRightSafe`: `______ bytes`
+      - delta: `______ bytes` = `______ cells`. Name what those cells are:
+        `______________________`
+      - The guide measured a delta of 2,400,400. This is stack converted into
+        heap; state the exchange rate you just paid, in one line:
+        `______________________`
+
+- [ ] **Laziness.** `existsLazy` finding a match at element 3 of 1,000,000:
+      - elements visited: `______` · bytes allocated: `______`
+      - and with no match present: `______` · `______`
+      - Which of the two ceilings this removes, and which it does not:
+        `______________________`
+
+- [ ] **Balance.** Insert `0, 1, ..., 4095` in ascending order:
+      - plain `MyTree.insert`: depth `______`
+      - `Avl.insertBalanced`: depth `______` · the AVL bound
+        `1.44 log2(n + 2)` = `______`
+      - rotations performed over the whole build: `______`
+      - bytes for one insert into the balanced result: `______`
+      - Module 2 measured 98,328 bytes for one insert into the degenerate tree.
+        The ratio you have just bought: `______ ×`
+
+### F. Engineering Hygiene
+
+- [ ] All code formatted (`sbt scalafmtAll`) with no manual override.
+- [ ] Every public definition carries a Scaladoc stating its **contract**.
+- [ ] Commits follow `docs/git-conventions.md` (`b1-m3: <imperative summary>`),
+      one commit per concept proven.
+- [ ] `error-patterns.md` read before committing; any defect instantiating an
+      existing pattern added as an occurrence rather than opening a new entry.
+      Pattern 11 — *a fixture that cannot exhibit the property under test* — has
+      two occurrences already, and this module offers a third at every turn: a
+      depth assertion on a tree that was never degenerate measures nothing, and
+      a stack assertion on an input below the ceiling measures nothing either.
+- [ ] Annotated milestone tag `b1-m3-stack-optimization` created, using the
+      message template, with a real entry under `Learned:`. Created **after**
+      §G, as Module 2's was.
+
+### G. Oral Defence
+
+- [ ] Work the post-module conceptual challenges (Step 4 of the routine) as a
+      dialogue: attempt each one **before** the discussion, say "I don't know"
+      plainly when that is the truth, and let `challenge-log.md` carry the
+      complete answer the exchange produced. The box closes when every exercise
+      has an entry there.

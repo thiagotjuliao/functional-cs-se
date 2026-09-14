@@ -147,7 +147,7 @@ class Exercise6MyTreeSpec extends Module2Harness:
 
     def comparisons(t: MyTree[Int], x: Int): Long =
       counter.set(0)
-      t.contains(x)(using counting)
+      val _ = t.contains(x)(using counting)
       counter.get
 
     val balanced = MyTree.fromRange(0, n)
