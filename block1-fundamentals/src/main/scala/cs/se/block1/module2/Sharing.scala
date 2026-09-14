@@ -72,12 +72,44 @@ object Sharing:
     */
   def prependCells(@unused n: Int): Long = 1L
 
-  /** Cells allocated by `xs :+ x`, where `xs` has `n` cells.
+  /** Cells of the old spine that `xs :+ x` must rebuild, where `xs` has `n`
+    * cells.
     *
     * The last cell's `tail` would have to change, and it cannot, so it is
     * rebuilt — which forces its parent to be rebuilt, all the way to the front.
+    *
+    * This counts the rebuilt spine and nothing else. The cell that holds `x`
+    * itself is not in it, and neither is anything an implementation allocates
+    * on the way — see `appendAllocatedCells`, which counts both.
     */
   def appendCells(n: Int): Long = n
+
+  /** Cells a stack-safe functional `xs :+ x` **allocates**, where `xs` has `n`
+    * cells — as distinct from the cells its result **retains**.
+    *
+    * `AllocationProbe` counts allocation. The two coincide only when an
+    * operation produces no garbage, which is why `reverse` measures exactly
+    * `reverseCells(n) × CellBytes` and append does not.
+    *
+    * Three quantities, and the exercise is to keep them apart:
+    *
+    *   - `appendCells(n)` — the old spine, rebuilt.
+    *   - what the result retains — that spine plus one cell for `x`.
+    *   - what the operation allocates — the above, plus every cell it builds
+    *     and discards before returning.
+    *
+    * The last term is not an implementation detail to be optimised away. A
+    * `concat` written to stay `@tailrec` has to walk `xs` forwards and emit
+    * backwards, so it materialises an intermediate spine and then consumes it.
+    * The alternatives are a non-tail recursion, which holds a frame per cell
+    * and overflows the stack at the sizes this module measures, or a mutable
+    * builder, which is what the standard library uses and what §D of the
+    * checklist forbids here. The constant is the price of the constraint;
+    * derive it, do not measure it first.
+    *
+    * Verified against the measurement in Exercise 8 once you have both.
+    */
+  def appendAllocatedCells(n: Int): Long = ???
 
   /** Cells allocated by `xs.reverse`, where `xs` has `n` cells.
     *

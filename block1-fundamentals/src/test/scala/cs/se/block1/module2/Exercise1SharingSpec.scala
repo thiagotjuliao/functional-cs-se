@@ -25,11 +25,28 @@ class Exercise1SharingSpec extends Module2Harness:
     assertEquals(Sharing.appendCells(0), 0L, "appending to the empty list rebuilds nothing")
     assertEquals(Sharing.appendCells(1), 1L)
     assertEquals(Sharing.appendCells(100_000), 100_000L)
+    assertEquals(Sharing.appendAllocatedCells(0), 1L, "the cell holding x is still allocated")
+    assertEquals(Sharing.appendAllocatedCells(1), 3L)
+    assertEquals(Sharing.appendAllocatedCells(100_000), 200_001L)
     assertEquals(Sharing.reverseCells(100_000), 100_000L)
+
+    // The distinction the two append functions exist to hold apart. `reverse`
+    // allocates exactly what it retains, so Exercise 8 measures it on the nose;
+    // append does not, and the gap is a temporary spine rather than an error.
+    assertEquals(
+      Sharing.appendAllocatedCells(100_000),
+      2 * Sharing.appendCells(100_000) + 1,
+      "the rebuilt spine, the cell for x, and the spine built and discarded"
+    )
     assertEquals(Sharing.mapCells(100_000), 100_000L)
 
     // No Int overflow at scale: this is why the return type is Long.
     assert(Sharing.appendCells(2_000_000_000) > 0L, "appendCells overflowed")
+    assert(
+      Sharing.appendAllocatedCells(2_000_000_000) > 0L,
+      "appendAllocatedCells overflowed — it doubles n, so Int arithmetic wraps an " +
+        "input this function is expected to answer for"
+    )
     assert(Sharing.cellBytes(Sharing.appendCells(2_000_000_000)) > 0L, "cellBytes overflowed")
   }
 
