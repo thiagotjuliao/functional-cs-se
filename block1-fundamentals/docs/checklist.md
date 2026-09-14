@@ -950,6 +950,12 @@ named. An unrecorded measurement is an unperformed measurement.
       two occurrences already, and this module offers a third at every turn: a
       depth assertion on a tree that was never degenerate measures nothing, and
       a stack assertion on an input below the ceiling measures nothing either.
+
+      Pattern 13 was opened by this module before its first exercise was
+      implemented: *a measurement taken while its subject is still changing*.
+      Read it before writing any assertion on a depth. A compiled frame is
+      2.51× smaller than an interpreted one, so a cold probe returns a number
+      that is already false, and the failing test blames the implementation.
 - [ ] Annotated milestone tag `b1-m3-stack-optimization` created, using the
       message template, with a real entry under `Learned:`. Created **after**
       §G, as Module 2's was.

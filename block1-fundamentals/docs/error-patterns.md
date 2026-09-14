@@ -32,8 +32,10 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 10 | A quantity compared against a model of a neighbouring quantity | 5 | no — the tolerances were wide enough, and the fifth is a verb in a comment |
 | 11 | A fixture that cannot exhibit the property under test | 2 | no — and the failure it finally produced blamed the wrong file |
 | 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
+| 13 | A measurement taken while its subject is still changing | 2 | no — it passes intermittently, and when it fails it blames the wrong file |
 
-Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**. The file was
+Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 in
+**Module 3**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
 day its defect appears.
@@ -857,3 +859,73 @@ assertion for the complexity class and is completely indifferent to whether the
 gap is 2,400× or 4,816×. The suite is green, the test is correct, the
 complexity class it proves is correct, and the number three lines above the
 function is off by a factor of two.
+---
+
+## 13. A measurement taken while its subject is still changing
+
+The instrument is correct, the arithmetic is correct, and the number is stale
+before it is used. Nothing is wrong with the measurement except *when* it was
+taken.
+
+This is not pattern 12's problem. There, a number could not be re-run; here it
+re-runs perfectly and gives a different answer, because the thing being measured
+moved between the measurement and the assertion.
+
+The subject was the largest recursion depth a method survives. Ten searches for
+that one boundary, in order, on one JVM in one process:
+
+```text
+run  1    32,768    and the very next call to deep(32,768) fails
+run  2    24,575    the interpreted frame
+run  3+   61,653    the C2-compiled frame
+```
+
+A **C2-compiled frame is 2.51× smaller than an interpreted one**, so the
+boundary climbs by that factor as the JIT does its work. Run 1 is the dangerous
+row: it does not sit at either value. It straddles the transition, and the
+number it returns was true for part of the search and false for the rest —
+which is why `deep(32,768)` fails immediately afterwards.
+
+Warm, the answer is stable but not fixed: 61,653, 61,655, 61,661 on consecutive
+calls, a spread of 8 frames.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Exercise1StackProbeSpec` | `!survives(deep(found + 1))`, on the first, cold search | a depth safely above the boundary, measured warm |
+| 2 | `StackProbe.maxDepth` Scaladoc | *"Binary search"* | a binary search over an `f` that has already been warmed |
+
+Occurrence 1 is a margin of **one frame** — 0.0016% — on a quantity that drifts
+by 8 between consecutive warm calls and by a factor of 2.51 across compilation.
+It is the guide's own §23 in miniature: that section forbids asserting an
+absolute depth, and this asserted something stricter without noticing.
+
+Occurrence 2 is the more useful one, because **the rule already existed in this
+repository and was not carried across.** Module 2's `SharingProof.bytesOf` says
+it outright — *"Warm the body before measuring, exactly as `Exercise4BoxingSpec`
+does. A cold measurement measures the interpreter."* The discipline was written
+down for the heap, and the stack instrument was specified without it, where it
+decides a factor of 2.51 rather than a few per cent.
+
+**The rule.** Before asserting on a measured quantity, ask what it is a function
+of, and list everything on that list that is not the input:
+
+```text
+quantity                  also a function of
+-----------------------   --------------------------------------------
+allocation in bytes       nothing after warm-up          -> stable
+elapsed time              tier, cache state, other load  -> warm, repeat
+recursion depth           tier, stack size, call site    -> warm, margin
+```
+
+Then: **warm until the answer repeats, and assert with a margin wider than the
+drift you just observed.** Both halves are needed. Warming without a margin
+still asserts 8 frames of noise away; a margin without warming still asserts
+across a factor of 2.51.
+
+**Why the build does not catch it.** It cannot, and worse, it will tell you the
+opposite. A cold assertion passes whenever the timing happens to line up, so the
+defect is intermittent rather than absent — and the failure, when it comes,
+blames the implementation under test. This one failed with *"61,679 was reported
+as surviving and does not"*, which reads as an accusation against a `maxDepth`
+that was correct throughout. That is pattern 11's signature reappearing: a
+failing test naming the wrong file.
