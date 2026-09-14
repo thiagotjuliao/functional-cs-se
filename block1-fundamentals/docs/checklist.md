@@ -747,6 +747,15 @@ unchanged, which is the argument the doubling table makes below.
       message template in `docs/git-conventions.md`, with a real entry under
       `Learned:`.
 
+      **Blocked on §G, and deliberately so.** `docs/git-conventions.md` defines
+      a tag as a *proof of completion* — "the point at which every acceptance
+      criterion of a module's checklist is `[x]` and the module's MUnit suite is
+      green". Half of that is true now. Tagging on a green suite alone would
+      make the tag mean exactly what the suite already means, and §G exists on
+      the argument that a green suite proves the code works and proves nothing
+      about whether I can say why. This is the last box in the module, and it
+      closes after §G rather than beside it.
+
 ### G. Oral Defence
 
 - [ ] Work the post-module conceptual challenges (Step 4 of the routine) as a
