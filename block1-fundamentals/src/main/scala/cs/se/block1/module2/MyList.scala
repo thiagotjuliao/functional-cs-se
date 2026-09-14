@@ -250,10 +250,22 @@ object MyList:
 
     /** `xs` followed by `ys`.
       *
-      * Allocates one cell per element of `xs` and shares the whole of `ys` — so
-      * the cost is `xs.length`, not `xs.length + ys.length`. Convince yourself
-      * of that from Part III.11 before implementing, because it is the single
-      * most useful instance of the path rule.
+      * **Retains** one cell per element of `xs` and shares the whole of `ys`, so
+      * what the result keeps is `xs.length` cells and not
+      * `xs.length + ys.length`. That is Part III.11's path rule, and it is the
+      * single most useful instance of it.
+      *
+      * **Allocates** twice that: `2 * xs.length`. Staying `@tailrec` forces a
+      * walk forwards and an emission backwards, so `loop(xs.reverse)`
+      * materialises a whole spine and drops it before returning. The verb
+      * matters here more than the number — an earlier draft of this sentence
+      * said *allocates* where it meant *retains*, and no test could contradict
+      * it. `Sharing` keeps the two apart on purpose, in `appendCells` against
+      * `appendAllocatedCells`; this is the function where the difference is
+      * actually created.
+      *
+      * `appended` adds one more cell on top, for `x` itself: `2n + 1`, which is
+      * the 200,001 cells Exercise 8 measures at `n = 100,000`.
       */
     def concat(ys: MyList[A]): MyList[A] =
       @scala.annotation.tailrec

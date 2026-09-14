@@ -1313,3 +1313,157 @@ path it walks"* — pointing at `MyTree.insert`, which was correct throughout. T
 spec now probes above the maximum, subtracts the box, asserts the *direction*
 before the magnitude, and compares against the model within 5%. Recorded as
 pattern 11 of [`error-patterns.md`](error-patterns.md).
+---
+
+## E4 — `Folds` and `concat`
+
+### 22. `concat`'s Scaladoc says the cost is `xs.length`. Exercise 8 measures 200,001 cells for the same call. Which is wrong?
+
+**Answered unaided, and with the mechanism rather than the verdict:** *"A está
+errada, `concat` aloca `2n` porque reverte antes."* The mechanism is exactly
+right, and the refinement is about where the defect sits.
+
+The number in the sentence is not wrong. `concat` produces `n` new cells chained
+onto a shared `ys`, and those `n` are what the result keeps. The other `n`, from
+the reversal, are garbage before the method returns.
+
+```text
+concat(ys) over an xs of n cells
+
+  xs.reverse          n cells      built, walked, discarded
+  loop prepends       n cells      the result's own spine
+                     ---------
+  allocated          2n
+  retained            n            <- what the sentence describes, correctly
+
+appended(x) = concat(Cons(x, Nil))
+
+  Cons(x, Nil)        1 cell       allocated by appended, not by concat
+  concat             2n
+                     ---------
+  total              2n + 1        = 200,001 at n = 100,000
+  measured                           200,001 cells (4,800,024 bytes / 24)
+```
+
+**The defect is the verb.** The sentence read *"**Allocates** one cell per
+element of `xs`"*. Replace `Allocates` with `retains` and it is correct word for
+word. It is the same split `Sharing` separates into two functions on purpose —
+`appendCells` against `appendAllocatedCells` — and it was missing from the one
+function where the second spine is actually created.
+
+Recorded as a fifth occurrence of pattern 10 in
+[`error-patterns.md`](error-patterns.md), and it is the first of that pattern's
+occurrences to live in a comment rather than in an assertion: nothing in the
+suite reads a Scaladoc, so no tolerance was too wide — there was no comparison
+at all. The contract is now repaired to state both numbers and to say which
+forces which.
+
+---
+
+## E6 %s `MyTree.contains`
+
+### 23. `contains` is documented `O(depth)`. On a balanced and a degenerate tree of the same 4,096 values, how many `Branch` nodes does `contains(-1)` visit?
+
+**Attempted: "2048 x 4096".** Both halves wrong, and the measurement is worth
+more than the correction because the implementation does not do what its
+Scaladoc says.
+
+```scala
+case Branch(v, l, r) => (v == x) || l.contains(x) || r.contains(x)
+```
+
+It never compares. It tests equality and descends into **both** subtrees: a
+generic tree search wearing a binary search's signature. Instrumented with a
+counting `Ordering` and a counting `equals`:
+
+```text
+                      depth   contains(-1)   Ordering consulted
+-------------------   -----   ------------   ------------------
+sorted/degenerate      4,096     4,096 nodes                   0
+balanced                  13     4,096 nodes                   0
+```
+
+Identical, `O(n)` in both, and the `(using Ordering[A])` parameter is requested
+and never called %s not once. The BST invariant is paid for by every `insert`
+and then read by nobody.
+
+Three consequences, and the first is the expensive one:
+
+* the balanced-versus-degenerate distinction that the whole of Exercise 9 exists
+  to measure is **invisible** to `contains`;
+* an unused `given` is not reported by `-Werror` the way an unused parameter is,
+  so the tool that catches `Sharing.prependCells` cannot catch this;
+* `Exercise6MyTreeSpec` asserts that `contains` returns the right booleans, and
+  it does. No assertion in the suite mentions a cost.
+
+The `2048` in the attempt is a real number in this system, for a different
+question: for a value that is **present** the `||` short-circuits on the hit, so
+`contains(2048)` costs 2,049 on the degenerate tree. For an absent value there
+is nothing to short-circuit and the whole tree is walked.
+
+### What a corrected `contains` costs, and why the probe decides it
+
+```text
+probe                    sorted/degenerate   balanced
+----------------------   -----------------   --------
+-1   (below the min)                     1         12
+4096 (above the max)                 4,096         13
+2048 (present)                       2,049         12
+```
+
+**On the degenerate tree `contains(-1)` visits one node.** `fromSorted` builds a
+spine to the right, so a value below the minimum is less than the root, the
+root's left child is `Leaf`, and the search stops. Pattern 11 again, in a second
+function: the probe that looks like the worst case is the best case. The
+predicted `4,096` is the right number from the wrong row %s it is the cost of
+probing *above* the maximum.
+
+And the balanced column is 12, not 13. `depth` is the **maximum** over
+root-to-leaf paths, not the length of every path; the leftmost path bottoms out
+one level early. `depth` bounds `contains` from above and does not predict it.
+
+What the table actually demonstrates is sharper than "degenerate is slower": the
+degenerate column ranges from 1 to 4,096 depending on the argument, while the
+balanced column stays between 12 and 13 **for every argument**. The defect of a
+degenerate tree is not that it is always worse. It is that its cost is a
+function of the query, and its worst case is the size of the structure.
+
+### The repair, and what it measures
+
+Made in Exercise 6, mirroring `insert` exactly %s same guards, same trichotomy:
+
+```scala
+def contains(x: A)(using Ordering[A]): Boolean = t match
+  case Leaf => false
+  case Branch(v, l, _) if x < v => l.contains(x)
+  case Branch(v, _, r) if x > v => r.contains(x)
+  case _ => true
+```
+
+Note what it does *not* use: `==`. Equality now comes from the same `Ordering`
+that placed the value, so a type whose `equals` disagrees with its ordering
+cannot make `contains` disagree with `insert`.
+
+Verified against the predicted costs, counting `Ordering.compare` calls:
+
+```text
+probe                    sorted/degenerate            balanced
+                         compares    nodes       compares    nodes
+----------------------   --------   ------       --------   ------
+-1   (below the min)            1        1             12       12
+4096 (above the max)        8,192    4,096             26       13
+2048 (present)              4,098    2,049             14       12
+```
+
+The nodes column is derived, not measured, and the derivation is the caution:
+a node costs **one** compare when the search goes left (`x < v` is true) and
+**two** when it goes right or stops (`x < v` false, then `x > v`). Dividing
+compares by a fixed factor is therefore only valid where every turn goes the
+same way %s true of the first two rows and false of the third. The balanced path
+to 2,048 is 10 left turns, 1 right turn and the final node:
+`10 + 2 + 2 = 14`, over 12 nodes. A first pass that divided by two reported 7
+and was wrong for exactly that reason.
+
+One assertion is still owed. The suite passes on both the old implementation and
+the new one, because every test asks what `contains` returns and none asks what
+it costs. Until a test separates them, the repair is protected by nothing.

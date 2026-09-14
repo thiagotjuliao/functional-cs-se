@@ -49,7 +49,9 @@ object MyTree:
     /** Whether `x` is present. `O(depth)`, and for the same reason. */
     def contains(x: A)(using Ordering[A]): Boolean = t match
       case Leaf => false
-      case Branch(v, l, r) => (v == x) || l.contains(x) || r.contains(x)
+      case Branch(v, l, _) if x < v => l.contains(x)
+      case Branch(v, _, r) if x > v => r.contains(x)
+      case _ => true
 
     /** Number of `Branch` nodes. `Leaf` counts as zero. */
     def size: Int = t match

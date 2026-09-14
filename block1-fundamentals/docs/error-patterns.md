@@ -29,8 +29,8 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 7 | A unit declared in the name and nowhere the machine reads | 1 | no — both sides of the confusion are `Long` |
 | 8 | An exact integer answer routed through `Double` | 2 | no — the suite stopped two powers of two short |
 | 9 | A structural guarantee carried by traversal order instead of by construction | 3 | the shape yes, the price no |
-| 10 | A quantity compared against a model of a neighbouring quantity | 4 | no — the tolerances were wide enough to swallow the gap |
-| 11 | A fixture that cannot exhibit the property under test | 1 | no — and the failure it finally produced blamed the wrong file |
+| 10 | A quantity compared against a model of a neighbouring quantity | 5 | no — the tolerances were wide enough, and the fifth is a verb in a comment |
+| 11 | A fixture that cannot exhibit the property under test | 2 | no — and the failure it finally produced blamed the wrong file |
 | 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
 
 Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**. The file was
@@ -623,6 +623,9 @@ nodeBytes(treeInsertNodes(n))       nodes                     bytes, the boxed e
                                                               included
 fromSorted.depth / fromBalanced     a path length             nodes allocated, which is
   .depth                                                      the path plus a new leaf
+MyList.concat's Scaladoc:           cells the result keeps    the verb says "allocates",
+  "allocates one cell per                                     and allocation is 2n
+  element of xs"
 ```
 
 Measured, at `n = 100,000` and a tree of `2^20 - 1`, on JDK 21.0.9 HotSpot,
@@ -705,6 +708,23 @@ The same choice hid a second defect. `-1` lies inside the `Integer` cache
 (`-128..127`), so `Integer.valueOf(-1)` allocates nothing and the boxed element
 of pattern 10 never appeared on that path — which is why both `-1` rows above
 are exact multiples of 24 and both `4096` rows are not.
+
+**Second occurrence, same probe, a different function.** Asked to predict what a
+corrected `MyTree.contains` costs on the two trees, the answer reached for
+`contains(-1)` again — and `-1` is below the minimum of a spine that grows to
+the right, so it is that tree's *cheapest* query:
+
+```text
+probe                    sorted/degenerate   balanced   verdict
+----------------------   -----------------   --------   --------
+-1   (below the min)                     1         12   inverted
+4096 (above the max)                 4,096         13   right
+```
+
+The shape of the mistake is identical to the first: on a structure that is
+degenerate in one direction, a probe aimed at the other end measures the best
+case and reads like the worst. A right spine has exactly one cheap query and
+`n` expensive ones, and the cheap one is the memorable value.
 
 **The rule.** For every property asserted, name two inputs before writing the
 fixture: the one that exhibits it maximally, and the one that hides it. Then
