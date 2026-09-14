@@ -995,7 +995,7 @@ The repaired implementation generates the midpoints recursively into a
 guarantee is the concatenation:
 
 ```scala
-mid #:: midPoints(lo, mid - 1) #::: midPoints(mid + 1, hi)
+mid #:: (midPoints(lo, mid - 1) #::: midPoints(mid + 1, hi))
 ```
 
 **The answer given: depth 15, a strictly ascending chain.** Correct. Measured,
@@ -1005,7 +1005,7 @@ with the two orders side by side over `0 until 15`:
 concatenation                                   sequence emitted                   size   depth
 ---------------------------------------------   --------------------------------   ----   -----
 mids(lo,mid-1) #::: (mid #:: mids(mid+1,hi))    0,1,2,3,4,5,6,7,8,9,10,11,12,13,14   15      15
-(mid #:: mids(lo,mid-1)) #::: mids(mid+1,hi)    7,3,1,0,2,5,4,6,11,9,8,10,13,12,14   15       4
+mid #:: (mids(lo,mid-1) #::: mids(mid+1,hi))    7,3,1,0,2,5,4,6,11,9,8,10,13,12,14   15       4
 ```
 
 The in-order concatenation emits the sorted sequence — that is what in-order
@@ -1014,22 +1014,23 @@ chain. The set of values is identical, the multiset is identical, and the depth
 differs by a factor of nearly four. Nothing about the swap is visible at the call
 site.
 
-The parentheses in the table are the author's, not the source's, and they are
-worth one line of their own. The line as committed carries none:
+The parentheses deserve a line of their own, because the line was first written
+without any:
 
 ```text
-written                                          parses as
+as first written                                 parses as
 ----------------------------------------------   ------------------------------------------------
 mid #:: mids(lo,mid-1) #::: mids(mid+1,hi)       mid #:: (mids(lo,mid-1) #::: mids(mid+1,hi))
 ```
 
 Both `#::` and `#:::` end in a colon, so both are **right**-associative, and
 equal precedence groups to the right. The grouping is therefore not the one the
-eye reads left to right — and here it does not matter, because
+eye reads left to right — and here it happens not to matter, because
 `mid #:: (l #::: r)` and `(mid #:: l) #::: r` denote the same sequence. That is
 luck rather than design: the two spellings coincide only because `mid` sits at
-the front of both. Declaring the grouping costs one pair of parentheses and
-removes the need to know the rule.
+the front of both, and nothing in the expression says so. The parse is now
+declared in the source, which costs one pair of parentheses and removes the need
+to know the rule.
 
 ### 17. Is the pre-order version correct by luck or by construction? Name the property that guarantees the balance.
 

@@ -477,7 +477,7 @@ midPoints, concatenated in-order:          0,1,2, ... ,14                  15   
 mids(lo,mid-1) #::: (mid #:: mids(...))
 
 midPoints, concatenated pre-order:         7,3,1,0,2,5,4,6,11,9,8,          4   right
-(mid #:: mids(lo,mid-1)) #::: mids(...)    10,13,12,14
+mid #:: (mids(lo,mid-1) #::: mids(...))    10,13,12,14
 
 Branch assembled on the recursion itself   no order exists to get wrong     4   right by
                                                                                construction
@@ -498,12 +498,13 @@ Inserting the pre-order of a binary search tree reconstructs that tree exactly.
 The distance between the correct version and the 15-deep one is a single swap of
 the operands around `#:::`.
 
-The parentheses in the table above are added for legibility; the source carries
-none, and both `#::` and `#:::` end in a colon and are therefore
-right-associative, so `mid #:: l #::: r` groups as `mid #:: (l #::: r)`. Here
-that is harmless — the two groupings denote the same sequence — but it is
-harmless by coincidence, not by design. Challenge 16 of
-[`challenge-log.md`](challenge-log.md) carries the parse.
+The parentheses in the table above are the source's, but only after the fact:
+the line was first written without them. Both `#::` and `#:::` end in a colon and
+are therefore right-associative, so `mid #:: l #::: r` groups as
+`mid #:: (l #::: r)` — not the grouping the eye reads left to right. Here that
+was harmless, because the two groupings denote the same sequence, but harmless by
+coincidence rather than by design. The parse is now declared. Challenge 16 of
+[`challenge-log.md`](challenge-log.md) carries it.
 
 **The rule.** When the invariant is structural, let the constructor carry it.
 Checkable by eye: if a function computes the shape — it picks a midpoint, it

@@ -119,10 +119,9 @@ object MyTree:
   def fromRange(lo: Int, hi: Int): MyTree[Int] =
     def midPoints(lo: Int, hi: Int): LazyList[Int] =
       if lo > hi then LazyList()
-      else if lo == hi then LazyList(lo)
       else
         val mid = (lo + hi) / 2
-        mid #:: midPoints(lo, mid - 1) #::: midPoints(mid + 1, hi)
+        mid #:: (midPoints(lo, mid - 1) #::: midPoints(mid + 1, hi))
     end midPoints
 
     midPoints(lo, hi - 1).foldLeft(Leaf: MyTree[Int]):
