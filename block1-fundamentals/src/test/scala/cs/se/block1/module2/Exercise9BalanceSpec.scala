@@ -1,5 +1,7 @@
 package cs.se.block1.module2
 
+import cs.se.block1.module1.Footprint
+
 /** Exercise 9 — what insertion order does to depth, and what depth does
   * to cost.
   *
@@ -44,30 +46,52 @@ class Exercise9BalanceSpec extends Module2Harness:
 
     assertEquals(Balance.degenerationFactor(0), 0.0)
 
-    // depth n against depth log2(n), plus the new leaf on each side.
+    // One insert allocates the path it rebuilds *and* the new leaf: `depth + 1`
+    // nodes, which is what `Sharing.treeInsertNodes` already states. The `+1` is
+    // noise against a depth of n and worth 7% against a depth of log2(n), so a
+    // factor built from depths alone lands outside the tolerance below — and it
+    // is the balanced side, the small one, that the constant distorts.
     val expected = (n + 1).toDouble / (Sharing.balancedDepth(n) + 1).toDouble
-    assertRatio(predicted, expected, 0.05, "the factor is a ratio of path lengths")
-
-    warmup(20)(Balance.fromBalanced(64).insert(-1))
+    assertRatio(predicted, expected, 0.05, "the factor is a ratio of nodes allocated")
 
     val sorted = Balance.fromSorted(n)
     val balanced = Balance.fromBalanced(n)
-    warmup(20)(sorted.insert(-1))
-    warmup(20)(balanced.insert(-1))
 
-    val sortedCost = probeBytes(sorted.insert(-1))
-    val balancedCost = probeBytes(balanced.insert(-1))
+    // The probe value must exceed every value held, or the experiment reports
+    // the opposite of the truth. Insert something *below* the minimum and the
+    // ascending-built tree answers with its shallowest path — it is a spine to
+    // the right, so a value smaller than the root lands as the root's left
+    // child, two nodes — and the degenerate tree measures cheaper than the
+    // balanced one. Worst case for a right spine is a value above its maximum.
+    val probe = n
+
+    warmup(20)(sorted.insert(probe))
+    warmup(20)(balanced.insert(probe))
+
+    // `insert` boxes its argument: `A` is erased to `Object`, and `probe` is far
+    // above the `Integer` cache, so one `java.lang.Integer` is allocated inside
+    // the measured window on each side. The model counts *nodes* and says so —
+    // `Sharing.reverseCells`: "Note what is not allocated: the elements" — so
+    // the box comes off both measurements before they are compared. Derived
+    // from Module 1's layout model rather than written as 16.
+    val box = Footprint.align(Footprint.HeaderBytes + Footprint.IntegerBytes).toLong
+    val sortedCost = probeBytes(sorted.insert(probe)) - box
+    val balancedCost = probeBytes(balanced.insert(probe)) - box
     val measured = sortedCost.toDouble / balancedCost
 
-    report("one insert into the degenerate tree (bytes)", sortedCost)
-    report("one insert into the balanced tree (bytes)", balancedCost)
+    report("one insert into the degenerate tree (bytes, box removed)", sortedCost)
+    report("one insert into the balanced tree (bytes, box removed)", balancedCost)
+    report("nodes, degenerate", sortedCost / Sharing.NodeBytes)
+    report("nodes, balanced", balancedCost / Sharing.NodeBytes)
     report("measured degeneration factor", f"$measured%.1f x")
 
+    // Direction before magnitude: a probe value that misses the worst case
+    // inverts this, and inverts it silently.
     assert(
-      measured > predicted / 3.0,
-      s"predicted a factor of about $predicted, measured $measured — if the measurement is " +
-        "far smaller, the insert is not copying the path it walks"
+      sortedCost > balancedCost,
+      s"the degenerate tree must cost more, not less: $sortedCost against $balancedCost"
     )
+    assertRatio(measured, predicted, 0.05, "the measurement must land on the model")
   }
 
   test("depth also governs lookup, not only allocation") {
