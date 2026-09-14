@@ -5,18 +5,18 @@ whether it can be derived. Neither asks the question this file asks:
 
 > **Where does composition go wrong, once the mechanism is already known?**
 
-Every entry below was a real defect written while working this block. None of them is
-ignorance of a mechanism. `LongBytes = 16` was written by someone who knows a
-`Long` is 64 bits; the error is in the conversion, not in the knowledge.
+Every entry below was a real defect written while working this block. None of
+them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
+knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
-That is why this file is organised by **pattern** rather than by exercise. Nine
-individual mistakes are a diary and nobody rereads a diary. Six recurring shapes
-are a review checklist.
+That is why this file is organised by **pattern** rather than by exercise.
+Sixteen individual mistakes are a diary and nobody rereads a diary. Nine
+recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
 instantiated it, the rule that prevents it, and — the field that makes this
-usable — **why the compiler and the test suite do not catch it**. All six
-compile cleanly under `-Wall -Werror`.
+usable — **why the compiler and the test suite do not catch it**. Every pattern
+but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 
 | # | Pattern | Occurrences | Caught by the build? |
 | :-- | :--- | :-: | :--- |
@@ -31,9 +31,9 @@ compile cleanly under `-Wall -Werror`.
 | 9 | A structural guarantee carried by traversal order instead of by construction | 3 | the shape yes, the price no |
 
 Patterns 1–6 were found in **Module 1**, 7 to 9 in **Module 2**. The file was
-created with Module 2 rather than at the end of it, which is why its first two
-entries were written on the day the defects appeared rather than reconstructed
-afterwards.
+created at the close of Module 1, so those six were reconstructed afterwards;
+from Module 2 on it is maintained continuously, and each entry is written on the
+day its defect appears.
 
 ---
 

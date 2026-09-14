@@ -23,7 +23,7 @@ read with `javap -c -p`, timings taken from the `medianNanos` harness in
 | E7 `Packing` | 3 | recorded |
 | E8 `BitmapIndex` | 3 | recorded |
 | E9 `VarIntCodec` | 3 | recorded |
-| Carried over from the Self-Check | 2 | recorded |
+| Carried over from the removed Self-Check | 2 | recorded |
 
 ---
 

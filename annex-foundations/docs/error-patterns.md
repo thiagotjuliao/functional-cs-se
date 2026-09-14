@@ -1,7 +1,7 @@
 # A1 — Error Patterns
 
-A quiz asks whether the mechanism is understood. The challenge log asks whether
-it can be derived. Neither asks the question this file asks:
+The recall set asks whether the mechanism is understood. The challenge log asks
+whether it can be derived. Neither asks the question this file asks:
 
 > **Where does composition go wrong, once the mechanism is already known?**
 
@@ -9,14 +9,14 @@ Every entry below was a real defect written during this annex. None of them is
 ignorance of a mechanism. `1 << 7 - 1` was written by someone who knows exactly
 what `<<` does; the error is in how the pieces were put together.
 
-That is why this file is organised by **pattern** rather than by exercise. Nine
-individual mistakes are a diary and nobody rereads a diary. Six recurring shapes
-are a review checklist.
+That is why this file is organised by **pattern** rather than by exercise.
+Fourteen individual mistakes are a diary and nobody rereads a diary. Seven
+recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
 instantiated it, the rule that prevents it, and — the field that makes this
-usable — **why the compiler and the test suite do not catch it**. Five of the six
-compile cleanly under `-Wall -Werror`.
+usable — **why the compiler and the test suite do not catch it**. Every pattern
+but the sixth compiles cleanly under `-Wall -Werror` in all its occurrences.
 
 | # | Pattern | Occurrences | Caught by the build? |
 | :-- | :--- | :-: | :--- |

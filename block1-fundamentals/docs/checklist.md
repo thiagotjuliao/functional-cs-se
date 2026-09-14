@@ -19,20 +19,36 @@ measurement.
       `List[Int]` and an `Array[Int]` of one million elements. Both numbers must
       match your Exercise 7 implementation.
 
+*The recall set `docs/quiz/b1-m1.html` carries no box here. It was written as
+this module closed, when the guide's Self-Check was dropped, and the routine's
+box for it first appears in Module 2 — so this module was accepted without it.
+It is the instrument to use when revising this material.*
+
 ### B. Implementation — Exercises
 
 All nine live in `src/main/scala/cs/se/block1/module1/`, one spec each under
 `src/test/scala/cs/se/block1/module1/`, over the shared `Module1Harness`.
 
-- [x] **E1 `Vec2`** — extension methods `+`, `*`, `dot`, `norm`.
-- [x] **E2 `Shape`** — `enum` ADT with exhaustive `area` and `totalArea`.
-- [x] **E3 `AllocationProbe`** — `allocatedBytes` and `measure`.
-- [x] **E4 `Boxing`** — `sumBoxed` and the allocation-free `sumPrimitive`.
-- [x] **E5 `Escape`** — `sumNorms` (non-escaping) and `collectVecs` (escaping).
-- [x] **E6 `WordStats`** — `wordFrequencies` and `topN`.
-- [x] **E7 `Footprint`** — `shallowSize`, `arrayOfIntSize`, `listOfIntSize`.
-- [x] **E8 `Csv`** — `renderCsv` under an allocation ceiling.
-- [x] **E9 `Bench`** — `medianNanos` harness.
+- [x] **E1 `Vec2`** — the extension methods `+`, `*`, `dot`, `norm`, and the
+      commutative-monoid laws that pin them.
+- [x] **E2 `Shape`** — the `enum` ADT with an exhaustive `area`, and `totalArea`
+      as a fold whose identity is the empty list.
+- [x] **E3 `AllocationProbe`** — `allocatedBytes` and `measure`: the instrument
+      every later exercise depends on, proved monotonic, single-evaluation, and
+      cheap enough not to disturb what it measures.
+- [x] **E4 `Boxing`** — `sumBoxed` against the allocation-free `sumPrimitive`,
+      agreeing on every input and diverging only in what they allocate.
+- [x] **E5 `Escape`** — `sumNorms` (non-escaping) against `collectVecs`
+      (escaping), and the allocation gap scalar replacement opens between them.
+- [x] **E6 `WordStats`** — `wordFrequencies` and `topN`, with the total count
+      preserved by the fold and an ordering that is total and deterministic.
+- [x] **E7 `Footprint`** — `shallowSize`, `arrayOfIntSize`, `listOfIntSize`: the
+      HotSpot layout derived rather than measured, and the tenfold `List[Int]`
+      tax it predicts.
+- [x] **E8 `Csv`** — `renderCsv` under an allocation ceiling: linear in the
+      input, not quadratic.
+- [x] **E9 `Bench`** — the `medianNanos` harness, proved to separate a heavy
+      body from a light one rather than merely to report a number.
 
 ### C. Correctness Gate
 
@@ -288,12 +304,11 @@ same box.
 
 **Milestone tag:** `b1-m2-persistent-structures`
 
-The exercise order is deliberate and is not by difficulty. **E1 comes first
-although it is the hardest tier**, because it builds the cost model that predicts
-what every later exercise measures. Module 1 put its predictive exercise seventh
-of nine, and the consequence was that its measurements arrived as isolated facts
-instead of as confirmations of a derivation. Do E1 first, on paper, before
-writing a line of `MyList`.
+The exercise order is deliberate. **E1 comes first**, because it builds the cost
+model that predicts what every later exercise measures. Module 1 put its
+predictive exercise seventh of nine, and the consequence was that its
+measurements arrived as isolated facts instead of as confirmations of a
+derivation. Do E1 first, on paper, before writing a line of `MyList`.
 
 ### A. Theory Comprehension
 
@@ -332,12 +347,12 @@ All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
 - [x] **E2 `MyList`** — the `enum` ADT, `isEmpty`, `length`, `headOption`, and
       the variance that makes `Nil` serve every element type.
 - [x] **E3 `Combinators`** — `map`, `filter`, `reverse`.
-- [x] **E4 `Folds`** — `foldLeft`, `foldRight`, `append`, `concat`, and the
+- [x] **E4 `Folds`** — `foldLeft`, `foldRight`, `appended`, `concat`, and the
       stack-depth difference between the two folds.
 - [x] **E5 `Building`** — `byAppend` and `byPrepend`, and the doubling table
       that proves their complexity classes.
 - [x] **E6 `MyTree`** — the BST `enum`: `insert`, `contains`, `size`, `depth`.
-- [x] **E7 `TreeFold`** — `foldInOrder`, `toList`, `treeMap`, and the ordering
+- [x] **E7 `TreeFold`** — `foldInOrder`, `toMyList`, `treeMap`, and the ordering
       law that ties them together.
 - [ ] **E8 `SharingProof`** — measure with `AllocationProbe` and confirm, or
       refute, every prediction E1 made.
@@ -363,7 +378,7 @@ Verified by reading your own diff before committing:
 - [ ] Zero mutable collections, and zero use of `scala.collection.immutable.List`
       *inside* your own structure's implementation. `MyList` is built from
       `MyList`, or the exercise proves nothing. Converting to `List` at the
-      boundary, in `toList`, is the one permitted crossing.
+      boundary, in `MyList.toScalaList`, is the one permitted crossing.
 - [ ] Every recursive function that walks a whole structure is either
       `@tailrec` or documented as bounded by depth rather than by size. `MyTree`
       recursion is the second kind; `MyList` recursion must be the first.

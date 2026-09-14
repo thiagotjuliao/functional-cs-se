@@ -314,6 +314,20 @@ const QUESTIONS = [
     ]
   },
   {
+    tier: "medium", part: "I", src: "Part I.6.3 — One adder for both signs",
+    stem: `<p>Add <code>00000101</code> (5) and <code>11111011</code> (−5) as 8-bit patterns, carrying as usual. The sum is nine bits wide: <code>100000000</code>. What becomes of the ninth bit, and what does that buy?</p>`,
+    options: [
+      { t: "It falls off the end; the eight bits that remain are <code>00000000</code>, so one circuit adds signed and unsigned alike", ok: true,
+        why: "§I.6.3: there is no ninth position to hold it. No sign inspection, no branch, no correction — which is exactly why two's complement won, and why <code>Int.MaxValue + 1</code> wraps to <code>Int.MinValue</code> rather than raising." },
+      { t: "The hardware inspects the sign bits first and branches to a subtraction", ok: false,
+        why: "That is what <b>sign-magnitude</b> would force (§I.6.1), and the cost of that second circuit is the reason the guide rejects it. Two's complement needs no such inspection." },
+      { t: "It raises an overflow error, which is why the JVM checks arithmetic", ok: false,
+        why: "§I.6.3 says the opposite in as many words: the bit vanishes and the value wraps. §I.5 makes the same point — wrapping is the defined behaviour of finite-width arithmetic, not a defect." },
+      { t: "It is kept as a carry flag that the next instruction must consume", ok: false,
+        why: "Nothing in the result depends on it. The guide's arithmetic is complete at eight bits: <code>00000000</code> is already the right answer, so there is nothing left for a later instruction to correct." }
+    ]
+  },
+  {
     tier: "easy", part: "I", src: "Part I.6.4 — The master identity",
     stem: `<p>Complete the master identity of the annex: <code>-x == ?</code></p>`,
     options: [

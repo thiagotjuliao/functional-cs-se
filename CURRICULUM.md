@@ -11,22 +11,34 @@ The repository layout aggregates 4 independent sbt subprojects under a single ro
 ```text
 functional-cs-se/
  ├── build.sbt
+ ├── CURRICULUM.md
+ ├── CLAUDE.md
+ ├── docs/                          // repository-wide contracts
+ │    ├── git-conventions.md        // tag scheme, commit scopes
+ │    └── tooling/
  ├── block1-fundamentals/           // Subproject 1
- │    ├── src/main/scala/...        
- │    ├── src/test/scala/...        // Exercises + MUnit specs
+ │    ├── src/main/scala/...        // exercise implementations
+ │    ├── src/test/scala/...        // one MUnit spec per exercise
  │    └── docs/                     // Requirements & Learning central
- │         ├── checklist.md         
- │         └── theory/              
- │              ├── references.md   
- │              └── module1_jvm.md  
+ │         ├── checklist.md         // the acceptance contract
+ │         ├── challenge-log.md     // Step 4 answers, with their derivations
+ │         ├── error-patterns.md    // defects by pattern, not by exercise
+ │         ├── quiz/                // recall sets, one page per module
+ │         └── theory/
+ │              ├── references.md
+ │              ├── module1_jvm.md
+ │              └── module2_structures.md
  ├── block2-category-types/         // Subproject 2
- ├── block3-effects-concurrency/    // Subproject 3
+ ├── block3-effect-concurrency/     // Subproject 3
  ├── block4-distributed-streams/    // Subproject 4
  └── annex-foundations/             // Subproject 5 — the Annex Track (optional)
       ├── src/main/scala/...
       ├── src/test/scala/...
-      └── docs/
+      └── docs/                     // same five artifacts as a block
            ├── checklist.md
+           ├── challenge-log.md
+           ├── error-patterns.md
+           ├── quiz/
            └── theory/
                 ├── references.md
                 └── annex1_bitwise.md
@@ -109,7 +121,7 @@ is the only one heavy on both at once, and should be budgeted accordingly.
 
 ---
 
-### 📂 Subproject 3: `block3-effects-concurrency`
+### 📂 Subproject 3: `block3-effect-concurrency`
 * **Duration:** 6 Weeks | **Abstraction:** ⭐️⭐️⭐️⭐️ | **Machine:** ⭐️⭐️⭐️⭐️⭐️
 * **Focus:** Computations suspension, lazy evaluation mechanics, designing custom asynchronous green-thread schedulers, and Loom virtualization.
 

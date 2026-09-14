@@ -32,29 +32,41 @@ unperformed measurement.
       arithmetic. If Part I felt obvious, do it anyway — it takes five minutes
       and it is the foundation every later part stands on.
 
+*The recall set `docs/quiz/a1.html` carries no box here. It was added while this
+annex was still open, but the routine's box for it first appears in B1-M2 — so
+this annex was accepted without it. It is the instrument to use when revising
+this material.*
+
 ### B. Implementation — Exercises
 
-All nine exercises live in `src/main/scala/cs/se/annex/a1/` and are validated
-by the suites in `src/test/scala/cs/se/annex/a1/`.
+All nine live in `src/main/scala/cs/se/annex/a1/`, one spec each under
+`src/test/scala/cs/se/annex/a1/`.
 
 - [x] **E1 `Bits`** — `testBit`, `setBit`, `clearBit`, `toggleBit`,
-      `toBinaryString`.
+      `toBinaryString`, and the algebra they form: set and clear idempotent,
+      toggle an involution.
 - [x] **E2 `TwosComplement`** — `negate`, `signMask`, `absBranchless`,
-      `sameSign`, `floorDiv2`.
+      `sameSign`, `floorDiv2`, and the master identity `x + ~x == -1` holding at
+      `Int.MinValue` like anywhere else.
 - [x] **E3 `PowersOfTwo`** — `isPowerOfTwo`, `modPowerOfTwo`, `nextPowerOfTwo`,
-      `log2Floor`.
-- [x] **E4 `PopCount`** — `naive`, `kernighan`, `swar`, plus the three-way
-      agreement law.
-- [x] **E5 `BitAdder`** — `add`, `negate`, `subtract`, `multiply`, built from
-      `^`, `&` and `<<` only.
+      `log2Floor`, each pinned by its defining inequality rather than by
+      examples.
+- [x] **E4 `PopCount`** — `naive`, `kernighan`, `swar`: three-way agreement with
+      the JDK intrinsic, plus inclusion–exclusion and the Hamming-distance
+      reading of `a ^ b`.
+- [x] **E5 `BitAdder`** — `add`, `negate`, `subtract`, `multiply` built from
+      `^`, `&` and `<<` only, proving `Int` is the ring `Z/2^32 Z`.
 - [x] **E6 `BitSet64`** — an `opaque type` over `Long` satisfying the
-      Boolean-algebra laws.
+      Boolean-algebra laws: both monoids, De Morgan, complement as an
+      involution.
 - [x] **E7 `Packing`** — `packInts`/`unpackHi`/`unpackLo` and the RGBA byte
-      codec, with roundtrip laws.
+      codec, with roundtrip laws and the sign-extension trap pinned by a test.
 - [x] **E8 `BitmapIndex`** — the HAMT node primitive: `hasSlot`,
-      `physicalIndex`, `insertAt`, `removeAt` over a persistent array.
-- [x] **E9 `VarIntCodec`** — zig-zag plus LEB128, with a roundtrip law over the
-      whole `Int` range and a size bound.
+      `physicalIndex`, `inserted`, `removed` over a persistent array the
+      operations never mutate.
+- [x] **E9 `VarIntCodec`** — zig-zag plus LEB128: a bijection on the whole of
+      `Int`, a roundtrip law over its whole range, a size bound, and rejection
+      of non-canonical input.
 
 ### C. Correctness Gate
 
@@ -252,8 +264,10 @@ The answers are recorded in [`challenge-log.md`](challenge-log.md), one entry
 per challenge with the derivations, bytecode and measurements behind them.
 This box closes when every exercise has an entry there.
 
-Recorded so far: E1 (3), E2 (3), E4 (3), E5 (3). E3 has no entry — it was closed on
-its test suite alone, without a Step 4 round.
+Thirty entries recorded: E1 (3), E2 (3), E4 (3), E5 (3), E6 (7), E7 (3), E8 (3),
+E9 (3), and two carried over from the removed Self-Check. E3 has no entry — it
+was closed on its test suite alone, without a Step 4 round, and that omission is
+itself recorded there rather than left silent.
 
 ## Annex Backlog
 
