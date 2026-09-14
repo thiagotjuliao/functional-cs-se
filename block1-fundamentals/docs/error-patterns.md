@@ -28,8 +28,9 @@ compile cleanly under `-Wall -Werror`.
 | 6 | A contract no implementation of that signature can satisfy | 2 | no — contracts are prose, and the suite samples the interior |
 | 7 | A unit declared in the name and nowhere the machine reads | 1 | no — both sides of the confusion are `Long` |
 | 8 | An exact integer answer routed through `Double` | 2 | no — the suite stopped two powers of two short |
+| 9 | A structural guarantee carried by traversal order instead of by construction | 3 | the shape yes, the price no |
 
-Patterns 1–6 were found in **Module 1**, 7 and 8 in **Module 2**. The file was
+Patterns 1–6 were found in **Module 1**, 7 to 9 in **Module 2**. The file was
 created with Module 2 rather than at the end of it, which is why its first two
 entries were written on the day the defects appeared rather than reconstructed
 afterwards.
@@ -321,6 +322,8 @@ Read it before committing, not after a defect. Six questions, one per pattern:
    `MaxValue`, at `MinValue`?
 7. Does any name in this diff declare a unit, and does the body honour it?
 8. Am I answering an integer question through `Double`?
+9. Does a recursion here compute a shape and then emit a flat sequence, leaving
+   something downstream to rediscover it?
 
 ---
 
@@ -344,6 +347,9 @@ watching for rather than waiting for:
 Patterns 7 and 8 both came out of Exercise 1 — arithmetic with no data structure
 in it, which is worth noting on its own: neither defect needed recursion,
 sharing or a measurement to appear.
+
+Pattern 9 came out of Exercise 6, and is the first in this file whose occurrences
+are three drafts of a single function rather than three separate sites.
 
 ---
 
@@ -447,3 +453,80 @@ a narrower reason worth recording: it sampled `2^k - 1` for `k` up to 20 —
 exactly the right family of inputs, stopped nine powers of two short of the
 first divergence. The walk now runs to `k = 30` and asserts `Int.MaxValue`
 directly, so both occurrences have a test standing over them.
+
+---
+
+## 9. A structural guarantee carried by traversal order instead of by construction
+
+The property required is about **shape** — `fromRange(0, 15)` must have depth 4.
+It is obtained by choosing the order in which values are handed to an
+order-sensitive operation, rather than by assembling the shape directly. The
+result is then correct exactly while that order is preserved, and the order is
+invisible at the place where the guarantee is written down.
+
+Three versions of `fromRange` were written. All three produce `size == 15`; all
+three contain the same fifteen values; the depths are measured:
+
+```text
+version                                   order fed to insert          depth   verdict
+---------------------------------------   --------------------------   -----   -------
+midpoint fixed as the root, then           0,1,2, ... ,14                   8   WRONG
+foldLeft(insert) over 0 until 15
+
+midPoints, concatenated in-order:          0,1,2, ... ,14                  15   WRONG
+mids(lo,mid-1) #::: (mid #:: mids(...))
+
+midPoints, concatenated pre-order:         7,3,1,0,2,5,4,6,11,9,8,          4   right
+(mid #:: mids(lo,mid-1)) #::: mids(...)    10,13,12,14
+
+Branch assembled on the recursion itself   no order exists to get wrong     4   right by
+                                                                               construction
+```
+
+The two wrong versions feed **ascending** input to `insert`, which is precisely
+the degeneracy Exercise 9 exists to demonstrate: each value is greater than every
+value already placed, so each becomes the right child of the previous one and the
+tree is a chain of `n` nodes. The first reports 8 rather than 15 only because a
+root was pre-placed, splitting one chain of 15 into two chains of 7:
+`max(1 + 7, 1 + 7)`.
+
+The third is correct, and correct for a nameable reason: the emission is a
+**pre-order** — every node is emitted before any value in either of its subtrees.
+When `insert` reaches a value, the node that must be its parent is therefore
+already in place, and the value lands exactly where `midPoints` intended it.
+Inserting the pre-order of a binary search tree reconstructs that tree exactly.
+The distance between the correct version and the 15-deep one is a single swap of
+the operands around `#:::`.
+
+**The rule.** When the invariant is structural, let the constructor carry it.
+Checkable by eye: if a function computes the shape — it picks a midpoint, it
+recurses on the halves — and then emits a **flat sequence**, the shape it just
+computed was thrown away, and something downstream is rediscovering by
+comparison what was already known. Look for a `fold` or an `insert` standing
+below a recursion that already had the answer.
+
+**Why the compiler and the test suite do not catch it.** Here the usual finding
+inverts, and both halves are worth recording.
+
+The *shape* is pinned. `Exercise6MyTreeSpec.scala:53` asserts `depth` against
+`Sharing.balancedDepth(n)` at `n` in {3, 7, 15, 31, 1023}, so all three wrong
+spellings fail it. The first occurrence was nevertheless found by reading the
+Scaladoc rather than by running the suite — a pinned assertion only protects code
+that has been run against it.
+
+What nothing pins is the **price**. Both surviving versions build the same tree,
+and one of them pays for it:
+
+```text
+fromRange(0, 1_000_000)            Branch allocations   median of 5 runs
+--------------------------------   ------------------   ----------------
+Branch assembled directly                   1,000,000            4.4 ms
+midPoints + foldLeft(insert)               18,951,445          493.1 ms
+```
+
+Nineteen times the allocations and a hundred and twelve times the wall clock, for
+a tree that is identical node for node — `insert` rebuilds every node on the path
+it walks, so the build costs the tree's internal path length instead of its size.
+`Exercise7TreeFoldSpec.scala:68` constructs exactly this million-element tree,
+which means the suite pays the half-second on every run and reports nothing. A
+test suite measures failure, not price.

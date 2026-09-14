@@ -1,4 +1,4 @@
-# B1-M1 — Conceptual Challenge Log
+# Block 1 — Conceptual Challenge Log
 
 The Step 4 audit of the module routine asks precise technical questions about
 design choices, and the answers are where the understanding actually lives. A
@@ -12,6 +12,14 @@ Every number below was executed and verified before being written — bytecode
 read with `javap -c -p`, allocation taken from the `AllocationProbe` instrument
 of Exercise 3, layout arithmetic cross-checked against the `Footprint`
 implementation of Exercise 7.
+
+The file spans the whole block: Module 1 holds challenges 1 to 15, Module 2
+continues from 16 further down. Numbering is continuous so that any challenge can
+be cited by number alone.
+
+---
+
+# Module 1 — JVM Semantics & Immutability Allocation Stress
 
 | Exercise | Challenges | Status |
 | :--- | :--- | :--- |
@@ -905,3 +913,150 @@ pass the entire suite, and none produces a warning, a log line or an exception.
 The only symptom is a change in the allocation counter — which is why §E demands
 the measured number instead of the claim. An optimisation whose only evidence is
 a counter is an optimisation that can only be defended with a counter.
+
+---
+
+# Module 2 — Manual Persistent Data Structures
+
+Numbering continues from 15. Module 1's challenges are above; the discipline is
+the same — the derivation, the measurement or the listing, never the verdict
+alone.
+
+| Exercise | Challenges | Status |
+| :--- | :--- | :--- |
+| E6 `MyTree.fromRange` | 2 | recorded |
+
+---
+
+## E6 — `MyTree.fromRange`
+
+The question arrived from the other direction for once: the Scaladoc asserts that
+`fromRange(0, 15)` has depth 4, and I challenged the assertion, having computed
+8. The reply was that the midpoint of 0 and 15 is 7 or 8, that one side then
+holds 7 values and the other 6, and that `max(1 + 7, 6 + 1) = 8`.
+
+Two things were wrong with that, and only the second matters.
+
+The interval is half-open: `fromRange(0, 15)` covers `0 until 15` = {0..14}, so
+the root is `(0 + 15) / 2 = 7` and both halves hold seven values, not seven and
+six. Arithmetic, quickly repaired.
+
+The substantive error is that `7` was placed where the recurrence requires a
+*depth*, not a *count*. A subtree of seven elements has depth 7 only if it is a
+chain — and `fromRange` recurses on the halves, so the half is balanced too:
+
+```text
+D(0) = 0
+D(n) = 1 + D((n - 1) / 2)
+
+n =  1  ->  1 + D(0) = 1
+n =  3  ->  1 + D(1) = 2
+n =  7  ->  1 + D(3) = 3
+n = 15  ->  1 + D(7) = 4
+```
+
+```text
+level 1                     7
+level 2           3                  11
+level 3       1       5          9       13
+level 4     0   2   4   6      8  10   12  14
+```
+
+The closed form is `D(n) = ceil(log2(n + 1))`, which is exactly what
+`Sharing.balancedDepth` must return — and it is why the Scaladoc chose 15 rather
+than 16 as its example: `15 = 2^4 - 1` is the largest tree of depth 4, so the
+example pins the bound at its tight point.
+
+The interesting part is what the wrong answer turned out to be right about. The
+implementation standing at the time chose the midpoint **once**, for the root,
+and inserted the remaining values with `foldLeft`:
+
+```text
+size  = 15
+depth = 8
+Branch(7,
+  Branch(0,Leaf,Branch(1,Leaf,Branch(2,Leaf,Branch(3,Leaf,
+    Branch(4,Leaf,Branch(5,Leaf,Branch(6,Leaf,Leaf))))))),
+  Branch(8,Leaf,Branch(9,Leaf,Branch(10,Leaf,Branch(11,Leaf,
+    Branch(12,Leaf,Branch(13,Leaf,Branch(14,Leaf,Leaf)))))))
+```
+
+`max(1 + 7, 1 + 7) = 8`. The predicted 8 described the tree that existed, not the
+tree the contract demanded: the values arrive ascending, each is greater than
+everything already placed, and each becomes the right child of the last. It is
+Exercise 9's degeneracy, reached inside the function whose whole purpose is to
+avoid it. Recorded as occurrence 1 of
+[`error-patterns.md`](error-patterns.md) pattern 9.
+
+### 16. Reverse the two operands of `#:::` in `midPoints`. The same fifteen values are emitted. What depth results, and why?
+
+The repaired implementation generates the midpoints recursively into a
+`LazyList` and still folds them through `insert`. The line carrying the whole
+guarantee is the concatenation:
+
+```scala
+(mid #:: midPoints(lo, mid - 1)) #::: midPoints(mid + 1, hi)
+```
+
+**The answer given: depth 15, a strictly ascending chain.** Correct. Measured,
+with the two orders side by side over `0 until 15`:
+
+```text
+concatenation                                   sequence emitted                   size   depth
+---------------------------------------------   --------------------------------   ----   -----
+mids(lo,mid-1) #::: (mid #:: mids(mid+1,hi))    0,1,2,3,4,5,6,7,8,9,10,11,12,13,14   15      15
+(mid #:: mids(lo,mid-1)) #::: mids(mid+1,hi)    7,3,1,0,2,5,4,6,11,9,8,10,13,12,14   15       4
+```
+
+The in-order concatenation emits the sorted sequence — that is what in-order
+traversal of a search tree *is* — and `insert` on a sorted sequence produces the
+chain. The set of values is identical, the multiset is identical, and the depth
+differs by a factor of nearly four. Nothing about the swap is visible at the call
+site.
+
+### 17. Is the pre-order version correct by luck or by construction? Name the property that guarantees the balance.
+
+**The answer given: by construction** — the midpoint is emitted first, then all
+midpoints below it, then all midpoints above it, and the same holds recursively
+inside each half. That is exactly right, and the property has a name.
+
+The emission is a **pre-order traversal**: every node is emitted before any value
+in either of its subtrees. That is the whole guarantee, in one sentence:
+
+> When `insert` reaches a value, the node that must become its parent has already
+> been placed, so the value lands where `midPoints` decided it should.
+
+The general statement is that inserting the pre-order sequence of a binary search
+tree into an empty tree, with an `insert` that performs no rebalancing,
+reconstructs that tree exactly. It is the reason pre-order is the traversal a BST
+is serialised in when the shape must survive the round trip; in-order
+serialisation preserves the *contents* and loses the *shape*, which is the
+15-versus-4 above.
+
+One correction to the reasoning as offered: the `LazyList`'s laziness plays no
+part in the guarantee. `foldLeft` forces the sequence in full, and the identical
+code over a strict `List` produces the identical tree. Laziness changes *when*
+the elements are produced; the balance depends only on the *order*, which is
+fixed by the concatenation. The two are worth keeping apart, because a change
+that preserves laziness while altering the order — the operand swap of challenge
+16 — destroys the invariant without touching the evaluation strategy.
+
+### What the correct version still costs
+
+Not a challenge, but the measurement belongs with them. `midPoints` computes the
+shape — it picks a midpoint, it recurses on the halves — then flattens it into a
+sequence, and `insert` rediscovers by comparison the position each value was
+already assigned. Measured at a million values, median of five runs after warm-up:
+
+```text
+fromRange(0, 1_000_000)            Branch allocations   median
+--------------------------------   ------------------   --------
+Branch assembled on the recursion           1,000,000     4.4 ms
+midPoints + foldLeft(insert)               18,951,445   493.1 ms
+```
+
+Both trees have depth 20 and a million nodes. The difference is that `insert`
+rebuilds every node on the path it walks, so the construction costs the tree's
+**internal path length**, `O(n log n)`, where direct assembly costs its **size**,
+`O(n)`. Recorded as occurrence 3 of [`error-patterns.md`](error-patterns.md)
+pattern 9.

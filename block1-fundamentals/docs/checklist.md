@@ -337,9 +337,9 @@ All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
       the stack-depth difference between the two folds.
 - [x] **E5 `Building`** *(Medium)* — `byAppend` and `byPrepend`, and the
       doubling table that proves their complexity classes.
-- [ ] **E6 `MyTree`** *(Medium)* — the BST `enum`: `insert`, `contains`, `size`,
+- [x] **E6 `MyTree`** *(Medium)* — the BST `enum`: `insert`, `contains`, `size`,
       `depth`.
-- [ ] **E7 `TreeFold`** *(Medium)* — `foldInOrder`, `toList`, `treeMap`, and the
+- [x] **E7 `TreeFold`** *(Medium)* — `foldInOrder`, `toList`, `treeMap`, and the
       ordering law that ties them together.
 - [ ] **E8 `SharingProof`** *(Hard)* — measure with `AllocationProbe` and
       confirm, or refute, every prediction E1 made.
