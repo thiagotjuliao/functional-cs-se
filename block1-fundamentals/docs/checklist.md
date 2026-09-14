@@ -21,9 +21,8 @@ measurement.
 
 ### B. Implementation — Exercises
 
-All nine exercises live in
-`src/main/scala/cs/se/block1/module1/` and are validated by
-`src/test/scala/cs/se/block1/module1/Module1Spec.scala`.
+All nine live in `src/main/scala/cs/se/block1/module1/`, one spec each under
+`src/test/scala/cs/se/block1/module1/`, over the shared `Module1Harness`.
 
 - [x] **E1 `Vec2`** — extension methods `+`, `*`, `dot`, `norm`.
 - [x] **E2 `Shape`** — `enum` ADT with exhaustive `area` and `totalArea`.
