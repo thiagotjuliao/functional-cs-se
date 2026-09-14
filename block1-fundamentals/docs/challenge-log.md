@@ -1467,3 +1467,81 @@ and was wrong for exactly that reason.
 One assertion is still owed. The suite passes on both the old implementation and
 the new one, because every test asks what `contains` returns and none asks what
 it costs. Until a test separates them, the repair is protected by nothing.
+
+---
+
+## E2 %s `MyList` and variance
+
+### 24. Delete the `+` from `MyList[+A]`. Which line does the compiler reject first, what does it say, and what would an invariant `MyList` need instead?
+
+Contracted from the start: the enum's own Scaladoc says *"delete the `+`,
+compile, and record which line the compiler rejects first %s that error is the
+whole content of Part VII.26, and it is asked again in §G."*
+
+**Answered unaided, and correctly in all three parts.** The compiler rejects
+`Nil`; `Nil` is `MyList[Nothing]` by construction and invariance denies it every
+other element type; so the empty list must become per-type, declared
+`case Nil[A]() extends MyList[A]`.
+
+Run, on `enum MyList[A]`:
+
+```text
+27 |  case Nil
+   |  ^^^^^^^^
+   |  cannot determine type argument for enum parent class MyList,
+   |  type parameter type A is invariant
+```
+
+One error, and the diagnosis is the answer restated by the compiler. The
+`extends MyList[A]` is not optional either %s writing `case Nil[A]()` alone is
+rejected with *"explicit extends clause needed because both enum case and enum
+class have type parameters"*.
+
+### What the repair costs
+
+It type-checks, and it breaks five use sites: a bare `Nil` now names the case
+class's companion object rather than a value, so every `case Nil =>` pattern and
+every `= Nil` default becomes `Nil()`. That is inconvenience, not cost.
+
+The cost is that the empty list stops being free.
+
+```text
+Cov.Nil eq Cov.Nil                = true
+Inv.Nil[Int]() eq Inv.Nil[Int]()  = false
+
+100,000 empty lists
+  covariant, parameterless case              0 bytes    0.00 per instance
+  invariant, Nil[A]()                1,600,072 bytes   16.00 per instance
+```
+
+A parameterless enum case compiles to a **single value**; a parameterised one
+compiles to a case class, and `Nil[A]()` allocates on every call. Covariance is
+not type-level convenience here %s it is what makes the empty list cost nothing,
+on the most frequently constructed value in the whole structure: the seed of
+every fold, the default accumulator of every `loop`, the terminator of every
+list.
+
+The 16 bytes agree with Module 1's layout model exactly:
+`Footprint.shallowSize(0, 0, 0, 0, 0)` is `align(12)` = 16, and `javap` confirms
+the class has no fields at all.
+
+### An instrument note: why the first measurement said 24
+
+The first run measured 24 bytes per instance, against a model predicting 16. The
+enum had been declared *inside* the test class, and `javap` names the difference:
+
+```text
+class TempLayoutSpec$InnerInv$Nil
+  private final TempLayoutSpec$InnerInv$ $outer;      // the companion
+class TempLayoutSpec$InnerInv
+  private final TempLayoutSpec $outer;                // the enclosing instance
+
+top-level   12 header + 0 fields      = 12  ->  align 16     measured 16
+nested      12 header + 2 refs x 4    = 20  ->  align 24     measured 24
+```
+
+Two enclosing references, one per level of nesting, and both are invisible in
+the source. A nested enum costs 50%% more per instance than the same declaration
+at the top level %s worth knowing independently of this challenge, and a reminder
+that a measurement of a *declaration* is sensitive to where the declaration
+sits.
