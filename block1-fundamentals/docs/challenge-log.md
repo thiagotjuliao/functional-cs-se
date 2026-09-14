@@ -1605,3 +1605,63 @@ def filterReverseFirst[A](xs: MyList[A])(p: A => Boolean): MyList[A] =
       case MyList.Cons(_, t) => loop(t, acc)
   loop(xs.reverse)          // the other ordering; the shipped one is loop(xs).reverse
 ```
+
+---
+
+## E5 — `Building`
+
+### 26. The `byPrepend` column measures 2.026, 2.013, 2.006. It descends toward 2 and never rises. Why, and what would the first ratio be with a zero constant term?
+
+**Answered: because the constant term `-4,056` shrinks the denominator more.**
+That is the mechanism, and closing the form turns "more" into a number.
+
+With `byPrepend(n) = 80n - c` and `D = 80n`:
+
+```text
+ratio = (2D - c) / (D - c)  =  2 + c/(D - c)
+                                  ^^^^^^^^^
+                                  the excess above 2
+```
+
+Subtracting the same constant from both sides removes a larger *fraction* of the
+denominator, because the denominator is half the numerator. The excess is
+`c/(D - c)`, and it halves on every doubling — which is precisely what the
+column does:
+
+```text
+n         excess = c/(D - c)      ratio       measured
+-------   --------------------   ---------   -------------
+ 2,000    4,056 / 155,944        2.026009    2.026
+ 4,000    4,056 / 315,944        2.012838    2.013
+ 8,000    4,056 / 635,944        2.006378    2.006
+16,000    4,056 / 1,275,944      2.003179    not in the table
+```
+
+**With `c = 0` the ratio would be exactly 2.000000 at every `n`** — `160n / 80n`,
+exact from the first row, with no convergence at all because there would be
+nothing to converge from. The `2.026` is not measurement noise and not JIT
+warm-up: it is arithmetic, and predictable to the sixth decimal.
+
+### What the same argument says about the other column
+
+`byAppend` measures 3.999, 3.999, 4.000 — it **rises** toward 4 while
+`byPrepend` **descends** toward 2. Same mechanism, opposite sign:
+
+```text
+4 f(n) - f(2n) = 64n - 12,168  >  0,   so   ratio = 4 - (64n - 12,168)/f(n)
+
+n         deficit                        ratio
+-------   ----------------------------   --------
+ 2,000    115,832 / 96,059,944           3.998794
+ 4,000    243,832 / 384,123,944          3.999365
+ 8,000    499,832 / 1,536,251,944        3.999675
+```
+
+In `byPrepend` the lower-order term is a negative constant and it pushes the
+ratio **up**; in `byAppend` the linear `+32n` dominates that constant and pushes
+it **down**. **The direction of approach reports the sign of the net lower-order
+effect**, which is information the doubling test discards the moment it is read
+as "close enough to 2, close enough to 4".
+
+It is also the practical reason the assertion bands in `Exercise5BuildingSpec`
+sit asymmetrically about their targets rather than centred on them.
