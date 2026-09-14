@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 6 (Medium) — A 64-element set in one machine word.
+/** Exercise 6 — A 64-element set in one machine word.
   *
   * A `Long` read set-theoretically (guide, Part II) is the characteristic
   * function of a subset of `{0, ..., 63}`. Under that reading the bitwise
@@ -115,7 +115,7 @@ object BitSet64:
   end extension
 end BitSet64
 
-/** Exercise 7 (Medium) — Packing several fields into one word.
+/** Exercise 7 — Packing several fields into one word.
   *
   * Two independent payoffs, both of which the curriculum collects later:
   *

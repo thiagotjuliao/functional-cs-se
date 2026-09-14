@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 5 (Medium) — BitAdder: arithmetic reconstructed from Boolean
+/** Exercise 5 — BitAdder: arithmetic reconstructed from Boolean
   * algebra.
   */
 class Exercise5BitAdderSpec extends AnnexA1Harness:

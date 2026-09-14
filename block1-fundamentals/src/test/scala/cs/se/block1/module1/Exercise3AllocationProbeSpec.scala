@@ -1,6 +1,6 @@
 package cs.se.block1.module1
 
-/** Exercise 3 (Easy) — AllocationProbe: the instrument every later allocation
+/** Exercise 3 — AllocationProbe: the instrument every later allocation
   * claim in this module is measured with.
   */
 class Exercise3AllocationProbeSpec extends Module1Harness:

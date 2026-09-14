@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 9 (Hard) — VarIntCodec: zig-zag plus LEB128, the encoding used by
+/** Exercise 9 — VarIntCodec: zig-zag plus LEB128, the encoding used by
   * Protocol Buffers.
   */
 class Exercise9VarIntCodecSpec extends AnnexA1Harness:

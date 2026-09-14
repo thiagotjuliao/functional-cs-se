@@ -15,7 +15,7 @@ import scala.reflect.ClassTag
   */
 final case class SparseNode[A](bitmap: Int, children: IArray[A])
 
-/** Exercise 8 (Hard) — The HAMT node primitive.
+/** Exercise 8 — The HAMT node primitive.
   *
   * This is the exercise the whole annex exists to make possible. Scala's
   * immutable `Vector`, `Map` and `Set` are tries of branching factor 32, and
@@ -122,7 +122,7 @@ object BitmapIndex:
     }
 end BitmapIndex
 
-/** Exercise 9 (Hard) — Variable-length integer encoding.
+/** Exercise 9 — Variable-length integer encoding.
   *
   * The bridge to Module B4-M12. This is not a toy format: zig-zag plus LEB128 is
   * exactly how Protocol Buffers encodes `sint32`, and the same shape appears in

@@ -170,8 +170,18 @@ Binding rules:
 * **Every numbered section of the guide gets at least one question.** Coverage is
   mechanically checkable: list the guide's sections, list the sections the
   questions cite, and the two lists must agree.
-* **Three tiers**, labelled per question, following the Easy / Medium / Hard
-  taxonomy of Step 3. Quantity and distribution are yours to choose.
+* **Three tiers**, labelled per question. The axis is what the reader must do
+  to answer, and it is defined here rather than borrowed from Step 3, which
+  labels nothing:
+  * *Easy* — recall a fact the guide states outright: what an operator does,
+    how a notation is read, which width a type has.
+  * *Medium* — derive one step from a stated fact: apply the mechanism to an
+    input the guide does not tabulate.
+  * *Hard* — separate a near-identical pair, or predict a documented
+    divergence: `>>` against `>>>`, a sign bit against a data bit, a mask that
+    rescues the low field but not the top one.
+
+  Quantity and distribution are yours to choose.
 * **Filterable by Part and by tier**, so a Part can be drilled the day it is
   read.
 * **No external dependencies.** No CDN, no framework, no build step: one file
@@ -183,10 +193,19 @@ Binding rules:
 Provide a rigid, bulletproof list of acceptance criteria for the module. I will save this list and only advance when every item is marked as checked `[x]`. The list always ends with an **Oral Defence** section, whose box is closed by the Challenge Log described in Step 4.
 
 ### Step 3: The Expanded Exercise Set (MUnit)
-Provide the problem descriptions and **empty type signatures** for a robust batch of **5 to 10 exercises**, balanced across three tiers:
-* **Easy (3 to 4 exercises):** Scala 3 syntax alignment, basic pattern matching, and initial immutability concepts.
-* **Medium (3 to 4 exercises):** Purely functional recursive algorithms, persistent collections manipulation, and custom combinator design.
-* **Hard (2 to 3 exercises):** Low-level JVM performance optimization (heap/stack), metaprogramming, lock-free concurrency, or formal algebraic law proofs.
+Provide the problem descriptions and **empty type signatures** for a robust batch of **5 to 10 exercises**, spanning three bands of content:
+* **Language (3 to 4 exercises):** Scala 3 syntax alignment, basic pattern matching, and initial immutability concepts.
+* **Structure (3 to 4 exercises):** Purely functional recursive algorithms, persistent collections manipulation, and custom combinator design.
+* **Machine (2 to 3 exercises):** Low-level JVM performance optimization (heap/stack), metaprogramming, lock-free concurrency, or formal algebraic law proofs.
+
+**The bands constrain the author, not the artifact.** They exist so that a set
+covers all three, and they are never printed: no exercise carries a difficulty
+label in its checklist entry, its Scaladoc, or its spec. A single adjective
+cannot separate conceptual depth from volume of code from JVM machinery, and
+when it tries, it misleads — `Sharing` is pure arithmetic over a dense idea and
+must be solved *first*, which no honest label communicates. Exercises are
+attempted in the order given; where the order matters for a reason the number
+does not convey, state that reason in the entry itself.
 *Provide the complete companion MUnit test file (`*Spec.scala`) to mathematically validate my implementation against all laws and invariants.*
 
 ### Step 4: Post-Module Architectural Review & Audit

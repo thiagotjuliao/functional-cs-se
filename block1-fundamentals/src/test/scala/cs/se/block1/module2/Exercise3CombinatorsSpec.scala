@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 3 (Easy) — map, filter and reverse, and the laws that pin them. */
+/** Exercise 3 — map, filter and reverse, and the laws that pin them. */
 class Exercise3CombinatorsSpec extends Module2Harness:
 
   // A def, not a val: a val is built at construction time, so an unimplemented

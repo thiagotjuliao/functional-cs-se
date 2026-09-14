@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 8 (Hard) — BitmapIndex: the HAMT node primitive. */
+/** Exercise 8 — BitmapIndex: the HAMT node primitive. */
 class Exercise8BitmapIndexSpec extends AnnexA1Harness:
 
   private val slots = 0 to 31

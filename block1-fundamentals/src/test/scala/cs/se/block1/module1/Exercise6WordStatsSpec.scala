@@ -2,7 +2,7 @@ package cs.se.block1.module1
 
 import scala.util.Random
 
-/** Exercise 6 (Medium) — WordStats: persistent map folding and a total,
+/** Exercise 6 — WordStats: persistent map folding and a total,
   * deterministic ordering that must not leak hash order.
   */
 class Exercise6WordStatsSpec extends Module1Harness:

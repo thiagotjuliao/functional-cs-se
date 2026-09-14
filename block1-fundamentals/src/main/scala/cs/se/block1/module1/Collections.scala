@@ -1,6 +1,6 @@
 package cs.se.block1.module1
 
-/** Exercise 6 (Medium) — persistent collections and structural sharing.
+/** Exercise 6 — persistent collections and structural sharing.
   *
   * A first, gentle encounter with the structure Module 2 rebuilds by hand:
   * Scala's immutable `Map` is a Hash Array Mapped Trie. Updating it does not
@@ -51,7 +51,7 @@ object WordStats:
     else frequencies.toList.sortBy((s, n) => (-n, s)).take(n)
 end WordStats
 
-/** Exercise 8 (Hard) — asymptotic allocation, not asymptotic time.
+/** Exercise 8 — asymptotic allocation, not asymptotic time.
   *
   * The lesson here is that Big-O applies to *bytes* as well as to steps, and
   * that the two can have different exponents for the same algorithm.

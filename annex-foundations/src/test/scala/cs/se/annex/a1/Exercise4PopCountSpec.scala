@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 4 (Medium) — PopCount: three algorithms measured against one
+/** Exercise 4 — PopCount: three algorithms measured against one
   * intrinsic.
   */
 class Exercise4PopCountSpec extends AnnexA1Harness:

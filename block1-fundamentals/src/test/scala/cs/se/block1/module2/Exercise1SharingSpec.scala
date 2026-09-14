@@ -2,7 +2,7 @@ package cs.se.block1.module2
 
 import cs.se.block1.module1.Footprint
 
-/** Exercise 1 (Hard) — the cost model. Arithmetic only: this suite can go green
+/** Exercise 1 — the cost model. Arithmetic only: this suite can go green
   * before a single data structure exists, which is why the exercise is first.
   */
 class Exercise1SharingSpec extends Module2Harness:

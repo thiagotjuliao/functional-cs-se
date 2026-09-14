@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 7 (Medium) — Packing: several fields in one word. */
+/** Exercise 7 — Packing: several fields in one word. */
 class Exercise7PackingSpec extends AnnexA1Harness:
 
   test("packInts round-trips every pair, negatives included") {

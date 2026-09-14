@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 5 (Medium) — the doubling test, run on your own structure.
+/** Exercise 5 — the doubling test, run on your own structure.
   *
   * The assertions here are on **ratios**, never on absolute byte counts. An
   * absolute threshold would encode this machine's constants into a test that has

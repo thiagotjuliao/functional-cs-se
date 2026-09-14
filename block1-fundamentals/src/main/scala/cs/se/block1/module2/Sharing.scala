@@ -4,7 +4,7 @@ import cs.se.block1.module1.Footprint
 
 import scala.annotation.unused
 
-/** Exercise 1 (Hard) — the cost model, and the first thing you write.
+/** Exercise 1 — the cost model, and the first thing you write.
   *
   * This exercise is out of tier order on purpose. It contains no data structure,
   * no recursion and no measurement: it is arithmetic over the object layout you

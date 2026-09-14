@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 2 (Easy) — TwosComplement: the master identity and branchless sign
+/** Exercise 2 — TwosComplement: the master identity and branchless sign
   * handling.
   */
 class Exercise2TwosComplementSpec extends AnnexA1Harness:

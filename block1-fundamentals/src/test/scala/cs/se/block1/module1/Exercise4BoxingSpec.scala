@@ -2,7 +2,7 @@ package cs.se.block1.module1
 
 import scala.util.Random
 
-/** Exercise 4 (Medium) — Boxing: the allocation cost of `List[Int]` against
+/** Exercise 4 — Boxing: the allocation cost of `List[Int]` against
   * `Array[Int]`, measured rather than asserted from theory.
   */
 class Exercise4BoxingSpec extends Module1Harness:

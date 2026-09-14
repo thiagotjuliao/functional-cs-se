@@ -1,6 +1,6 @@
 package cs.se.block1.module1
 
-/** Exercise 4 (Medium) — the boxing tax, measured rather than assumed.
+/** Exercise 4 — the boxing tax, measured rather than assumed.
   *
   * Two summations that are mathematically identical and materially different at
   * the machine level. The spec asserts that they agree numerically; the
@@ -42,7 +42,7 @@ object Boxing:
     loop()
 end Boxing
 
-/** Exercise 5 (Hard) — the controlled experiment for escape analysis.
+/** Exercise 5 — the controlled experiment for escape analysis.
   *
   * These two functions do the same arithmetic over the same inputs and differ
   * in exactly one respect: whether the `Vec2` instances they construct can be
@@ -116,7 +116,7 @@ object Escape:
     Array.tabulate(xs.length)(i => Vec2(xs(i), ys(i)))
 end Escape
 
-/** Exercise 7 (Hard) — heap arithmetic from first principles.
+/** Exercise 7 — heap arithmetic from first principles.
   *
   * No reflection, no JOL, no measurement: derive the numbers from the layout
   * rules in the guide, Part I.4.1. This is the exercise that converts the theory

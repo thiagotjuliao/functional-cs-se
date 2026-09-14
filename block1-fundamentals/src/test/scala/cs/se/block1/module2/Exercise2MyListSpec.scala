@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 2 (Easy) — the ADT and the three questions you can ask a cell. */
+/** Exercise 2 — the ADT and the three questions you can ask a cell. */
 class Exercise2MyListSpec extends Module2Harness:
 
   test("apply builds front-to-back, and Nil is a shared singleton") {

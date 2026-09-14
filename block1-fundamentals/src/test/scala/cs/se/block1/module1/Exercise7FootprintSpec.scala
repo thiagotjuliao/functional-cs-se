@@ -1,6 +1,6 @@
 package cs.se.block1.module1
 
-/** Exercise 7 (Hard) — Footprint arithmetic: deriving the HotSpot object layout
+/** Exercise 7 — Footprint arithmetic: deriving the HotSpot object layout
   * on paper, then asserting the derivation against known-good sizes.
   */
 class Exercise7FootprintSpec extends Module1Harness:

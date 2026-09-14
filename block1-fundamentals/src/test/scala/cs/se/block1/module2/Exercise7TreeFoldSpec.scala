@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 7 (Medium) — traversal, and the law that makes the invariant
+/** Exercise 7 — traversal, and the law that makes the invariant
   * observable.
   */
 class Exercise7TreeFoldSpec extends Module2Harness:

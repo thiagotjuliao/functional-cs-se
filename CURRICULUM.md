@@ -79,9 +79,9 @@ is the only one heavy on both at once, and should be budgeted accordingly.
 * **Module 3: Stack Optimization & Control Flow Elimination (Week 3)**
   * *Theory:* Elimination of imperative constructs, advanced tail-call recursion optimization (`@tailrec`), and structural prevention of `StackOverflowError`.
 * **🎯 Graded Exercise Set (Week 3):**
-  * *Easy:* Transforming imperative `while` loops into pure tail-recursive functions.
-  * *Medium:* Implementing custom structural combinators (`map`, `filter`, `foldLeft`, `foldRight`) on your manual persistent list.
-  * *Hard:* Writing a balanced, pure functional Binary Search Tree (BST) supporting rotations with zero variable mutations.
+  * Transforming imperative `while` loops into pure tail-recursive functions.
+  * Implementing custom structural combinators (`map`, `filter`, `foldLeft`, `foldRight`) on your manual persistent list.
+  * Writing a balanced, pure functional Binary Search Tree (BST) supporting rotations with zero variable mutations.
 * **🚀 Mini-Project 1: Algebraic Expression Evaluation Engine & AST (Week 4)**
   * *Description:* Build a purely functional mathematical parser and evaluation engine. The system will ingest raw math strings, generate an Abstract Syntax Tree (AST), optimize the expressions algebraically using pattern matching identities, and safely compute the output guaranteeing zero stack overflow risk and clean heap allocation.
 
@@ -101,9 +101,9 @@ is the only one heavy on both at once, and should be budgeted accordingly.
   * *Theory:* Endofunctors, Monads as Monoids in the category of Endofunctors, Composability boundaries, and Monad Transformers.
   * *Implementation:* Coding your own structural interfaces for `Functor`, `Applicative`, and `Monad`. Implementing concrete instances for custom data wrappers alongside `State` and `Either` monads.
 * **🎯 Graded Exercise Set (Week 9):**
-  * *Easy:* Designing smart constructors with opaque types to block bad primitives (e.g., structural Email/CPF wrappers).
-  * *Medium:* Providing manual `Functor` and `Monad` instances for deeply nested or custom recursive structures.
-  * *Hard:* Creating a custom property-based validation mini-engine on top of MUnit to empirically verify Monad Laws (Left Identity, Right Identity, Associativity).
+  * Designing smart constructors with opaque types to block bad primitives (e.g., structural Email/CPF wrappers).
+  * Providing manual `Functor` and `Monad` instances for deeply nested or custom recursive structures.
+  * Creating a custom property-based validation mini-engine on top of MUnit to empirically verify Monad Laws (Left Identity, Right Identity, Associativity).
 * **🚀 Mini-Project 2: Combinatoric Validation Framework & State Mutation Engine (Week 10)**
   * *Description:* Code your own mini-"Cats Core" engine. The integration goal is a resilient Financial Transaction Processor. Incoming complex data validations must accumulate multiple parallel processing errors via a custom `Validated` data structure, and successive structural state mutations must be evaluated purely functionally through your manual `State` monad, yielding immutable transaction logs without any variable mutations.
 
@@ -122,9 +122,9 @@ is the only one heavy on both at once, and should be budgeted accordingly.
   * *Theory:* Abstract mutual exclusion, structural signaling, and coordinating shared state under highly asynchronous thread environments.
   * *Implementation:* Coding thread-safe `Ref` wrappers (using Java's `AtomicReference`) and async single-assignment `Deferred` variables (logical async promises) from scratch without utilizing heavy `synchronized` statements.
 * **🎯 Graded Exercise Set (Week 15):**
-  * *Easy:* Writing a custom lazy data abstraction that handles atomic memoization (evaluate once, cache safely).
-  * *Medium:* Implementing a concurrency racing combinator (`race`), where two competing `IO` tasks execute simultaneously, automatically canceling the loser cleanly.
-  * *Hard:* Coding an asynchronous, non-blocking binary `Semaphore` relying exclusively on your native `IO`, `Ref`, and `Deferred` implementations.
+  * Writing a custom lazy data abstraction that handles atomic memoization (evaluate once, cache safely).
+  * Implementing a concurrency racing combinator (`race`), where two competing `IO` tasks execute simultaneously, automatically canceling the loser cleanly.
+  * Coding an asynchronous, non-blocking binary `Semaphore` relying exclusively on your native `IO`, `Ref`, and `Deferred` implementations.
 * **🚀 Mini-Project 3: Micro-Effect Runtime & Resilient Background Job Processor (Week 16)**
   * *Description:* Build a lightweight, custom clone of a framework like "Cats Effect" or "ZIO". The mini-project consists of an high-throughput background batch processing engine. The system will poll high-volume mock tasks, dynamically throttle concurrency quotas through your custom fiber runtime, allocate loads across virtual threads, and track system vital signs via an immutable fiber context tracker (`FiberRef`).
 
@@ -144,9 +144,9 @@ is the only one heavy on both at once, and should be budgeted accordingly.
   * *Theory:* The Tagless Final pattern (Functional Inversion of Control). Extreme network serialization optimizations via pure typeclass-driven transformations without runtime reflection overhead.
   * *Implementation:* Decoupling business logic from transport mechanisms using context bounds. Building manual binary encoders and decoders (*Codecs*) that map custom entities directly into raw Byte Arrays using precise bitwise logic (`&`, `|`, `>>`).
 * **🎯 Graded Exercise Set (Week 21):**
-  * *Easy:* Engineering a continuous, infinite reactive Stream of Prime Numbers or Fibonacci records evaluated entirely on demand.
-  * *Medium:* Testing a robust logging system that guarantees a target file descriptor is securely closed even if the input streaming fiber encounters a fatal exception halfway through.
-  * *Hard (Module 12 Specific):* Implement a pure type-level `Codec` combinator using Scala 3 `Match Types` that automatically synthesizes binary encoders for fixed-size tuples without relying on reflection or third-party macros.
+  * Engineering a continuous, infinite reactive Stream of Prime Numbers or Fibonacci records evaluated entirely on demand.
+  * Testing a robust logging system that guarantees a target file descriptor is securely closed even if the input streaming fiber encounters a fatal exception halfway through.
+  * *(Module 12)* Implement a pure type-level `Codec` combinator using Scala 3 `Match Types` that automatically synthesizes binary encoders for fixed-size tuples without relying on reflection or third-party macros.
 * **🚀 Mini-Project 4: Fully Reactive Stream-Based HTTP Server from Scratch (Week 22)**
   * *Description:* The ultimate capstone project merging every concept learned in this course. Utilizing native Java Non-Blocking Sockets (Java NIO Sockets) running in a pure functional wrapper, you will build an **asynchronous, stream-oriented HTTP Server** completely from scratch (similar to a micro-scale fusion of *FS2* and *Http4s*). The server will sustain concurrent incoming client traffic, stream responses using your manual backpressure protocols, wrap request-handling resources safely, and serialize network payloads via your custom binary bitwise Codecs. The entire application architecture will be modular, structured in pure layers decoupled by Scala 3 context parameters.
 

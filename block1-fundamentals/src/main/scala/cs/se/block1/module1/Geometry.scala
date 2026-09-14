@@ -1,6 +1,6 @@
 package cs.se.block1.module1
 
-/** Exercise 1 (Easy) — Scala 3 syntax alignment: `extension` blocks.
+/** Exercise 1 — Scala 3 syntax alignment: `extension` blocks.
   *
   * A two-dimensional vector. `final` is deliberate: a class that cannot be
   * subclassed keeps its call sites monomorphic, which is a precondition for the
@@ -66,7 +66,7 @@ object Vec2:
   end extension
 end Vec2
 
-/** Exercise 2 (Easy) — Scala 3 syntax alignment: `enum` as an ADT.
+/** Exercise 2 — Scala 3 syntax alignment: `enum` as an ADT.
   *
   * A closed sum type over three shapes. Because the type is closed, the
   * compiler can prove a `match` on it exhaustive — the whole point of an ADT.

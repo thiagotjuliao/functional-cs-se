@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 8 (Hard) — the model against the machine.
+/** Exercise 8 — the model against the machine.
   *
   * Every assertion here compares a measurement with what Exercise 1 predicted
   * from arithmetic alone. Tolerances are generous, because the instrument has a

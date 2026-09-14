@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 4 (Medium) — Population count, three ways.
+/** Exercise 4 — Population count, three ways.
   *
   * `popcount` is the primitive that makes Hash Array Mapped Tries viable, and
   * therefore the primitive that makes Scala's immutable `Map` and `Vector`
@@ -75,7 +75,7 @@ object PopCount:
     (z * c4) >>> 24 // horizontal sum
 end PopCount
 
-/** Exercise 5 (Medium) — Arithmetic reconstructed from Boolean algebra.
+/** Exercise 5 — Arithmetic reconstructed from Boolean algebra.
   *
   * Addition is not a primitive that sits above bit manipulation; it is a fixed
   * point of a Boolean recurrence (guide, Part IV.23). Proving that to yourself

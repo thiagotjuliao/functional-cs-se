@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercises 8 and 9 (Hard) — confronting the model with the machine.
+/** Exercises 8 and 9 — confronting the model with the machine.
   *
   * Exercise 1 made predictions from arithmetic alone. This is where they are
   * checked against `AllocationProbe`, the instrument you built in Module 1,
@@ -58,7 +58,7 @@ object SharingProof:
 
 end SharingProof
 
-/** Exercise 9 (Hard) — what insertion order does to depth, and what depth does
+/** Exercise 9 — what insertion order does to depth, and what depth does
   * to cost.
   *
   * Every number in the guide's §15 rests on one quantity, and that quantity is

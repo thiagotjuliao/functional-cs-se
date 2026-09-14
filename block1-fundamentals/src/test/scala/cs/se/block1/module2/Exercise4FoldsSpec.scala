@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 4 (Easy) — the two folds, and the asymmetry between them.
+/** Exercise 4 — the two folds, and the asymmetry between them.
   *
   * The last test asserts that `foldRight` *fails*. That is deliberate: a
   * `foldRight` which survives a million elements is one that quietly reversed

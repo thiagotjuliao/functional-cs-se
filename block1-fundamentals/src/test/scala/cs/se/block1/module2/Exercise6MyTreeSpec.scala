@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 6 (Medium) — the BST, its invariant, and what depth depends on. */
+/** Exercise 6 — the BST, its invariant, and what depth depends on. */
 class Exercise6MyTreeSpec extends Module2Harness:
 
   private def build(xs: Int*): MyTree[Int] =

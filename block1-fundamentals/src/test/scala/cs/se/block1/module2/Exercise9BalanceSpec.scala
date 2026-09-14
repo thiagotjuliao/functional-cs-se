@@ -1,6 +1,6 @@
 package cs.se.block1.module2
 
-/** Exercise 9 (Hard) — what insertion order does to depth, and what depth does
+/** Exercise 9 — what insertion order does to depth, and what depth does
   * to cost.
   *
   * The whole module rests on one number, and that number is not a property of

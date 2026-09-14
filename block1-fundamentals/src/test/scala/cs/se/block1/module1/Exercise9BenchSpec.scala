@@ -1,6 +1,6 @@
 package cs.se.block1.module1
 
-/** Exercise 9 (Hard) — the timing harness: a measurement is only a measurement
+/** Exercise 9 — the timing harness: a measurement is only a measurement
   * if the optimiser could not delete the thing being measured.
   */
 class Exercise9BenchSpec extends Module1Harness:

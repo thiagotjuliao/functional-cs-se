@@ -2,7 +2,7 @@ package cs.se.annex.a1
 
 import cs.se.annex.a1.TwosComplement.signMask
 
-/** Exercise 1 (Easy) — Addressing individual bits.
+/** Exercise 1 — Addressing individual bits.
   *
   * The vocabulary every later exercise is written in. A 32-bit word is read here
   * as the characteristic function of a subset of `{0, ..., 31}`: `testBit` is
@@ -62,7 +62,7 @@ object Bits:
     }.mkString
 end Bits
 
-/** Exercise 2 (Easy) — Two's complement and branchless sign handling.
+/** Exercise 2 — Two's complement and branchless sign handling.
   *
   * Everything here descends from the master identity `-x == ~x + 1`
   * (guide, Part I.6.4). The point of the exercise is not the four lines of code
@@ -119,7 +119,7 @@ object TwosComplement:
   def floorDiv2(x: Int): Int = x >> 1
 end TwosComplement
 
-/** Exercise 3 (Easy) — Powers of two.
+/** Exercise 3 — Powers of two.
   *
   * The arithmetic that makes hash tables and tries fast. Every function here
   * must run in constant time with no loop and no floating point: `Math.log`,

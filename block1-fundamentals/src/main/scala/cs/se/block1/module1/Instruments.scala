@@ -3,7 +3,7 @@ package cs.se.block1.module1
 import com.sun.management.ThreadMXBean
 import java.lang.management.ManagementFactory
 
-/** Exercise 3 (Easy) — the measuring instrument for the entire module.
+/** Exercise 3 — the measuring instrument for the entire module.
   *
   * Implement this one first: Exercises 4, 5 and 8 are validated through it.
   *
@@ -77,7 +77,7 @@ object AllocationProbe:
     (value, measureResult)
 end AllocationProbe
 
-/** Exercise 9 (Hard) — a minimal, honest timing harness.
+/** Exercise 9 — a minimal, honest timing harness.
   *
   * Before writing a single line here, watch Shipilëv's *Nanotrusting the
   * Nanotime*. This exercise exists so that you feel, first-hand, the three

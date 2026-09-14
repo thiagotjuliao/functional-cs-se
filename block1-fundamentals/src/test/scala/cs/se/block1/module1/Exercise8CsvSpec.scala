@@ -2,7 +2,7 @@ package cs.se.block1.module1
 
 import scala.util.Random
 
-/** Exercise 8 (Hard) — allocation complexity: an O(n) renderer proved against
+/** Exercise 8 — allocation complexity: an O(n) renderer proved against
   * an O(n^2) control, by measurement rather than by inspection.
   */
 class Exercise8CsvSpec extends Module1Harness:

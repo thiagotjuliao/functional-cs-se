@@ -2,7 +2,7 @@ package cs.se.block1.module1
 
 import scala.util.Random
 
-/** Exercise 2 (Easy) — Shape: an enum ADT and its area fold. */
+/** Exercise 2 — Shape: an enum ADT and its area fold. */
 class Exercise2ShapeSpec extends Module1Harness:
 
   /** The same element count `Exercise4BoxingSpec` uses, so that the two

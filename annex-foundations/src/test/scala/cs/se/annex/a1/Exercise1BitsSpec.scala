@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 1 (Easy) — Bits: addressing individual bits. */
+/** Exercise 1 — Bits: addressing individual bits. */
 class Exercise1BitsSpec extends AnnexA1Harness:
 
   private val indices = 0 to 31

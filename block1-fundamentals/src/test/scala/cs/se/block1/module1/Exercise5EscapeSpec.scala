@@ -2,7 +2,7 @@ package cs.se.block1.module1
 
 import scala.util.Random
 
-/** Exercise 5 (Hard) — Escape analysis: the same `Vec2` allocation is free when
+/** Exercise 5 — Escape analysis: the same `Vec2` allocation is free when
   * it cannot escape and expensive when it can.
   */
 class Exercise5EscapeSpec extends Module1Harness:

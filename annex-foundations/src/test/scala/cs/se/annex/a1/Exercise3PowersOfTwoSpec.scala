@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 3 (Easy) — PowersOfTwo: the arithmetic behind hash tables and tries. */
+/** Exercise 3 — PowersOfTwo: the arithmetic behind hash tables and tries. */
 class Exercise3PowersOfTwoSpec extends AnnexA1Harness:
 
   private val positivePowers: List[Int] = (0 to 30).map(1 << _).toList

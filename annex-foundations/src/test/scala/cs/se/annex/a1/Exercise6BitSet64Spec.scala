@@ -1,6 +1,6 @@
 package cs.se.annex.a1
 
-/** Exercise 6 (Medium) — BitSet64: a Boolean algebra in one machine word. */
+/** Exercise 6 — BitSet64: a Boolean algebra in one machine word. */
 class Exercise6BitSet64Spec extends AnnexA1Harness:
 
   private val members = 0 to 63

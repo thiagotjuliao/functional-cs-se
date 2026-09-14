@@ -37,24 +37,24 @@ unperformed measurement.
 All nine exercises live in `src/main/scala/cs/se/annex/a1/` and are validated
 by the suites in `src/test/scala/cs/se/annex/a1/`.
 
-- [x] **E1 `Bits`** *(Easy)* — `testBit`, `setBit`, `clearBit`, `toggleBit`,
+- [x] **E1 `Bits`** — `testBit`, `setBit`, `clearBit`, `toggleBit`,
       `toBinaryString`.
-- [x] **E2 `TwosComplement`** *(Easy)* — `negate`, `signMask`, `absBranchless`,
+- [x] **E2 `TwosComplement`** — `negate`, `signMask`, `absBranchless`,
       `sameSign`, `floorDiv2`.
-- [x] **E3 `PowersOfTwo`** *(Easy)* — `isPowerOfTwo`, `modPowerOfTwo`,
-      `nextPowerOfTwo`, `log2Floor`.
-- [x] **E4 `PopCount`** *(Medium)* — `naive`, `kernighan`, `swar`, plus the
-      three-way agreement law.
-- [x] **E5 `BitAdder`** *(Medium)* — `add`, `negate`, `subtract`, `multiply`,
-      built from `^`, `&` and `<<` only.
-- [x] **E6 `BitSet64`** *(Medium)* — an `opaque type` over `Long` satisfying the
+- [x] **E3 `PowersOfTwo`** — `isPowerOfTwo`, `modPowerOfTwo`, `nextPowerOfTwo`,
+      `log2Floor`.
+- [x] **E4 `PopCount`** — `naive`, `kernighan`, `swar`, plus the three-way
+      agreement law.
+- [x] **E5 `BitAdder`** — `add`, `negate`, `subtract`, `multiply`, built from
+      `^`, `&` and `<<` only.
+- [x] **E6 `BitSet64`** — an `opaque type` over `Long` satisfying the
       Boolean-algebra laws.
-- [x] **E7 `Packing`** *(Medium)* — `packInts`/`unpackHi`/`unpackLo` and the
-      RGBA byte codec, with roundtrip laws.
-- [x] **E8 `BitmapIndex`** *(Hard)* — the HAMT node primitive: `hasSlot`,
+- [x] **E7 `Packing`** — `packInts`/`unpackHi`/`unpackLo` and the RGBA byte
+      codec, with roundtrip laws.
+- [x] **E8 `BitmapIndex`** — the HAMT node primitive: `hasSlot`,
       `physicalIndex`, `insertAt`, `removeAt` over a persistent array.
-- [x] **E9 `VarIntCodec`** *(Hard)* — zig-zag plus LEB128, with a roundtrip law
-      over the whole `Int` range and a size bound.
+- [x] **E9 `VarIntCodec`** — zig-zag plus LEB128, with a roundtrip law over the
+      whole `Int` range and a size bound.
 
 ### C. Correctness Gate
 

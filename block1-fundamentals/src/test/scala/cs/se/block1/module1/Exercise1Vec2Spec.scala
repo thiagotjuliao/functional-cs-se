@@ -2,7 +2,7 @@ package cs.se.block1.module1
 
 import scala.util.Random
 
-/** Exercise 1 (Easy) — Vec2: component-wise algebra and its monoid laws. */
+/** Exercise 1 — Vec2: component-wise algebra and its monoid laws. */
 class Exercise1Vec2Spec extends Module1Harness:
 
   test("addition is component-wise") {

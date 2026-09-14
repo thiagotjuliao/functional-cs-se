@@ -2,7 +2,7 @@ package cs.se.block1.module2
 
 import cs.se.block1.module2.MyList.*
 
-/** Exercise 5 (Medium) — two ways to build the same list, and the doubling test
+/** Exercise 5 — two ways to build the same list, and the doubling test
   * that tells them apart.
   *
   * Both functions below must return exactly the same list. They are pure, they

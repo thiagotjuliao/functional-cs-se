@@ -327,24 +327,23 @@ writing a line of `MyList`.
 All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
 `src/test/scala/cs/se/block1/module2/`.
 
-- [x] **E1 `Sharing`** *(Hard — do this first)* — the cost model: cells
-      allocated and shared per operation, balanced depth, and the tree sharing
-      ratio. Pure arithmetic, no data structure, no measurement.
-- [x] **E2 `MyList`** *(Easy)* — the `enum` ADT, `isEmpty`, `length`,
-      `headOption`, and the variance that makes `Nil` serve every element type.
-- [x] **E3 `Combinators`** *(Easy)* — `map`, `filter`, `reverse`.
-- [x] **E4 `Folds`** *(Easy)* — `foldLeft`, `foldRight`, `append`, `concat`, and
-      the stack-depth difference between the two folds.
-- [x] **E5 `Building`** *(Medium)* — `byAppend` and `byPrepend`, and the
-      doubling table that proves their complexity classes.
-- [x] **E6 `MyTree`** *(Medium)* — the BST `enum`: `insert`, `contains`, `size`,
-      `depth`.
-- [x] **E7 `TreeFold`** *(Medium)* — `foldInOrder`, `toList`, `treeMap`, and the
-      ordering law that ties them together.
-- [ ] **E8 `SharingProof`** *(Hard)* — measure with `AllocationProbe` and
-      confirm, or refute, every prediction E1 made.
-- [ ] **E9 `Balance`** *(Hard)* — `fromSorted` against `fromBalanced`, and what
-      the depth difference does to the cost of one insert.
+- [x] **E1 `Sharing`** *(do this first)* — the cost model: cells allocated and
+      shared per operation, balanced depth, and the tree sharing ratio. Pure
+      arithmetic, no data structure, no measurement.
+- [x] **E2 `MyList`** — the `enum` ADT, `isEmpty`, `length`, `headOption`, and
+      the variance that makes `Nil` serve every element type.
+- [x] **E3 `Combinators`** — `map`, `filter`, `reverse`.
+- [x] **E4 `Folds`** — `foldLeft`, `foldRight`, `append`, `concat`, and the
+      stack-depth difference between the two folds.
+- [x] **E5 `Building`** — `byAppend` and `byPrepend`, and the doubling table
+      that proves their complexity classes.
+- [x] **E6 `MyTree`** — the BST `enum`: `insert`, `contains`, `size`, `depth`.
+- [x] **E7 `TreeFold`** — `foldInOrder`, `toList`, `treeMap`, and the ordering
+      law that ties them together.
+- [ ] **E8 `SharingProof`** — measure with `AllocationProbe` and confirm, or
+      refute, every prediction E1 made.
+- [ ] **E9 `Balance`** — `fromSorted` against `fromBalanced`, and what the
+      depth difference does to the cost of one insert.
 
 ### C. Correctness Gate
 
