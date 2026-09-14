@@ -763,3 +763,40 @@ unchanged, which is the argument the doubling table makes below.
       plainly when that is the truth, and let `challenge-log.md` carry the
       complete answer the exchange produced. The box closes when every exercise
       has an entry there.
+
+      **Coverage is complete.** Thirteen entries over three rounds, 16 to 28,
+      and every one of the nine exercises has at least one:
+
+      | exercise | entries |
+      | :--- | :--- |
+      | E1 `Sharing` | 27 |
+      | E2 `MyList` | 24 |
+      | E3 `Combinators` | 25 |
+      | E4 `Folds` | 22 |
+      | E5 `Building` | 26 |
+      | E6 `MyTree` | 16, 17, 23 |
+      | E7 `TreeFold` | 28 |
+      | E8 `SharingProof` | 18, 19, 20 |
+      | E9 `Balance` | 21 |
+
+      The order held: every question was attempted before it was discussed.
+      Five of the seven in the later rounds were answered unaided — the
+      `concat` mechanism, the variance diagnosis and its repair, the `filter`
+      idiom, the doubling constant, and the whole of `sharingRatio`'s blind
+      spot, that one with the algebra. One was answered half right, and the
+      half that was wrong (`contains(-1)` on a right spine) was the more useful
+      half, because it repeated a documented trap. One was **"I don't know"**,
+      said plainly and at the time, and the treeMap counterexample was then
+      built from three steps with the last one left to me — which is the
+      exchange the box exists to produce.
+
+      **Two defects surfaced from the challenges rather than from the suite**,
+      and both are now fixed: `MyTree.contains` never consulted the `Ordering`
+      it asks for and was `O(n)` behind an `O(depth)` contract, and
+      `MyList.concat`'s Scaladoc said *allocates* where it meant *retains*.
+      Neither could have been caught by running anything — the suite was green
+      through both.
+
+      One item is carried rather than closed: no assertion separates the old
+      `contains` from the new one, because every test asks what it returns and
+      none asks what it costs. Recorded in entry 23.

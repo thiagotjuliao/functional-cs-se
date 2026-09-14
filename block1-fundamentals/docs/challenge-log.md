@@ -1360,7 +1360,7 @@ forces which.
 
 ---
 
-## E6 %s `MyTree.contains`
+## E6 — `MyTree.contains`
 
 ### 23. `contains` is documented `O(depth)`. On a balanced and a degenerate tree of the same 4,096 values, how many `Branch` nodes does `contains(-1)` visit?
 
@@ -1384,7 +1384,7 @@ balanced                  13     4,096 nodes                   0
 ```
 
 Identical, `O(n)` in both, and the `(using Ordering[A])` parameter is requested
-and never called %s not once. The BST invariant is paid for by every `insert`
+and never called — not once. The BST invariant is paid for by every `insert`
 and then read by nobody.
 
 Three consequences, and the first is the expensive one:
@@ -1415,7 +1415,7 @@ probe                    sorted/degenerate   balanced
 spine to the right, so a value below the minimum is less than the root, the
 root's left child is `Leaf`, and the search stops. Pattern 11 again, in a second
 function: the probe that looks like the worst case is the best case. The
-predicted `4,096` is the right number from the wrong row %s it is the cost of
+predicted `4,096` is the right number from the wrong row — it is the cost of
 probing *above* the maximum.
 
 And the balanced column is 12, not 13. `depth` is the **maximum** over
@@ -1430,7 +1430,7 @@ function of the query, and its worst case is the size of the structure.
 
 ### The repair, and what it measures
 
-Made in Exercise 6, mirroring `insert` exactly %s same guards, same trichotomy:
+Made in Exercise 6, mirroring `insert` exactly — same guards, same trichotomy:
 
 ```scala
 def contains(x: A)(using Ordering[A]): Boolean = t match
@@ -1459,7 +1459,7 @@ The nodes column is derived, not measured, and the derivation is the caution:
 a node costs **one** compare when the search goes left (`x < v` is true) and
 **two** when it goes right or stops (`x < v` false, then `x > v`). Dividing
 compares by a fixed factor is therefore only valid where every turn goes the
-same way %s true of the first two rows and false of the third. The balanced path
+same way — true of the first two rows and false of the third. The balanced path
 to 2,048 is 10 left turns, 1 right turn and the final node:
 `10 + 2 + 2 = 14`, over 12 nodes. A first pass that divided by two reported 7
 and was wrong for exactly that reason.
@@ -1470,12 +1470,12 @@ it costs. Until a test separates them, the repair is protected by nothing.
 
 ---
 
-## E2 %s `MyList` and variance
+## E2 — `MyList` and variance
 
 ### 24. Delete the `+` from `MyList[+A]`. Which line does the compiler reject first, what does it say, and what would an invariant `MyList` need instead?
 
 Contracted from the start: the enum's own Scaladoc says *"delete the `+`,
-compile, and record which line the compiler rejects first %s that error is the
+compile, and record which line the compiler rejects first — that error is the
 whole content of Part VII.26, and it is asked again in §G."*
 
 **Answered unaided, and correctly in all three parts.** The compiler rejects
@@ -1493,7 +1493,7 @@ Run, on `enum MyList[A]`:
 ```
 
 One error, and the diagnosis is the answer restated by the compiler. The
-`extends MyList[A]` is not optional either %s writing `case Nil[A]()` alone is
+`extends MyList[A]` is not optional either — writing `case Nil[A]()` alone is
 rejected with *"explicit extends clause needed because both enum case and enum
 class have type parameters"*.
 
@@ -1516,7 +1516,7 @@ Inv.Nil[Int]() eq Inv.Nil[Int]()  = false
 
 A parameterless enum case compiles to a **single value**; a parameterised one
 compiles to a case class, and `Nil[A]()` allocates on every call. Covariance is
-not type-level convenience here %s it is what makes the empty list cost nothing,
+not type-level convenience here — it is what makes the empty list cost nothing,
 on the most frequently constructed value in the whole structure: the seed of
 every fold, the default accumulator of every `loop`, the terminator of every
 list.
@@ -1542,13 +1542,13 @@ nested      12 header + 2 refs x 4    = 20  ->  align 24     measured 24
 
 Two enclosing references, one per level of nesting, and both are invisible in
 the source. A nested enum costs 50%% more per instance than the same declaration
-at the top level %s worth knowing independently of this challenge, and a reminder
+at the top level — worth knowing independently of this challenge, and a reminder
 that a measurement of a *declaration* is sensitive to where the declaration
 sits.
 
 ---
 
-## E3 %s `Combinators`
+## E3 — `Combinators`
 
 ### 25. `map` is `loop(xs.reverse)` and `filter` is `loop(xs).reverse`. For which inputs do the two idioms cost different amounts, and which is cheaper?
 
@@ -1584,7 +1584,7 @@ equal to `xs.map(identity)`.
 **`map` never drops anything, so `k = n` and its choice of idiom is free.**
 Writing it the other way changes nothing: 6,397,952 either way. **`filter` can
 drop, so it must reverse last**, and the penalty for getting it backwards is
-`n - k` cells %s exactly the elements it had already decided to discard.
+`n - k` cells — exactly the elements it had already decided to discard.
 
 The last row is the sharpest. `filter(_ => false)` costs **0 bytes** written
 correctly and **2,400,000** written backwards: an operation whose result is
@@ -1665,3 +1665,109 @@ as "close enough to 2, close enough to 4".
 
 It is also the practical reason the assertion bands in `Exercise5BuildingSpec`
 sit asymmetrically about their targets rather than centred on them.
+
+---
+
+## E1 — `Sharing`
+
+### 27. Four of Exercise 1's five counting functions were confronted with a measurement in Exercise 8. `sharingRatio` was not. What error would it miss even if you measured the ratio and compared?
+
+**Answered unaided, with the algebra:** *any other value in the constant
+`NodeBytes`, because `nodeBytes(n) = n * NodeBytes`, so*
+`sharingRatio = (n * NodeBytes) / (treeInsertNodes(n) * NodeBytes)`
+`= n / treeInsertNodes(n)` — *completely independent of the constant.*
+
+Verified:
+
+```text
+n           sharingRatio   n / treeInsertNodes(n)   equal
+---------   ------------   ----------------------   -----
+       15         3.0000                   3.0000   true
+    1,023        93.0000                  93.0000   true
+1,048,575    49,932.1429              49,932.1429   true
+```
+
+### The question it opens, which is larger than the one that was asked
+
+`NodeBytes` **is** read by three assertions — twice in `Exercise1SharingSpec`
+and once in `Exercise8SharingProofSpec`. So: do they catch what `sharingRatio`
+cannot?
+
+```text
+shallowSize(2, 0, 0, 0, 0) = 24      the cell's formula
+shallowSize(3, 0, 0, 0, 0) = 24      the node's formula
+
+measured Cons     2,400,000 / 100,000 = 24.00 bytes
+measured Branch   2,400,000 / 100,000 = 24.00 bytes
+```
+
+**They do not.** Write `2 *` where `3 *` was meant and all three assertions stay
+green, because both formulas land on 24. Measuring does not rescue it either: a
+real `Cons` and a real `Branch` both measure 24.00 bytes.
+
+On this JVM **nothing** separates the two constants. The value is correct and
+its correctness is unverifiable. What would separate them:
+
+```text
+ReferenceBytes = 4    cell = 24   node = 24   separable = false
+ReferenceBytes = 8    cell = 32   node = 40   separable = true
+```
+
+And that experiment is not available. `Footprint.ReferenceBytes` is a literal
+`4` rather than a reading of the running JVM, so `-XX:-UseCompressedOops` would
+make the model *wrong* rather than more discriminating — unlike Module 1's
+`-XX:-DoEscapeAnalysis`, which removed an optimisation the model did not assume.
+
+The entry worth keeping is that [`error-patterns.md`](error-patterns.md)
+**predicted this before the module began**, in its "where it can reappear in
+Module 2" table:
+
+> *pattern 4 — `CellBytes` and `NodeBytes` are both 24, so a call that confuses
+> them passes*
+> *pattern 2 — exactly the above: a cell and a node are indistinguishable by
+> size on this JVM*
+
+The prediction came true, and the file that made it is the only artifact that
+would have caught the defect — by being read, not by being run.
+
+---
+
+## E7 — `TreeFold`
+
+### 28. Give a concrete tree and a concrete `f` where `t.treeMap(f).contains(y)` is false for a `y` that is in the tree.
+
+**"I don't know", said plainly, and then built from three steps:** what
+`contains` does (compares with `v` and descends one side, never looking at the
+other), what `treeMap` does (puts `f(v)` where `v` was, leaving the wiring
+untouched), and what follows when the two meet.
+
+**Answered from there, unaided:** `f(a) = -a` over `{0, 1, 2}`, and `y = 0`
+disappears — *"0 > -1, but what sits to the right of -1 is -2"*. Correct, and
+the measurement shows the damage is wider:
+
+```text
+original in-order = List(0, 1, 2)
+mapped   in-order = List(0, -1, -2)      not ascending
+shape preserved   = size 3 -> 3, depth 2 -> 2
+
+value    maps to    contains(y)   actually present
+-----   ---------   -----------   ----------------
+    0           0         false               true
+    1          -1          true               true
+    2          -2         false               true
+```
+
+**`-2` is lost as well**, by the mirror of the same argument: `-2 < -1` goes
+left to the `0`, and `-2 < 0` goes left again into `Leaf`. Of the three values
+only the root remains findable.
+
+A total, pure function with no effects, applied by an operation that preserves
+the shape exactly, and two thirds of the structure becomes unreachable. Nothing
+threw, nothing overflowed, and `toMyList` still returns all three values. What
+broke is the only place the guarantee ever lived: the *promise* that descending
+one side is safe.
+
+`toMyList` is the second casualty and it is quieter. It returns
+`List(0, -1, -2)` from an operation documented as "the values in ascending
+order". `foldInOrder` walks left-value-right, the shape still says which is
+which, and the shape is now lying.
