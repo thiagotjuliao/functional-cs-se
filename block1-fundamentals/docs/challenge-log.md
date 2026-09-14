@@ -1813,3 +1813,82 @@ one side is safe.
 `List(0, -1, -2)` from an operation documented as "the values in ascending
 order". `foldInOrder` walks left-value-right, the shape still says which is
 which, and the shape is now lying.
+### Should `treeMap` reject a non-monotone `f`, and could a type demand one?
+
+**Attempted: a separate `treeMapSafe`; enforcement via sealed traits with
+abstract methods, or via opaque types; "I can't think of other ways".** The
+first is right and is what the standard library does. The second does not work.
+The third works, but buys something other than what it looks like.
+
+**A separate method is the standard library's answer, and it costs twice.**
+`Set.map` does not preserve shape: it rebuilds.
+
+```text
+TreeSet(0,1,2).map(-_)      = TreeSet(-2, -1, 0)   correctly ordered
+TreeSet(1,2,3).map(_ => 0)  = TreeSet(0)           size 1, collapsed
+```
+
+The first cost is that **elements disappear** — two distinct keys may map to
+one. The second appeared on implementing `treeMapSafe` the obvious way, as
+`foldInOrder` then `insert`:
+
+```text
+n        source depth   f = identity   f = negate
+-----   -------------   ------------   ----------
+   64               7             64           64
+  256               9            256          256
+1,024              11          1,024        1,024
+```
+
+**The safe version degenerates the tree, `f = identity` included.**
+`foldInOrder` emits in ascending order, and inserting in ascending order is
+precisely the worst case Exercise 9 exists to demonstrate. A broken invariant
+has been traded for a structure that is `O(n^2)` to build and `O(n)` to query.
+Repairing it means rebuilding *balanced* over the already-sorted sequence —
+back to `fromRange`.
+
+So the trade is stateable: **preserving the shape keeps all `n` elements and
+costs `O(n)`, and lies about the order; rebuilding keeps the order and may lose
+elements.** Scala chose to lose elements.
+
+**Sealed traits with abstract methods do not help**, and the reason is worth
+stating because the idea is attractive. An abstract method forces you to
+*supply* a function. The signature is `A => B` whether `f` is monotone or not —
+it is the *same* signature. There is nowhere to hang the requirement: what must
+be forbidden is not a shape but a *behaviour over infinitely many pairs of
+inputs*. `forall a, b. a < b implies f(a) < f(b)` is not something Scala's type
+checker can decide, with or without a trait.
+
+**Opaque types work, and what they buy is accountability rather than proof.**
+`opaque type Monotone[A, B] = A => B` with a smart constructor hides the
+constructor — but the smart constructor cannot verify monotonicity either. It
+can only be the place where the claim is made. The gain is that the claim is
+made **once, somewhere with a name**, instead of implicitly at every call site.
+
+That is not nothing, and it is exactly the bargain `Ordering` already offers:
+nothing in Scala checks that a `compare` is a total order. You sign for it when
+you write the instance. `Monotone` would be the same promise one floor up, and
+Block 2 is where such a promise becomes a *typeclass with laws*, checked by
+MUnit property tests rather than by the compiler.
+
+### The option that was missing: do not enforce the law, remove the ability to break it
+
+The question was framed as "how do I demand monotonicity". There is an answer
+that demands nothing:
+
+```scala
+enum MyTree[K, +V]:
+  case Branch(key: K, value: V, left: MyTree[K, V], right: MyTree[K, V])
+
+def mapValues[W](f: V => W): MyTree[K, W]   // the order lives in K, and K is untouched
+```
+
+If the ordering lives in a **key** and `map` only touches the **payload**, the
+violation stops being expressible. There is no law to verify because there is no
+way to disobey it. This is why `Map` carries `mapValues` separately from `map`,
+and why only one of the two is cheap.
+
+The general move, and it is the one the next block is built on: **when a law
+cannot be checked, change the type until the illegal operation cannot be
+written.** That is B2-M4 stated in a sentence — *ADTs, opaque types,
+unrepresentable invalid states*.
