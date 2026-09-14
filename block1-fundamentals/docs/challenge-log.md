@@ -1272,7 +1272,8 @@ whose smallness is the property under test. An additive constant is negligible
 exactly where the quantity is large, which in a comparison between a degenerate
 structure and a balanced one is never the side that matters.
 
-Measured, after the fixture was repaired (see below), on JDK 26, forked:
+Measured, after the fixture was repaired (see below), on JDK 21.0.9 HotSpot,
+forked:
 
 ```text
                               bytes    box off     nodes

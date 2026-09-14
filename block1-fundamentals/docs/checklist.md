@@ -313,9 +313,9 @@ derivation. Do E1 first, on paper, before writing a line of `MyList`.
 
 ### A. Theory Comprehension
 
-- [ ] Read `docs/theory/module2_structures.md` in full.
-- [ ] Work `docs/quiz/b1-m2.html`, filtering by Part as you finish each one.
-- [ ] Read Okasaki, *Purely Functional Data Structures*, Ch. 2.
+- [x] Read `docs/theory/module2_structures.md` in full.
+- [x] Work `docs/quiz/b1-m2.html`, filtering by Part as you finish each one.
+- [x] Read Okasaki, *Purely Functional Data Structures*, Ch. 2.
 - [x] Derive, before measuring anything, the number of cells allocated by
       `x :: xs`, by `xs :+ x` and by `xs.reverse` over a list of `n`. All three
       must match your Exercise 1 implementation. Derived as `1`, `n` and `n`:
@@ -355,43 +355,113 @@ All nine live in `src/main/scala/cs/se/block1/module2/`, one spec each under
 - [x] **E6 `MyTree`** — the BST `enum`: `insert`, `contains`, `size`, `depth`.
 - [x] **E7 `TreeFold`** — `foldInOrder`, `toMyList`, `treeMap`, and the ordering
       law that ties them together.
-- [ ] **E8 `SharingProof`** — measure with `AllocationProbe` and confirm, or
+- [x] **E8 `SharingProof`** — measure with `AllocationProbe` and confirm, or
       refute, every prediction E1 made.
-- [ ] **E9 `Balance`** — `fromSorted` against `fromBalanced`, and what the
+- [x] **E9 `Balance`** — `fromSorted` against `fromBalanced`, and what the
       depth difference does to the cost of one insert.
 
 ### C. Correctness Gate
 
-- [ ] `sbt fundamentals/test` — **all tests green**, zero ignored, zero skipped.
-- [ ] `sbt fundamentals/compile` succeeds under `-Wall -Werror` with **zero**
-      warnings suppressed by annotation or configuration.
-- [ ] `sbt scalafmtCheckAll` passes.
-- [ ] Module 1's 28 tests still pass. This module adds to the suite; it does not
-      replace it.
+- [x] `sbt fundamentals/test` — **all tests green**, zero ignored, zero skipped.
+      65 tests: 28 from Module 1 and 37 from Module 2.
+- [x] `sbt fundamentals/compile` succeeds under `-Wall -Werror`. **Not with zero
+      suppressions — with two**, both by annotation, both documented at the
+      site. Module 1 has none at all, so this is the first time the box needs an
+      answer rather than a sweep, and the answer is different for each:
+
+      - `@unused` on the parameter of `Sharing.prependCells(n: Int)`. This one
+        is forced by the exercise's own signature. A prepend costs one cell
+        whatever the list's length, so a *correct* implementation cannot read
+        `n`, and under `-Werror` an unread parameter is an error. The signature
+        exists to be read beside `appendCells(n)`, which does use it — the
+        parallel is the lesson. The clause and the exercise cannot both be
+        satisfied; recorded as a fourth occurrence of pattern 6 in
+        [`error-patterns.md`](error-patterns.md), *a contract no implementation
+        of that signature can satisfy*.
+      - `@unchecked` on the match in `MyList.head` and `MyList.tail`. Not
+        forced: it is a consequence of narrowing the domain with `require`
+        instead of returning `Option`. With the precondition above it, the
+        `Nil` branch the exhaustivity checker demands is a case that cannot
+        arrive — but that argument is exactly the one §D's last box puts to
+        §G, so the annotation stands or falls with that decision rather than on
+        its own.
+- [x] `sbt scalafmtCheckAll` passes.
+- [x] Module 1's 28 tests still pass. This module adds to the suite; it does not
+      replace it. Verified by running the two packages separately:
+      `testOnly cs.se.block1.module1.*` reports 28, `module2.*` reports 37.
 
 ### D. Purity Gate
 
 Verified by reading your own diff before committing:
 
-- [ ] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module2`.
-- [ ] Zero `while` loops and zero imperative `for` loops.
-- [ ] Zero `throw` and zero `try`/`catch`.
-- [ ] Zero mutable collections, and zero use of `scala.collection.immutable.List`
+- [x] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module2`. Swept:
+      no occurrence at all, in code or in prose.
+- [x] Zero `while` loops and zero imperative `for` loops. Swept: every hit for
+      `while` is a Scaladoc sentence. One iteration construct does exist —
+      `(0 until 20).foreach(_ => body)` in `SharingProof.bytesOf` — and it is
+      the warm-up, inside the instrument rather than inside a structure. It
+      falls under the same exception Module 1 granted `AllocationProbe` and
+      `Bench`: a measuring instrument may do what it measures must not.
+- [x] Zero `throw` and zero `try`/`catch`. Swept: no occurrence of any of the
+      three.
+
+      Two `require` calls do exist, in `MyList.head` and `MyList.tail`, and
+      `require` raises `IllegalArgumentException`. As in Module 1, they are not
+      a violation of this box but the subject of the last one.
+- [x] Zero mutable collections, and zero use of `scala.collection.immutable.List`
       *inside* your own structure's implementation. `MyList` is built from
       `MyList`, or the exercise proves nothing. Converting to `List` at the
       boundary, in `MyList.toScalaList`, is the one permitted crossing.
-- [ ] Every recursive function that walks a whole structure is either
+
+      Swept: no `mutable`, no `ListBuffer`, no `ArrayBuffer`. The only
+      `scala.List` in the implementation is `toScalaList`'s own return type and
+      the `scala.List.empty[A]` seed of its fold — the permitted crossing,
+      taken once, at the boundary. Every other hit is prose.
+- [x] Every recursive function that walks a whole structure is either
       `@tailrec` or documented as bounded by depth rather than by size. `MyTree`
       recursion is the second kind; `MyList` recursion must be the first.
-- [ ] `head` on an empty list: the decision is made, documented in the Scaladoc,
+
+      Seven `@tailrec` walks in `MyList`: `length`, `map`, `filter`, `reverse`,
+      `foldLeft`, `concat` and `toScalaList`. `MyTree`'s recursion is bounded by
+      depth and says so at the declaration.
+
+      **One deliberate exception, and it is the point of an exercise rather than
+      a gap.** `MyList.foldRight` is not `@tailrec` and cannot be made so
+      directly: it must reach the end of the list before it can combine
+      anything, so every element's frame waits on the stack. It is bounded by
+      *size*, which this box forbids — and `Exercise4FoldsSpec` asserts that it
+      overflows at a million elements, reporting `foldRight over 1,000,000
+      overflowed = true`. A `foldRight` that survived that input would be one
+      that secretly reversed the list, and hiding the cost is worse than paying
+      it. Module 3 removes the limit properly.
+- [x] `head` on an empty list: the decision is made, documented in the Scaladoc,
       and defended in §G. Module 1 asked the same question of
       `Escape.sumNorms`; the answer here may differ, but it may not be absent.
+
+      The answer is the same as Module 1's and reached the same way: the domain
+      is narrowed rather than the return type widened. `Option[A]` was rejected
+      because it forces every correct caller to handle a case it has already
+      excluded, and invites the `.get` that converts a loud defect into a silent
+      one. `require` states the narrowed domain at the boundary; the match is
+      `@unchecked` because the `Nil` branch the exhaustivity checker wants has
+      been ruled out by the line above it.
+
+      What is *not* settled by that, and is the §G question: `require` throws,
+      so the gate two boxes up is satisfied only by reading it as forbidding
+      `throw` as control flow rather than as domain enforcement. The same
+      reading carries the `@unchecked` recorded in §C.
 
 ### E. Empirical Gate — Record The Numbers
 
 Every number below must be produced by *your* structure, not by Scala's. Fill in
 every blank, and compare each against what Exercise 1 predicted **before** you
 ran it.
+
+Every number was measured in the forked test JVM that `build.sbt` pins to
+`-Xmx2g -XX:+UseG1GC`, after warm-up, with compressed oops on — which is what
+makes the cell 24 bytes rather than 32, and every byte count here is a multiple
+of that constant. The ratios are not: they survive a JVM without compressed oops
+unchanged, which is the argument the doubling table makes below.
 
 - [x] **Cell and node size.**
       - `Sharing.CellBytes`: `24` · `Sharing.NodeBytes`: `24`
@@ -400,18 +470,70 @@ ran it.
         `= align(20) = 24 and align(12 + 3*4) = align(24) = 24, so the node's`
         `third reference lands inside padding the cell was already paying for`
 
-- [ ] **List operations over `n = 100,000`.** Predicted from E1, then measured
-      with `AllocationProbe` in E8:
+- [x] **List operations over `n = 100,000`.** Predicted from E1, then measured
+      with `AllocationProbe` in E8. Every row is measured over `MyList`, not
+      over `scala.List`: both cons cells are 24 bytes, so three of these four
+      rows would agree either way, and `append` is the only one whose cost is
+      decided by algorithm rather than by shape
+      ([`challenge-log.md`](challenge-log.md), entry 18).
+
+      The `measured` column has the element's box removed, with the raw reading
+      beside it. Every operation that *introduces* an element boxes an `Int`
+      above the `Integer` cache inside the measured window, and the model counts
+      cells rather than elements — `Sharing.reverseCells`: *"Note what is not
+      allocated: the elements"*. `reverse` introduces nothing and pays nothing,
+      and that asymmetry is what identifies the 16 bytes instead of merely
+      tolerating them (entry 20).
 
       | operation | E1 predicts (bytes) | measured (bytes) | agree? |
       | :--- | ---: | ---: | :---: |
-      | `x :: xs` | `______` | `______` | |
-      | `xs :+ x` | `______` | `______` | |
-      | `xs.reverse` | `______` | `______` | |
-      | `xs.map(identity)` | `______` | `______` | |
+      | `x :: xs` | `24` | `24` · raw `40` | exactly |
+      | `xs :+ x` | `4,800,024` | `4,800,024` · raw `4,800,040` | exactly |
+      | `xs.reverse` | `2,400,000` | `2,400,000` · no box | exactly |
+      | `xs.map(identity)` | `2,400,000` | `6,397,952` | no — see below |
 
+      - The fourth row disagrees with the model by design, in the same way
+        `append` does and for a different reason. `mapCells(n) = n` counts the
+        cells the result *retains*; there is no `mapAllocatedCells`. The
+        measurement decomposes to the byte:
+        ```text
+        two spines          2 x 100,000 x 24       4,800,000
+        one Integer each    (100,000 - 128) x 16   1,597,952
+                                                   ---------
+                                                   6,397,952   measured
+        ```
+        The two spines are the `@tailrec` tax `MyList.map` documents: the
+        accumulator builds backwards, so a second pass restores the order and
+        one spine is garbage before the method returns.
+
+        The 1,597,952 is the experiment `Sharing.mapCells` was written to
+        provoke, and the answer is not zero. `identity` allocates nothing, yet
+        every element costs a fresh 16-byte `java.lang.Integer` — all but the
+        128 the cache shares. `Function1` is specialised for `Int`, so
+        `identity` unboxes its argument and the `int` that comes back must be
+        boxed again to enter the cell. Compare `filter`, which returns the same
+        elements in the same order and pays no box at all: its `p(h)` returns a
+        primitive and the element is re-prepended as the *same reference*. The
+        spine is the model's business; the box is `f`'s signature's.
+
+        This row was closed late. It had no `measureMap` until now, and the
+        figure standing in `MyList.map`'s Scaladoc in the meantime was
+        `6,522,656` — wrong by 124,704 bytes, unanchored by any test, and
+        therefore unable to be contradicted by a green suite. Recorded as
+        pattern 12 of [`error-patterns.md`](error-patterns.md).
       - Where prediction and measurement differ, the difference is itself a
-        result. Account for it: `______________________`
+        result. Account for it: `E1 makes two predictions for append and they`
+        `differ by a factor of two. appendCells(n) = n counts the spine the`
+        `result retains; appendAllocatedCells(n) = 2n + 1 counts what the`
+        `operation spends. AllocationProbe counts spending, so the measurement`
+        `must be compared against the second, and it lands on it to the byte:`
+        `200,001 cells at 24. The two models coincide only for an operation`
+        `that produces no garbage, which is reverse - the one row that hits the`
+        `model with no slack at all. The excess is the intermediate spine a`
+        `@tailrec concat builds and discards, because it must walk xs forwards`
+        `and emit backwards; the alternatives are a non-tail recursion, which`
+        `overflows at this n, or the mutable builder that section D forbids.`
+        `Recorded as entry 19.`
 
 - [x] **The doubling table.** Build a list of `n` elements both ways and record
       the bytes, for `n` = 2,000 / 4,000 / 8,000 / 16,000:
@@ -466,32 +588,161 @@ ran it.
         the `Integer.valueOf` cache: values `0..127` are shared and cost
         nothing. Module 1, §19.
 
-- [ ] **Tree sharing.** On a balanced tree of `2^20 − 1` nodes:
-      - whole tree: `______ bytes` · one `insert`: `______ bytes`
-      - nodes copied: `______` · depth: `______` · sharing ratio: `______ ×`
-      - The nodes copied should exceed the depth by exactly one. Say why:
-        `______________________`
+      - **On reproducing these.** `byPrepend` is exact: the four figures come
+        back identical on every run, alone or with the whole suite. `byAppend`
+        is exact only when its suite runs alone — verified by running
+        `testOnly *Exercise5BuildingSpec` twice and getting the table above to
+        the byte both times. Run inside `fundamentals/test`, where sbt forks one
+        JVM for every suite, two of the four figures move:
+        ```text
+        n         alone (recorded)   whole suite        delta   vs. model
+        -------   ----------------   ---------------   ------   ---------
+          2,000         96,059,944        96,111,696   51,752   +0.05 %
+         16,000      6,144,508,128     6,144,507,944      184   exact
+        ```
+        The second row is the one to read twice: with the suite it lands on
+        `24n^2 + 32n - 4,056` exactly, and alone it is 184 bytes above. The
+        drift is not in the algorithm — the ratios are `3.997 / 3.999 / 4.000`
+        against `3.999 / 3.999 / 4.000`, and the complexity class is untouched.
+        It is the shared JVM: the probe counts the calling thread, and what that
+        thread did before entering the measured window is not fixed by the code
+        being measured. An absolute byte count at this scale measures a *run*;
+        the ratio measures the *algorithm*. That is the same argument the two
+        `x prev` columns make above, arriving from the other direction.
 
-- [ ] **Degeneration.** Insert 4,096 values in sorted order and in shuffled
+- [x] **Tree sharing.** On a balanced tree of `2^20 − 1` = 1,048,575 nodes:
+      - whole tree: `25,165,800 bytes` · one `insert`: `504 bytes` (raw `520`)
+      - nodes copied: `21` · depth: `20` · sharing ratio: `49,932.14 ×`
+      - Measurement and model are the same number, not merely close:
+        ```text
+        whole tree    1,048,575 x 24                =  25,165,800
+        one insert    (balancedDepth(n) + 1) x 24
+                      (20 + 1) x 24                 =         504
+        ratio         25,165,800 / 504              =  49,932.14
+        ```
+        Leaving the element's box inside the measured window gives `48,396 ×`
+        instead — wrong by 3%, and no assertion in the suite was tight enough to
+        report it. Recorded as entry 20 and as pattern 10 of
+        [`error-patterns.md`](error-patterns.md).
+      - The nodes copied should exceed the depth by exactly one. Say why:
+        `the insert rebuilds every node on the path from the root to the`
+        `insertion point, which is 20 nodes and is the depth, and then builds`
+        `the new leaf. The leaf is not on that path: the path ends at the empty`
+        `subtree where the value goes, so it is walked to and not through. The`
+        `count is therefore depth + 1, which is Sharing.treeInsertNodes as`
+        `written, and 504 bytes is 21 nodes rather than 20.`
+
+- [x] **Degeneration.** Insert 4,096 values in sorted order and in shuffled
       order, and record for each:
-      - sorted: depth `______`, one insert costs `______ bytes`
-      - shuffled: depth `______`, one insert costs `______ bytes`
-      - ratio: `______ ×`
+      - sorted: depth `4,096`, one insert costs `98,328 bytes` (raw `98,344`)
+      - balanced: depth `13`, one insert costs `336 bytes` (raw `352`)
+      - ratio: `292.643 ×`, against a model of `4,097 / 14` = `292.643 ×`,
+        deviation `0.0000 %`
+      - **The second row is `fromBalanced`, not a shuffle**, and the substitution
+        is deliberate rather than an omission. A shuffled build has a depth that
+        is logarithmic in expectation but varies from run to run, so it measures
+        a distribution; `fromBalanced` measures the bound that distribution is
+        approaching, and it is reproducible. The degenerate side — the side this
+        box is about — is identical either way, because a sorted insertion order
+        has no distribution at all: it produces the right spine every time.
+      - Both figures are `depth + 1` nodes, and that `+ 1` is the finding:
+        ```text
+                            numerator   denominator    factor   vs. model
+        -----------------   ---------   -----------   -------   ---------
+        depths only              4,096            13   315.077    +7.67 %
+        numerator +1 only        4,097            13   315.154    +7.70 %
+        denominator +1 only      4,096            14   292.571    -0.02 %
+        both, correct            4,097            14   292.643     0.00 %
+
+        measured   98,328 / 336  =  292.6429
+        model       4,097 /  14  =  292.6429      deviation 0.0000 %
+        ```
+        An additive constant is invisible against 4,096 and worth 7.1% against
+        13, so the ratio is decided entirely by the *balanced* side — the side
+        whose smallness is the property under test. Entry 21.
+      - The measurement also depends on probing above the maximum rather than
+        below the minimum. `insert(-1)` into a right spine stops at the root's
+        empty left child, so it measures that tree's *cheapest* insert: 48 bytes
+        against the balanced tree's 312, a factor of `0.15 ×` in a test whose
+        subject is a factor of 292. Recorded as pattern 11 of
+        [`error-patterns.md`](error-patterns.md).
       - Name the production inputs that arrive pre-sorted:
-        `______________________`
+        `auto-increment primary keys, read back in insertion order by any query`
+        `that declares ORDER BY id for determinism; event timestamps, which are`
+        `non-decreasing because they are stamped as the events occur; and the`
+        `merge phase of an external sort or an LSM compaction, whose input`
+        `contract is that every run is already sorted.`
+
+        None of the three is an edge case and none is an attack. In each one the
+        ordering is a *consequence* of how the data was produced, and the code
+        that produced it is correct: the `ORDER BY` is there to make a result
+        reproducible, the clock moves forwards on its own, and a merge that
+        accepted unsorted runs would not be a merge. The degenerate case is the
+        one that arrives by default.
+
+        The three differ in how reliably they degenerate, which is worth keeping
+        apart:
+
+        ```text
+        source                  ordering        what it costs at n = 4,096
+        ---------------------   -------------   --------------------------
+        auto-increment key      total           depth 4,096 - the full spine
+        event timestamp         near-total      a spine with short branches
+        merged sorted runs      total per run   one spine per run
+        ```
+
+        Near-sorted is not a reprieve. A few out-of-order arrivals hang short
+        branches off a spine that is otherwise the full height, so the depth
+        stays within a small factor of `n`. The structure needs the order to be
+        *shuffled*, and an input that is merely *not perfectly sorted* is not
+        shuffled.
+
+        And the cost is not only the `292 x` measured above. At depth 4,096 the
+        `MyTree` recursion that §D documents as *bounded by depth rather than by
+        size* stops being an argument and becomes a `StackOverflowError`, on the
+        input a system is most likely to receive.
 
 ### F. Engineering Hygiene
 
-- [ ] All code formatted (`sbt scalafmtAll`) with no manual override.
-- [ ] Every public definition carries a Scaladoc stating its **contract**, not a
+- [x] All code formatted (`sbt scalafmtAll`) with no manual override.
+      `scalafmtCheckAll` passes over all 19 Block 1 sources.
+- [x] Every public definition carries a Scaladoc stating its **contract**, not a
       restatement of its name. Constants carry the rule from pattern 4 of
       `error-patterns.md`: name the assertion that pins the value, or state that
       none does.
-- [ ] Commits follow `docs/git-conventions.md` (`b1-m2: <imperative summary>`),
-      one commit per concept proven.
-- [ ] `error-patterns.md` has been read before committing, and any defect that
+
+      Audited mechanically, as Module 1 was: walk every `def`, `val` and `case`
+      in `module2` and check the preceding non-blank line for a closing `*/`.
+      Every public definition passes. What the audit reports and why each is not
+      a gap:
+
+      - Eleven method-**local** bindings — the `loop` helpers, `SharingProof`'s
+        `ls` and `t`, `fromRange`'s nested `midPoints` and its `mid`. Not public
+        definitions, and Module 1's audit excluded the same class.
+      - The four `enum` cases: `MyList.Nil` and `Cons`, `MyTree.Leaf` and
+        `Branch`. Their contract is stated by the enum's own Scaladoc
+        immediately above them, and stated at more length than a per-case line
+        could — `MyList`'s covers closure, recursion, the `Nil` singleton and
+        what `+A` buys; `MyTree`'s states the BST invariant and, pointedly, what
+        the invariant does *not* buy. Same reasoning Module 1 applied to the
+        `Vec2` and `Shape` companions.
+- [x] `error-patterns.md` has been read before committing, and any defect that
       instantiated an existing pattern was added as an occurrence to that entry
       rather than opening a new one.
+
+      Two defects surfaced while closing these gates, and they went to different
+      places for the reason the rule gives:
+
+      - The `@unused` on `Sharing.prependCells` became a **third occurrence of
+        pattern 6**, not a new entry. It is the same shape as the other two — a
+        contract no implementation of that signature can satisfy — with the
+        contract living in this checklist rather than in a Scaladoc. That the
+        carrier differs is the interesting part, and it belongs inside the
+        pattern, not beside it.
+      - The unanchored measurements opened **pattern 12**, because none of the
+        eleven covered it: 10 and 11 are defects of measurement, and this is a
+        defect of *record-keeping about* measurement. Its own text argues the
+        case.
 - [ ] Annotated milestone tag `b1-m2-persistent-structures` created, using the
       message template in `docs/git-conventions.md`, with a real entry under
       `Learned:`.
