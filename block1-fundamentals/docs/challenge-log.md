@@ -925,6 +925,8 @@ alone.
 | Exercise | Challenges | Status |
 | :--- | :--- | :--- |
 | E6 `MyTree.fromRange` | 2 | recorded |
+| E8 `SharingProof` | 3 | recorded |
+| E9 `Balance` | 1 | recorded |
 
 ---
 
@@ -1078,3 +1080,235 @@ rebuilds every node on the path it walks, so the construction costs the tree's
 **internal path length**, `O(n log n)`, where direct assembly costs its **size**,
 `O(n)`. Recorded as occurrence 3 of [`error-patterns.md`](error-patterns.md)
 pattern 9.
+
+---
+
+## E8 — `SharingProof`
+
+### 18. The three list measurements build with `scala.List` and only the tree measurement uses your structure. Given that both cells are 24 bytes, does the difference matter?
+
+The question arrived as a question rather than a challenge — *"is it the default
+API or my `MyList`?"* — which is the better version of it, because the answer was
+not visible from the numbers.
+
+It was the default API, and the tree was not:
+
+```scala
+val ls = List.from(0 until n)      // scala.collection.immutable.List
+bytesOf(ls.prepended(n + 1))
+...
+val t = MyTree.fromRange(0, n)     // MyTree
+bytesOf(t.insert(n + 1))
+```
+
+Within one exercise the two halves disagreed, and that asymmetry is the tell.
+
+**Why the sizes could not decide it.** They are identical, and identical for a
+reason that has nothing to do with either structure being right:
+
+```text
+                          header   fields         raw   aligned
+-----------------------   ------   ------------   ---   -------
+scala.::                      12    2 refs = 8     20        24
+MyList.Cons                   12    2 refs = 8     20        24
+```
+
+So `prepend` measured 40 either way and `reverse` measured 2,400,000 either way.
+A suite that is green while measuring the wrong structure proves the layout of
+`scala.::`, and Exercise 1 made no predictions about `scala.::`.
+
+**What did decide it** is that one of the three operations is implemented
+differently on the two structures, and the measurement separates them:
+
+```text
+                     scala.List    MyList
+------------------   -----------   ---------
+append, n = 100,000    2,400,120   4,800,040
+```
+
+`scala.List.appended` reaches `n` cells by building through a mutable
+`ListBuffer`. `MyList.appended` cannot: §D forbids the buffer. The two agree on
+everything whose cost is decided by *shape* and diverge on the one thing whose
+cost is decided by *algorithm* — which is exactly the reach of the coincidence,
+and is recorded as occurrence 2 of [`error-patterns.md`](error-patterns.md)
+pattern 2.
+
+### 19. Count the cells `appended` allocates for a list of `n`. Compare with `appendCells(n) = n`. Which side is wrong?
+
+**Answered unaided: 2n** — *"reverse + n iterations"* — and the measurement
+confirms it to the byte. `appended` delegates to `concat`, and `concat` opens
+with `loop(xs.reverse)`:
+
+```text
+step                                   cells
+------------------------------------   ---------
+Cons(x, Nil)                                   1
+xs.reverse, discarded on the way out   n = 100,000
+loop, prepending each onto the result  n = 100,000
+                                       ---------
+                                         200,001
+```
+
+```text
+200,001 x 24                =  4,800,024
++ one boxed java.lang.Integer      +  16
+                               ---------
+measured                        4,800,040        exactly
+```
+
+**Neither side is wrong**, which is the answer the question was fishing for.
+They are different quantities:
+
+* `appendCells(n) = n` counts the cells the **result keeps**. True: the returned
+  list holds `n` copies of the old spine, and nothing in it is garbage.
+* `AllocationProbe` counts the bytes the thread **spent**. A `@tailrec` `concat`
+  has to walk `xs` forwards and emit backwards, so it materialises an
+  intermediate spine and then consumes it.
+
+The two coincide only when an operation produces no garbage, and `reverse` is
+the proof: it measures `n x 24` on the nose, because it has no temporary.
+
+**Why the constant is not an inefficiency to remove.** Three routes reach an
+append, and the module's rules admit one of them:
+
+```text
+route                        cells allocated   fails how
+--------------------------   ---------------   -------------------------------
+non-tail recursion                         n   one frame per cell; overflows at
+                                               the sizes this module measures
+mutable builder (ListBuffer)               n   what scala.List does; forbidden
+                                               by §D of the checklist
+@tailrec, via reverse                 2n + 1   nothing — it is the price
+```
+
+So the factor of two is the price of the constraint, not a defect. The model was
+split rather than corrected: `appendCells` kept its meaning and
+`appendAllocatedCells` was added beside it, written as
+`appendCells(n) + n + 1` so that the three terms name themselves — the rebuilt
+spine, the discarded spine, the cell for `x`.
+
+One property of that spelling worth keeping: it survives the overflow guard at
+`n = 2,000,000,000` only because `appendCells` returns `Long`, so the whole
+expression promotes before it doubles. Written `2 * n + 1` in `Int` it wraps
+negative, and the suite asserts against exactly that.
+
+### 20. The exercise's Scaladoc asks you to subtract a floor and you subtracted none. Was anything owed?
+
+Raised from the other side again — *"não desconsiderei nenhum piso"* — and the
+answer has two halves, one reassuring and one not.
+
+**The floor the Scaladoc means was zero, and skipping it was correct.**
+`AllocationProbe.measure[A]` boxes its result when `A` is a primitive, because
+the by-name parameter erases to `Function0[Object]`. Every body in
+`SharingProof` returns a reference — a `MyList`, a `MyTree` — so nothing is
+boxed on the way out. That is a fact about the *return type* and it is worth
+stating in the Scaladoc, because the first measurement that returns an `Int`
+pays 16 bytes silently.
+
+**A different quantity was in the window, and it was owed a subtraction.** Every
+measurement that introduces an element introduces an `Int` into a structure
+whose `A` is erased, so the element is boxed *inside* the measured region:
+
+```text
+operation      model       measured    gap
+------------   ---------   ---------   ----
+prepend               24          40    +16
+tree insert          504         520    +16
+reverse        2,400,000   2,400,000      0
+```
+
+`100,001` and `1,048,576` are both above the `Integer` cache (`-128..127`), so
+each costs one `java.lang.Integer`: header 12 + `int` 4 = 16, already aligned.
+`reverse` introduces no element and pays nothing, which is what identifies the
+culprit rather than merely tolerating it.
+
+The model says explicitly that this is not its business —
+`Sharing.reverseCells`: *"Note what is not allocated: the elements"* — so the box
+belongs outside the comparison. With it removed, three assertions stopped being
+ceilings:
+
+```text
+                  before            after
+---------------   ---------------   -----------------------
+prepend           <= 48 (got 40)    == 24 (got 24)
+tree insert       +- 3 nodes        +- 1 node (got 504)
+append            within 10%        within 1%
+sharing ratio     48,396 x          49,932 x, model 49,932 x
+```
+
+The last line is the cost of leaving it: the ratio §E of the checklist asks for
+was wrong by 3%, and no assertion in the suite was tight enough to say so.
+Recorded as pattern 10 of [`error-patterns.md`](error-patterns.md).
+
+---
+
+## E9 — `Balance`
+
+### 21. Your degeneration factor diverges from the spec by 7.7%. Where does the missing `+1` come from, and why does it move one side of the ratio and not the other?
+
+```scala
+fromSorted(n).depth / fromBalanced(n).depth.toDouble      // 4096 / 13 = 315.077
+```
+
+An `insert` does not allocate `depth` nodes. It allocates `depth + 1`: every node
+on the path is rebuilt, **and** a leaf is created. The module already said so,
+four lines from the function that got it wrong —
+`Sharing.treeInsertNodes = balancedDepth(n) + 1L`, whose Scaladoc reads *"the
+count therefore exceeds the depth by exactly one"*. It is also where Exercise 8's
+504 bytes came from: 21 nodes at 24, for a depth of 20.
+
+```text
+                    numerator   denominator    factor    against the spec
+-----------------   ---------   -----------   -------   ----------------
+depths only              4096            13   315.077          +7.67 %
+numerator +1 only        4097            13   315.154          +7.70 %
+denominator +1 only      4096            14   292.571          -0.02 %
+both, correct            4097            14   292.643            0.00 %
+```
+
+The third row is the answer. **The `+1` is invisible against 4096 and worth 7.1%
+against 13**, so the ratio is decided entirely by the balanced side — the side
+whose smallness is the property under test. An additive constant is negligible
+exactly where the quantity is large, which in a comparison between a degenerate
+structure and a balanced one is never the side that matters.
+
+Measured, after the fixture was repaired (see below), on JDK 26, forked:
+
+```text
+                              bytes    box off     nodes
+---------------------------   -------  ---------   -----
+sorted.insert(4096)            98,344     98,328    4097
+balanced.insert(4096)             352        336      14
+
+98,328 / 336  =  292.6429
+  4,097 /  14  =  292.6429        deviation 0.0000 %
+```
+
+### What the fixture measured instead
+
+Not a challenge — a defect in the spec, found while confirming the answer above,
+and worth recording because the failure it would have produced named the wrong
+file.
+
+The test probed both trees with `insert(-1)`. `fromSorted` builds a spine to the
+right, so a value below the minimum is the *cheapest* insert that tree admits: it
+is less than the root, the root's left child is empty, and the walk stops.
+
+```text
+probe    sorted (bytes / nodes)   balanced (bytes / nodes)    factor
+------   ----------------------   -------------------------   ------
+-1                    48 /    2                 312 /    13     0.15
+4096              98,344 / 4097.7                352 / 14.7    292.6
+```
+
+The degenerate tree measured six times *cheaper* than the balanced one, in a test
+whose subject is that it is three hundred times more expensive. And because `-1`
+sits inside the `Integer` cache, that probe also allocated no box — which is why
+its two rows are exact multiples of 24 and hid challenge 20 on the same path.
+
+The assertion standing at the time, `measured > predicted / 3.0`, would have
+failed on the corrected formula with the message *"the insert is not copying the
+path it walks"* — pointing at `MyTree.insert`, which was correct throughout. The
+spec now probes above the maximum, subtracts the box, asserts the *direction*
+before the magnitude, and compares against the model within 5%. Recorded as
+pattern 11 of [`error-patterns.md`](error-patterns.md).

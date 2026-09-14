@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Sixteen individual mistakes are a diary and nobody rereads a diary. Nine
+Twenty-two individual mistakes are a diary and nobody rereads a diary. Eleven
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -21,7 +21,7 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | # | Pattern | Occurrences | Caught by the build? |
 | :-- | :--- | :-: | :--- |
 | 1 | Bit-to-byte conversion written from memory | 3 | two of three |
-| 2 | Two quantities that coincide under the current configuration | 1 | no — a test passed for the wrong reason |
+| 2 | Two quantities that coincide under the current configuration | 2 | no — a test passed for the wrong reason |
 | 3 | Off-by-one in a limit | 1 | no — the boundary has no call site |
 | 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no — one latent since pinned, five documented |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
@@ -29,8 +29,10 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 7 | A unit declared in the name and nowhere the machine reads | 1 | no — both sides of the confusion are `Long` |
 | 8 | An exact integer answer routed through `Double` | 2 | no — the suite stopped two powers of two short |
 | 9 | A structural guarantee carried by traversal order instead of by construction | 3 | the shape yes, the price no |
+| 10 | A quantity compared against a model of a neighbouring quantity | 4 | no — the tolerances were wide enough to swallow the gap |
+| 11 | A fixture that cannot exhibit the property under test | 1 | no — and the failure it finally produced blamed the wrong file |
 
-Patterns 1–6 were found in **Module 1**, 7 to 9 in **Module 2**. The file was
+Patterns 1–6 were found in **Module 1**, 7 to 11 in **Module 2**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
 day its defect appears.
@@ -114,6 +116,34 @@ author fixes before committing.
 checker has nothing to compare. The assertion checks the *result*, and the result
 is correct — by coincidence. This defect passed a green suite and would have
 shipped; it was found by reading the call, not by running it.
+
+**Occurrence 2, Module 2.** Exercise 8 exists to confirm Exercise 1's model of
+*this module's* structure. Three of its four measurements built the list with
+`scala.collection.immutable.List` instead:
+
+```text
+written                              measures            model describes
+----------------------------------   -----------------   ----------------
+List.from(0 until n).prepended(x)    scala.::            MyList.Cons
+MyTree.fromRange(0, n).insert(x)     MyTree              MyTree            right
+```
+
+The suite was green, and it was green because the two cells are the same size:
+
+```text
+                          header   fields         raw   aligned
+-----------------------   ------   ------------   ---   -------
+scala.::                      12    2 refs = 8     20        24
+MyList.Cons                   12    2 refs = 8     20        24
+```
+
+Same 24, same measurement, different structure — which is this pattern exactly,
+one layer up: the coincidence is no longer between two *fields* but between two
+*types*. `reverse` and `prepend` agreed to the byte. `append` did not, and that
+is what exposed it: `scala.List.appended` reaches `n` cells through a mutable
+`ListBuffer`, while a `@tailrec` `MyList.concat` allocates `2n + 1` (pattern 10).
+A structure swapped for another that happens to lay out identically is caught
+only where their *algorithms* differ, and nowhere where only their shapes do.
 
 ---
 
@@ -309,7 +339,8 @@ confronted with what it would be replacing.
 
 ## How to use this file
 
-Read it before committing, not after a defect. Six questions, one per pattern:
+Read it before committing, not after a defect. Eleven questions, one per
+pattern:
 
 1. Is there a width in this diff that I converted in my head?
 2. Does any call pass several same-typed arguments positionally?
@@ -324,6 +355,10 @@ Read it before committing, not after a defect. Six questions, one per pattern:
 8. Am I answering an integer question through `Double`?
 9. Does a recursion here compute a shape and then emit a flat sequence, leaving
    something downstream to rediscover it?
+10. For every comparison of a prediction against a measurement: do both sides
+    count the same set of things, said out loud in one sentence?
+11. Can the fixture I am measuring actually exhibit the property I am asserting,
+    or have I chosen the input where it does not appear?
 
 ---
 
@@ -350,6 +385,12 @@ sharing or a measurement to appear.
 
 Pattern 9 came out of Exercise 6, and is the first in this file whose occurrences
 are three drafts of a single function rather than three separate sites.
+
+Patterns 10 and 11 came out of Exercises 8 and 9, and both are defects of
+*measurement* rather than of code: the implementations they describe were
+correct, and the instrument aimed at them was not. That is a category the first
+nine entries do not cover, and it is the category an empirical module produces
+most of.
 
 ---
 
@@ -538,3 +579,121 @@ it walks, so the build costs the tree's internal path length instead of its size
 `Exercise7TreeFoldSpec.scala:68` constructs exactly this million-element tree,
 which means the suite pays the half-second on every run and reports nothing. A
 test suite measures failure, not price.
+
+---
+
+## 10. A quantity compared against a model of a neighbouring quantity
+
+Both sides of the comparison are `Long`, both are in bytes, and they count
+different sets of things. The model describes what a structure *keeps*; the
+instrument reports what a thread *spent*. They coincide only when an operation
+produces no garbage and introduces no element — which is one of the four
+measurements in Exercise 8, and it is the one that agreed to the byte.
+
+```text
+compared                            the model counts          the measurement counts
+---------------------------------   -----------------------   ------------------------
+cellBytes(appendCells(n))           cells the result keeps    bytes allocated, garbage
+                                                              included
+cellBytes(prependCells(n))          cells                     bytes, the boxed element
+                                                              included
+nodeBytes(treeInsertNodes(n))       nodes                     bytes, the boxed element
+                                                              included
+fromSorted.depth / fromBalanced     a path length             nodes allocated, which is
+  .depth                                                      the path plus a new leaf
+```
+
+Measured, at `n = 100,000` and a tree of `2^20 - 1`, on JDK 26, forked, after
+warm-up:
+
+```text
+operation      model       measured    the difference is
+------------   ---------   ---------   ----------------------------------------
+prepend               24          40   one java.lang.Integer
+tree insert          504         520   one java.lang.Integer
+reverse        2,400,000   2,400,000   nothing — reverse introduces no element
+append         2,400,000   4,800,040   a discarded spine, a cell, and the box
+```
+
+`reverse` is the control that identifies the culprit. It is the only one of the
+four that adds no value to the structure, and it is the only one that lands on
+the model untouched. Anything that must be subtracted from `reverse` is not a
+boxed element, and the subtraction is wrong.
+
+The fourth row is the same error in arithmetic rather than in measurement, and
+the right model was four lines away in the same file. `Sharing.treeInsertNodes`
+reads `balancedDepth(n) + 1L` and says why in its Scaladoc — *"the count
+therefore exceeds the depth by exactly one"* — while `degenerationFactor`
+divided one depth by another:
+
+```text
+                    numerator   denominator    factor
+-----------------   ---------   -----------   -------
+depths                   4096            13   315.077
+nodes, depth + 1         4097            14   292.643
+```
+
+The `+1` is worth 0.02% on the numerator and 7.1% on the denominator. **An
+additive constant disappears where the quantity is large and decides the answer
+where it is small** — and in a comparison between a degenerate structure and a
+balanced one, the balanced side is always the small one.
+
+**The rule.** Before comparing a prediction with a measurement, say what each
+side counts in one sentence, out loud, with a noun: *"cells the result keeps"*
+against *"bytes this thread allocated"*. If the two nouns differ, the comparison
+is not yet a comparison — either model the difference or remove it from the
+window, and say which.
+
+**Why the build does not catch it.** Both sides are `Long`; the noun lives in the
+name, which the machine does not read (pattern 7, one layer up). Worse, the
+tolerances absorbed three of the four: prepend asserted *at most two cells* and
+measured 1.67 of one, the tree asserted *within three nodes* and measured 0.67 of
+one over, and append was compared against `scala.List`, whose builder-based
+`appended` sits 0.005% from the model (pattern 2). Only swapping in `MyList`
+produced a gap — 100% — that no tolerance could hide. Three defects sat inside a
+green suite for as long as the instrument was pointed at the wrong structure.
+
+---
+
+## 11. A fixture that cannot exhibit the property under test
+
+The assertion is right, the implementation is right, and the input chosen to
+join them is the one input for which the property does not hold.
+
+`Exercise9BalanceSpec` measures what depth does to the cost of an insert, by
+inserting into a degenerate tree and a balanced one and taking the ratio. It
+probed both with `insert(-1)`.
+
+`fromSorted` inserts `0, 1, ..., n-1` ascending, so every value becomes the right
+child of the last and the tree is a spine to the right. A value *below* the
+minimum is therefore the cheapest insert that tree admits: it is less than the
+root, the root's left child is empty, and the walk stops after one node.
+
+```text
+probe    sorted (bytes / nodes)   balanced (bytes / nodes)    factor   verdict
+------   ----------------------   -------------------------   ------   --------
+-1                    48 /    2                 312 /    13     0.15   inverted
+4096              98,344 / 4097.7                352 / 14.7    292.6   right
+```
+
+The degenerate tree measured **six times cheaper** than the balanced one, in a
+test whose subject is that it is three hundred times more expensive.
+
+The same choice hid a second defect. `-1` lies inside the `Integer` cache
+(`-128..127`), so `Integer.valueOf(-1)` allocates nothing and the boxed element
+of pattern 10 never appeared on that path — which is why both `-1` rows above
+are exact multiples of 24 and both `4096` rows are not.
+
+**The rule.** For every property asserted, name two inputs before writing the
+fixture: the one that exhibits it maximally, and the one that hides it. Then
+assert the *direction* before the magnitude — `sortedCost > balancedCost` is one
+line, it cannot be satisfied by an inverted experiment, and it fails on the sign
+long before anyone reads the ratio.
+
+**Why the build does not catch it.** A fixture compiles. The assertion that
+should have caught it, `measured > predicted / 3.0`, reads like a floor but was
+never reached: `degenerationFactor` was wrong upstream (pattern 10, fourth row),
+so the suite failed earlier and this defect stayed latent behind another one.
+Had the formula been fixed first, the failure message would have read *"the
+insert is not copying the path it walks"* — a diagnosis pointing squarely at
+`MyTree.insert`, which was correct throughout.

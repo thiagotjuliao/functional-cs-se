@@ -32,6 +32,9 @@ object SharingProof:
     * evidence is three measurements away, and Module 1's challenge log entry 4
     * has them.
     *
+    * While the body's return type is a reference not a boxed primitive
+    * we'll consider 0 as the floor for our reference-valued body.
+    *
     * Warm the body before measuring, exactly as `Exercise4BoxingSpec` does.
     * A cold measurement measures the interpreter.
     */
@@ -44,13 +47,19 @@ object SharingProof:
     * Must agree with `Sharing.cellBytes(Sharing.prependCells(n))`, and the
     * agreement must not depend on `n`.
     */
-  def measurePrepend(n: Int): Long = ???
+  def measurePrepend(n: Int): Long =
+    val ls = MyList((0 until n)*)
+    bytesOf(ls.prepended(n + 1))
 
   /** Measured bytes allocated by `xs.appended(x)` on a list of `n` cells. */
-  def measureAppend(n: Int): Long = ???
+  def measureAppend(n: Int): Long =
+    val ls = MyList((0 until n)*)
+    bytesOf(ls.appended(n + 1))
 
   /** Measured bytes allocated by `xs.reverse` on a list of `n` cells. */
-  def measureReverse(n: Int): Long = ???
+  def measureReverse(n: Int): Long =
+    val ls = MyList((0 until n)*)
+    bytesOf(ls.reverse)
 
   /** Measured bytes allocated by one `insert` into a balanced tree of `n` nodes.
     *
@@ -58,7 +67,9 @@ object SharingProof:
     * single one. On `n = 2^20 - 1` the reference measurement is 504 bytes —
     * 21 nodes at 24 — and yours should land within a node or two of it.
     */
-  def measureTreeInsert(n: Int): Long = ???
+  def measureTreeInsert(n: Int): Long =
+    val t = MyTree.fromRange(0, n)
+    bytesOf(t.insert(n + 1))
 
 end SharingProof
 
@@ -76,8 +87,12 @@ object Balance:
     * Predict its depth before running this. Then run it, and check whether your
     * prediction and the measurement agree — the gap, if any, is a challenge-log
     * entry.
+    *
+    * Since all values come from an ascending order then all of them goes to
+    * the right branch side of the tree on each node, i.e, depth = n.
     */
-  def fromSorted(n: Int): MyTree[Int] = ???
+  def fromSorted(n: Int): MyTree[Int] =
+    MyTree.fromMyList(MyList((0 until n)*))
 
   /** A tree holding the same values, built so that the depth is minimal.
     *
@@ -85,7 +100,8 @@ object Balance:
     * the midpoint as the root is what produces the bound, in one line, in this
     * Scaladoc.
     */
-  def fromBalanced(n: Int): MyTree[Int] = ???
+  def fromBalanced(n: Int): MyTree[Int] =
+    MyTree.fromRange(0, n)
 
   /** The factor by which one `insert` costs more on the sorted-built tree than
     * on the balanced one, at size `n`.
@@ -96,6 +112,8 @@ object Balance:
     *
     * Returns `0.0` for `n <= 0`.
     */
-  def degenerationFactor(n: Int): Double = ???
+  def degenerationFactor(n: Int): Double =
+    if n <= 0 then 0.0
+    else (fromSorted(n).depth + 1) / (fromBalanced(n).depth + 1).toDouble
 
 end Balance

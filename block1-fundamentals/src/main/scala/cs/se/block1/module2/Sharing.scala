@@ -109,7 +109,8 @@ object Sharing:
     *
     * Verified against the measurement in Exercise 8 once you have both.
     */
-  def appendAllocatedCells(n: Int): Long = ???
+  def appendAllocatedCells(n: Int): Long =
+    appendCells(n) + n + 1
 
   /** Cells allocated by `xs.reverse`, where `xs` has `n` cells.
     *
