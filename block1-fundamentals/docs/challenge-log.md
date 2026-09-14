@@ -1545,3 +1545,63 @@ the source. A nested enum costs 50%% more per instance than the same declaration
 at the top level %s worth knowing independently of this challenge, and a reminder
 that a measurement of a *declaration* is sensitive to where the declaration
 sits.
+
+---
+
+## E3 %s `Combinators`
+
+### 25. `map` is `loop(xs.reverse)` and `filter` is `loop(xs).reverse`. For which inputs do the two idioms cost different amounts, and which is cheaper?
+
+**Answered: filter is cheaper when the predicate rejects, because the list being
+reversed is smaller.** Correct, and pointing at the right mechanism. The
+refinement is that the property is not about `filter` against `map`: it is about
+**length preservation**, and either function could have been written either way.
+
+Let `n` be the input length and `k` the length of the result.
+
+```text
+loop(xs.reverse)   reverse first   costs  n + k cells
+loop(xs).reverse   reverse last    costs    2k cells
+```
+
+They are equal **exactly when `k = n`**. Measured at `n = 100,000`, with each
+variant written out and probed, model beside measurement:
+
+```text
+                           reverse first            reverse last
+                        model        measured     model      measured
+---------------------   ---------   ---------   ---------   ---------
+filter keeps all        4,800,000   4,800,000   4,800,000   4,800,000
+filter keeps half       3,600,000   3,600,000   2,400,000   2,400,000
+filter keeps 1 in 100   2,424,000   2,424,000      48,000      48,000
+filter keeps none       2,400,000   2,400,000           0           0
+map(identity)           6,397,952   6,397,952   6,397,952   6,397,952
+```
+
+Every cell agrees to the byte, and `mapReverseLast(xs)(identity)` returns a list
+equal to `xs.map(identity)`.
+
+**`map` never drops anything, so `k = n` and its choice of idiom is free.**
+Writing it the other way changes nothing: 6,397,952 either way. **`filter` can
+drop, so it must reverse last**, and the penalty for getting it backwards is
+`n - k` cells %s exactly the elements it had already decided to discard.
+
+The last row is the sharpest. `filter(_ => false)` costs **0 bytes** written
+correctly and **2,400,000** written backwards: an operation whose result is
+`Nil`, allocating 2.4 MB to produce it. Reversing first commits to paying for
+the whole input before the predicate has been consulted once.
+
+This also settles the `filter` figure that pattern 12 removed from
+`MyList.map`'s Scaladoc as unanchored. It is `2k` cells, exactly, with no
+boxing: the predicate returns a primitive and each kept element is re-prepended
+as the same reference. The probe, so the number stays reproducible:
+
+```scala
+def filterReverseFirst[A](xs: MyList[A])(p: A => Boolean): MyList[A] =
+  @tailrec def loop(as: MyList[A], acc: MyList[A] = MyList.Nil): MyList[A] =
+    as match
+      case MyList.Nil => acc
+      case MyList.Cons(h, t) if p(h) => loop(t, acc.prepended(h))
+      case MyList.Cons(_, t) => loop(t, acc)
+  loop(xs.reverse)          // the other ordering; the shipped one is loop(xs).reverse
+```
