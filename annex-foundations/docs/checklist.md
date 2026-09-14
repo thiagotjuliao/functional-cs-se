@@ -31,11 +31,11 @@ unperformed measurement.
       back), and read one negative 8-bit pattern as a signed value, showing the
       arithmetic. If Part I felt obvious, do it anyway — it takes five minutes
       and it is the foundation every later part stands on.
-
-*The recall set `docs/quiz/a1.html` carries no box here. It was added while this
-annex was still open, but the routine's box for it first appears in B1-M2 — so
-this annex was accepted without it. It is the instrument to use when revising
-this material.*
+- [x] Work `docs/quiz/a1.html`, filtering by Part as you finish each one.
+      Worked after the milestone was tagged, and the box added with it: the
+      recall set was written while this annex was still open, but the routine's
+      box for it first appears in B1-M2. It is recorded here so this annex is
+      held to the contract every later module is held to.
 
 ### B. Implementation — Exercises
 

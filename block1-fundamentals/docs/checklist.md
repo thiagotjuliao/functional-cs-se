@@ -18,11 +18,12 @@ measurement.
 - [x] Derive, from the object-layout rules alone, the heap cost of a
       `List[Int]` and an `Array[Int]` of one million elements. Both numbers must
       match your Exercise 7 implementation.
-
-*The recall set `docs/quiz/b1-m1.html` carries no box here. It was written as
-this module closed, when the guide's Self-Check was dropped, and the routine's
-box for it first appears in Module 2 — so this module was accepted without it.
-It is the instrument to use when revising this material.*
+- [x] Work `docs/quiz/b1-m1.html`, filtering by Part as you finish each one.
+      Worked after the milestone was tagged, and the box added with it: the
+      recall set was written as this module closed, when the guide's Self-Check
+      was dropped, and the routine's box for it first appears in Module 2. It is
+      recorded here so this module is held to the contract every later module is
+      held to.
 
 ### B. Implementation — Exercises
 
