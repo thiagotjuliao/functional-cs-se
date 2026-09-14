@@ -89,7 +89,44 @@
   "files.insertFinalNewline": true,
 
   // ---------------------------------------------------------------------------
-  // Theory guides in docs/theory are Markdown; preview with Ctrl+K V.
+  // Tabs — a click opens a file, it does not audition it
+  //
+  // By default a single click opens the file in a *preview tab*: italic title,
+  // one slot reused by the next thing clicked, so opening a second file closes
+  // the first. Keeping a file meant double-clicking it, or editing it, before
+  // the tab would stay.
+  //
+  // That default assumes browsing. The work here is cross-referencing — a
+  // theory guide beside the exercise it unlocks beside the spec that proves it
+  // — and under that default the third file evicts the first. Off, every click
+  // is an ordinary tab.
+  // ---------------------------------------------------------------------------
+  "workbench.editor.enablePreview": false,
+
+  // ---------------------------------------------------------------------------
+  // Markdown opens rendered
+  //
+  // Note the collision: VS Code calls the *tab* behaviour above "preview" and
+  // the *rendered Markdown* below "preview" too. They are unrelated settings,
+  // and this file wants them in opposite directions — no italic tabs, yes
+  // rendered Markdown.
+  //
+  // Every Markdown file here is written to be read rendered: tables, aligned
+  // ```text blocks, checkbox lists, cross-document links. The editor
+  // association makes that the default for `.md` instead of something reached
+  // with Ctrl+K V after the fact.
+  //
+  // To edit one, reopen it as text: `Ctrl+Shift+P` → "Reopen Editor With..." →
+  // "Text Editor" (or right-click the file → "Open With..."). The `[markdown]`
+  // block below still governs that text view; it is not overridden, only
+  // bypassed while the rendered view is open.
+  // ---------------------------------------------------------------------------
+  "workbench.editorAssociations": {
+    "*.md": "vscode.markdown.preview.editor"
+  },
+
+  // ---------------------------------------------------------------------------
+  // Markdown as text, once reopened that way
   // ---------------------------------------------------------------------------
   "[markdown]": {
     "files.trimTrailingWhitespace": false,

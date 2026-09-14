@@ -1,5 +1,7 @@
 package cs.se.block1.module2
 
+import cs.se.block1.module1.AllocationProbe
+
 /** Exercises 8 and 9 — confronting the model with the machine.
   *
   * Exercise 1 made predictions from arithmetic alone. This is where they are
@@ -33,7 +35,9 @@ object SharingProof:
     * Warm the body before measuring, exactly as `Exercise4BoxingSpec` does.
     * A cold measurement measures the interpreter.
     */
-  def bytesOf[A](body: => A): Long = ???
+  def bytesOf[A](body: => A): Long =
+    (0 until 20).foreach(_ => body)
+    AllocationProbe.measure(body)._2
 
   /** Measured bytes allocated by `x :: xs` on a list of `n` cells.
     *
