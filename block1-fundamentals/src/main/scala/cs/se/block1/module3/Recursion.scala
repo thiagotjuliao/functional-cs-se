@@ -27,7 +27,10 @@ object Arithmetic:
     * `Int.MinValue` is where this kind of function usually breaks; Module 1's
     * pattern 6 is the entry to re-read before claiming totality.
     */
-  def gcd(a: Int, b: Int): Int = ???
+  @scala.annotation.tailrec
+  def gcd(a: Int, b: Int): Int =
+    if b == 0 then a
+    else gcd(b, a % b)
 
   /** `base` raised to `exp`, by repeated squaring.
     *
@@ -41,7 +44,13 @@ object Arithmetic:
     *
     * Returns `1L` for `exp <= 0`.
     */
-  def power(base: Long, exp: Int): Long = ???
+  def power(base: Long, exp: Int): Long = powerAcc(base, exp)
+
+  @scala.annotation.tailrec
+  private def powerAcc(base: Long, exp: Int, acc: Long = 1L): Long =
+    if exp <= 0 then acc
+    else if exp % 2 == 0 then powerAcc(base * base, exp / 2, acc)
+    else powerAcc(base * base, exp / 2, acc * base)
 
   /** The decimal digits of `n`, most significant first.
     *
@@ -52,9 +61,25 @@ object Arithmetic:
     * answer is wanted in. Resolve that without a second traversal if you can,
     * and if you cannot, say what the second traversal costs. Module 2, §12.
     *
-    * Negative `n`: decide and document.
+    * Negative `n`: since we want only the digits we'll take the absolute value of n.
     */
-  def digits(n: Int): MyList[Int] = ???
+  def digits(n: Int): MyList[Int] =
+    @scala.annotation.tailrec
+    def loop(
+        n: Long,
+        q: Long = 10,
+        r: Long = 0,
+        d: Long = 1,
+        acc: MyList[Int] = MyList()
+    ): MyList[Int] =
+      if d > n then acc
+      else
+        val n_ = n - r
+        val r_ = (n_ % q) / d
+        val d_ = d * 10
+        val q_ = q * 10
+        loop(n_, q_, r_, d_, acc.prepended(r_.toInt))
+    if n == 0 then MyList(0) else loop(Math.abs(n.toLong))
 
   /** The number of Collatz steps from `n` down to 1, counting the last step.
     *
@@ -68,7 +93,13 @@ object Arithmetic:
     * Nobody knows whether this terminates for every `n`. Your Scaladoc should
     * not claim that it does.
     */
-  def collatzLength(n: Long): Int = ???
+  def collatzLength(n: Long): Int =
+    @scala.annotation.tailrec
+    def loop(n: Long, acc: Int = 0): Int =
+      if n <= 1 then acc
+      else if n % 2 == 0 then loop(n / 2, acc + 1)
+      else loop(3 * n + 1, acc + 1)
+    loop(n)
 
 end Arithmetic
 
