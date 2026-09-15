@@ -86,4 +86,59 @@ class Exercise1StackProbeSpec extends Module3Harness:
     }
   }
 
+  test("onStack propagates whatever the body throws, fatal throwables included") {
+    // "Whatever" is the whole contract, and the word does real work here. The
+    // obvious way to carry a result across a thread boundary is a Try, and
+    // `scala.util.Try` catches only what `NonFatal` admits - which excludes
+    // every `VirtualMachineError`, and `StackOverflowError` is one.
+    //
+    // An implementation built on Try passes the two ordinary cases below and
+    // loses the third: the error escapes the Try, kills the thread, leaves the
+    // result box empty, and the caller is handed whatever an empty box
+    // produces. Measured on exactly that implementation, the caller saw a
+    // `MatchError` - a failure that names nothing about a stack.
+    //
+    // This is the one assertion in the module that separates catching
+    // `Throwable` from catching anything narrower.
+
+    val ordinary = intercept[IllegalArgumentException] {
+      StackProbe.onStack(512)(throw IllegalArgumentException("from the other thread"))
+    }
+    assertEquals(
+      ordinary.getMessage,
+      "from the other thread",
+      "the throwable that arrives must be the one that was thrown, not a wrapper around it"
+    )
+
+    val checked = intercept[UnsupportedOperationException] {
+      StackProbe.onStack(512)(throw UnsupportedOperationException("also ordinary"))
+    }
+    assertEquals(checked.getMessage, "also ordinary")
+
+    // The body overflows with nothing catching it on the way out, which is what
+    // `survives` normally does and is deliberately absent here.
+    //
+    // Written with a plain catch rather than `intercept`, because MUnit's
+    // `intercept` cannot express this assertion: it is built on `NonFatal` and
+    // a `StackOverflowError` escapes it untouched. Verified - `intercept` let
+    // it through while catching an `IllegalStateException` normally. The tool
+    // for testing that a Throwable is caught is defeated by the same
+    // fatal/non-fatal split the test is about, which is worth knowing before
+    // you reach for it anywhere else in this module.
+    val overflowed =
+      try
+        val _ = StackProbe.onStack(256)(deep(Int.MaxValue))
+        "the body returned, so nothing overflowed"
+      catch
+        case _: StackOverflowError => "propagated"
+        case t: Throwable => s"propagated the wrong thing: ${t.getClass.getName}"
+    assertEquals(
+      overflowed,
+      "propagated",
+      "a StackOverflowError raised by the body must reach the caller as itself. An " +
+        "implementation whose result box stays empty hands back whatever an empty box " +
+        "produces - measured on a Try-based version, a MatchError naming nothing about a stack"
+    )
+  }
+
 end Exercise1StackProbeSpec
