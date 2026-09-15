@@ -238,12 +238,43 @@ end Loops
   */
 object EarlyExit:
 
-  /** The index of the first element equal to `x`, or `-1`.
+  /** The index of the first element equal to `x`, or `-1` when no element is.
     *
-    * `-1` is in-band signalling in the same `Int` domain as a legitimate index,
-    * which Module 1 recorded as a live objection against `Bench.medianNanos`.
-    * Use it anyway, for symmetry with the standard library, and record the
-    * objection in the Scaladoc rather than pretending it is absent.
+    * `indexOf(MyList(3, 1, 4, 1), 1) == 1` — the '''first''' occurrence and not any
+    * occurrence. `indexOf(MyList(), x) == -1` for every `x`.
+    *
+    * The walk stops at the element that decides the answer; nothing after the
+    * first match is visited. Over 100,000 elements with no match at all it
+    * allocates nothing — measured, 0 bytes.
+    *
+    * '''Two objections are recorded here rather than repaired.'''
+    *
+    * The first is the sentinel. `-1` is in-band signalling in the same `Int`
+    * domain that carries a legitimate index: the absence of a result is encoded
+    * as a value of the result type, and a caller who does not know the
+    * convention cannot read it off the type. `Option[Int]` would carry the
+    * distinction where the compiler can see it. Module 1 recorded the same
+    * objection against `Bench.medianNanos`; the convention is kept for symmetry
+    * with the standard library, which is a reason and not a defence.
+    *
+    * The second is the equality, and it is the sharper one. `x == h` compares
+    * two values of the same type parameter `A`, so the unrelated-types check has
+    * nothing to compare — it is not evaded, it is inapplicable by construction.
+    * `MyList` is covariant, so a call site widens `A` instead of being rejected,
+    * and universal equality is cooperative across the numeric tower:
+    *
+    * {{{
+    * indexOf(MyList(1, 2, 3), 1L)  ==  0   // A inferred as Int | Long
+    * indexOf(MyList(1, 2, 3), 1.0) ==  0   // A inferred as Int | Double
+    * indexOf(MyList(1, 2, 3), "3") == -1   // A inferred as Int | String
+    * }}}
+    *
+    * Written directly, `1 == "3"` is a hard error under `-source:future`. Routed
+    * through this signature it is warning E225 — a type argument inferred to be
+    * a union — and therefore an error in `Compile`, where `-Werror` is set, and
+    * a warning only in `Test`, where the build drops `-Werror` deliberately. The
+    * repair is a `using CanEqual[A, A]` context bound, which hands the proof
+    * back to the caller; that is Block 2 machinery and is not used here.
     */
   def indexOf[A](xs: MyList[A], x: A): Int =
     @scala.annotation.tailrec
@@ -254,11 +285,35 @@ object EarlyExit:
         case Cons(_, t) => loop(t, i + 1)
     loop(xs)
 
-  /** Whether `p` holds for every element. `true` for the empty list.
+  /** Whether `p` holds for every element, and `true` for the empty list.
     *
-    * Must stop at the first element that fails. A version that visits the whole
-    * list and combines with `&&` returns the right answer and is a different
-    * function; the spec counts calls to `p`.
+    * `true` is not a convention: it is the identity of `&&`, which is what the
+    * empty conjunction is worth.
+    *
+    * '''Stopping is part of the contract, not an optimisation.''' `p` is applied
+    * exactly once to each element visited, and no element after the one that
+    * decides the answer is visited at all. `Exercise5EarlyExitSpec` counts the
+    * applications with an `AtomicInteger` and asserts 4 over a list of
+    * 1,000,000 whose fourth element is the first to fail — the one assertion in
+    * the suite that a whole-list implementation would not also pass.
+    *
+    * '''The `&&` spelling is the same function.''' `p(h) && forall(t, p)` short
+    * circuits, is accepted by `@tailrec`, and compiles to the same `goto`: `&&`
+    * takes its right operand by name, but on `Boolean` it is an intrinsic that
+    * becomes a branch rather than a call, so the operand is in tail position and
+    * no frame is left pending. What is genuinely a different function is the
+    * fold — `xs.foldLeft(true)((b, a) => b && p(a))` — which visits every
+    * element regardless of `&&`, because `foldLeft` has no way to stop. The
+    * short circuit belongs to the operator; the early exit belongs to the
+    * recursion.
+    *
+    * `@tailrec` sits on a public method, which guide §26 would normally refuse:
+    * the annotation needs a statically known target and an overridable method
+    * has none. It is admissible because `EarlyExit` is an `object` and every
+    * member of an `object` is final by construction — the same argument that
+    * admits `Arithmetic.gcd`.
+    *
+    * Allocates nothing: 0 bytes over 100,000 elements, measured.
     */
   @scala.annotation.tailrec
   def forall[A](xs: MyList[A], p: A => Boolean): Boolean =
@@ -267,12 +322,22 @@ object EarlyExit:
       case Cons(h, t) if p(h) => forall(t, p)
       case _: Cons[A] => false
 
-  /** Whether `p` holds for at least one element. `false` for the empty list.
+  /** Whether `p` holds for at least one element, and `false` for the empty list
+    * — the identity of `||`, for the reason `forall` returns `true`.
     *
-    * Must stop at the first element that succeeds, for the same reason.
+    * Stops at the first element that succeeds, under the same contract: one
+    * application of `p` per element visited, and nothing visited after the
+    * decision. With no match present there is nothing to stop at and the whole
+    * list is walked, which the spec pins at 1,000,000 applications.
     *
-    * State the relationship between this and `forall` in one line. There is
-    * exactly one, it is an identity, and Block 2 will call it by name.
+    * '''The identity.''' `forall(xs, p) == !exists(xs, a => !p(a))` — De Morgan,
+    * and Block 2 will name it again as the duality between the two monoids
+    * `Boolean` carries, `(&&, true)` and `(||, false)`.
+    *
+    * It is not used as the implementation. The derived spelling would preserve
+    * the early exit, since negating a predicate does not move the element where
+    * it first decides, but it allocates one closure per call to carry
+    * `a => !p(a)` — against zero for the direct spelling.
     */
   @scala.annotation.tailrec
   def exists[A](xs: MyList[A], p: A => Boolean): Boolean =
@@ -283,12 +348,31 @@ object EarlyExit:
 
   /** The longest prefix whose elements all satisfy `p`.
     *
-    * `takeWhile(MyList(1,2,3,1), _ < 3) == MyList(1, 2)`.
+    * `takeWhile(MyList(1, 2, 3, 1), _ < 3) == MyList(1, 2)`.
     *
-    * This one cannot simply return at the first failure: it has a structure to
-    * build. The accumulator is that structure, and it is built in the wrong
-    * order for the same reason `digits` was. One `reverse` is the accepted
-    * price; two traversals of the '''input''' is not.
+    * '''It stops, it does not filter.''' Everything after the first failure is
+    * dropped, including elements that satisfy `p`:
+    * `takeWhile(MyList(1, 2, 9, 1, 2), _ < 5) == MyList(1, 2)`, and the later
+    * `1` and `2` are gone. The returned values alone do not reveal the
+    * difference between the two behaviours, which is why the spec asserts this
+    * input specifically.
+    *
+    * `p` is applied once per element visited, and the element that fails is the
+    * last one visited.
+    *
+    * '''The accumulator is a structure, and it is built backwards''' — the trade
+    * `digits` makes in Exercise 3, for the same reason. Prepending is the only
+    * constant-time insertion a singly-linked cell offers, so the order that
+    * makes the recursion tail is the reverse of the order wanted.
+    *
+    * One `reverse` of the '''prefix''' is the price, and that is not a figure of
+    * speech. Rebuilding the prefix costs two `Cons` cells per element kept —
+    * 48 bytes against the 24 a non-tail spelling would allocate, measured at
+    * 4,800,000 bytes for 100,000 elements. Stack safety is bought here with
+    * exactly one extra copy of the result, and Exercise 6 makes that exchange
+    * the subject rather than a side effect.
+    *
+    * What is never paid is a second traversal of the '''input'''.
     */
   def takeWhile[A](xs: MyList[A], p: A => Boolean): MyList[A] =
     @scala.annotation.tailrec

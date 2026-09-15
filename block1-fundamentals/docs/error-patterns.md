@@ -1091,9 +1091,14 @@ that would report the next constructor is the one the wildcard removed.
 
 | # | Where | What was written | What was meant |
 | :-- | :--- | :--- | :--- |
-| 1 | `EarlyExit.forall` | `case _ => false` | `case Cons(_, _) => false` |
-| 2 | `EarlyExit.exists` | `case _ => true` | `case Cons(_, _) => true` |
-| 3 | `EarlyExit.takeWhile`, in `loop` | `case _ => acc` | `case Nil => acc` and `case Cons(_, _) => acc`, separately |
+| 1 | `EarlyExit.forall` | `case _ => false` | `case _: Cons[A] => false` |
+| 2 | `EarlyExit.exists` | `case _ => true` | `case _: Cons[A] => true` |
+| 3 | `EarlyExit.takeWhile`, in `loop` | `case _ => acc` | `case Nil => acc` and `case _: Cons[A] => acc`, separately |
+
+Any spelling that names the constructor restores the check; the typed pattern
+was chosen over `case Cons(_, _)` because it is an `instanceof` where the
+constructor pattern also calls `unapply`, and the type argument is deducible
+from the scrutinee, so `-unchecked` has no objection.
 
 Occurrence 3 is the one that merges two *different* terminations — the list ran
 out, and an element failed the predicate — and it is also the one where the
