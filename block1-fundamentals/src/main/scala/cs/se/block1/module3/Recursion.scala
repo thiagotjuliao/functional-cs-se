@@ -136,11 +136,26 @@ object Loops:
     * acc
     * }}}
     *
-    * `factorial(0) == 1`. Above `n = 20` a `Long` silently wraps; the domain is
-    * yours to document, and "silently" is the word that decides whether a
-    * comment is enough.
+    * Total over every `Int`, and correct over `[0, 20]`.
+    *
+    * Below that range the result is the empty product: `factorial(0) == 1`, and
+    * so is every negative `n`, because `2 to n` is empty there and the loop
+    * this was translated from returns its seed untouched.
+    *
+    * Above it the result is arithmetic modulo 2^64 and not a factorial.
+    * `20! = 2,432,902,008,176,640,000` is the largest a `Long` holds; `21!`
+    * overshoots `Long.MaxValue` by a factor of 5.54 and wraps, with no
+    * exception raised and no flag left to read afterwards. The caller cannot
+    * detect the wrap from the returned value, which is why the limit is stated
+    * here as a domain rather than mentioned as a caveat, and why
+    * `Exercise4LoopsSpec` pins both sides of it.
     */
-  def factorial(n: Int): Long = ???
+  def factorial(n: Int): Long =
+    @scala.annotation.tailrec
+    def loop(m: Int = 2, acc: Long = 1L): Long =
+      if m > n then acc
+      else loop(m + 1, acc * m)
+    loop()
 
   /** The `n`-th Fibonacci number, `fibonacci(0) == 0`, `fibonacci(1) == 1`.
     *
@@ -150,12 +165,31 @@ object Loops:
     * a
     * }}}
     *
-    * Note the temporary `t` in the loop, and note that your translation will
-    * not need one. Guide §10 says why; your Scaladoc should say it too, because
-    * it is the clearest single argument in this module for what the
-    * transformation buys beyond stack safety.
+    * Correct over `[0, 92]`. `F(92) = 7,540,113,804,746,346,429` is the largest
+    * that fits a `Long`; `F(93)` wraps silently, exactly as `factorial` does
+    * above 20. For `n <= 0` the result is `0`, the seed, as in the loop.
+    *
+    * '''Why the translation carries no `t`.''' The loop needs one because its
+    * assignments are sequential: `a = b` destroys the old `a` before
+    * `b = a + b` can read it, so `t` preserves a value the next statement is
+    * about to condemn. The recursion assigns nothing. `loop(i + 1, b, a + b)`
+    * evaluates every argument before a single binding is made, so the state
+    * where `a` is already new and `b` is still old never exists — and a
+    * temporary exists only to carry a value across such a state.
+    *
+    * The temporary does not leave the machine. The JVM has no simultaneous
+    * assignment, so the compiled tail call stores both new values into fresh
+    * slots and only then overwrites the parameters (guide §6). What changes is
+    * who is answerable for it: forgetting `t` in the loop compiles, runs, and
+    * returns powers of two, while in the recursion the mistake has nowhere to
+    * live. That is what the transformation buys beyond stack safety.
     */
-  def fibonacci(n: Int): Long = ???
+  def fibonacci(n: Int): Long =
+    @scala.annotation.tailrec
+    def loop(i: Int = 0, a: Long = 0L, b: Long = 1L): Long =
+      if i >= n then a
+      else loop(i + 1, b, a + b)
+    loop()
 
   /** `n` with its decimal digits reversed. `reverseDigits(1024) == 4201`.
     *
@@ -165,12 +199,30 @@ object Loops:
     * acc
     * }}}
     *
-    * The loop overflows silently for inputs whose reversal exceeds `Int`, and
-    * so will your translation. That is not a defect introduced by the
-    * transformation, which is exactly why it is worth recording: a faithful
-    * translation preserves the bugs too.
+    * Total over every `Int`, and faithful over every `Int` — including where
+    * the original is wrong. Three behaviours are inherited rather than chosen,
+    * and all three follow from the loop's own arithmetic:
+    *
+    *   - Leading zeros vanish: `reverseDigits(100) == 1`, because `acc` never
+    *     records the trailing zeros it multiplies past.
+    *   - The sign is preserved: `reverseDigits(-1024) == -4201`, because `%`
+    *     and `/` both truncate toward zero in Scala, so every digit arrives
+    *     negative.
+    *   - The result wraps when the reversal does not fit:
+    *     `reverseDigits(1_999_999_999)` returns `1,410,065,399` rather than
+    *     `9,999,999,991`.
+    *
+    * The overflow is inherited, not introduced, and it is deliberately left in
+    * place. Widening the accumulator would make the translation unverifiable
+    * against its original — and agreeing with that original on every input,
+    * the wrong ones included, is the only property this exercise can check.
     */
-  def reverseDigits(n: Int): Int = ???
+  def reverseDigits(n: Int): Int =
+    @scala.annotation.tailrec
+    def loop(m: Int = n, acc: Int = 0): Int =
+      if m == 0 then acc
+      else loop(m / 10, acc * 10 + m % 10)
+    loop()
 
 end Loops
 
