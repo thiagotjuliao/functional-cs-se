@@ -61,7 +61,19 @@ object Arithmetic:
     * answer is wanted in. Resolve that without a second traversal if you can,
     * and if you cannot, say what the second traversal costs. Module 2, §12.
     *
-    * Negative `n`: since we want only the digits we'll take the absolute value of n.
+    * Negative `n`: the sign is discarded and the digits of `|n|` are returned,
+    * so the function is total over every `Int`. The law is therefore
+    * `digits(n)` reassembles to `|n|`, '''not''' to `n`.
+    *
+    * The absolute value is taken '''after''' the widening — `Math.abs(n.toLong)`
+    * and never `Math.abs(n)` — because two's complement is asymmetric.
+    * `|Int.MinValue|` is `2^31` and the largest `Int` is `2^31 - 1`, so
+    * `Math.abs(Int): Int` has nowhere to put the answer and returns its argument
+    * unchanged. The 32-bit spelling hands the loop a negative `n`, the guard
+    * `d > n` fires before the first iteration, and the result is an empty list:
+    * a wrong answer with no exception and no warning. `Long` carries the same
+    * asymmetry at `2^63`, which is `2^32` times beyond the largest `Int`, so one
+    * widening closes the whole domain rather than moving the edge.
     */
   def digits(n: Int): MyList[Int] =
     @scala.annotation.tailrec

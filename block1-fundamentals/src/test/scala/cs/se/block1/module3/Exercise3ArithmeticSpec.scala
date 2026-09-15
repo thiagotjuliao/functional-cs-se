@@ -49,10 +49,26 @@ class Exercise3ArithmeticSpec extends Module3Harness:
     assertEquals(Arithmetic.digits(7).toScalaList, List(7))
     assertEquals(Arithmetic.digits(100).toScalaList, List(1, 0, 0), "trailing zeros are digits")
 
-    // The law that pins the order: reassembling the digits must return the input.
-    List(0, 7, 42, 1024, 999_999, Int.MaxValue).foreach { n =>
+    // The boundary of the input type, pinned literally. |Int.MinValue| is 2^31
+    // and the largest Int is 2^31 - 1, so an abs taken at 32 bits returns its
+    // argument unchanged and the loop exits before its first iteration. The
+    // failure is an empty list: no exception, no warning, and a reassembly of 0.
+    assertEquals(
+      Arithmetic.digits(Int.MinValue).toScalaList,
+      List(2, 1, 4, 7, 4, 8, 3, 6, 4, 8),
+      "the abs must be taken after the widening, not before"
+    )
+
+    // The law that pins the order: reassembling the digits returns the
+    // magnitude of the input. digits preserves |n|, not n — the sign is
+    // discarded by contract, so the law is stated over the absolute value.
+    //
+    // math.abs(n.toLong), never math.abs(n).toLong: abs and toLong do not
+    // commute, and the wrong order reproduces here, in the test, the exact
+    // 32-bit defect the test exists to catch.
+    List(0, 7, 42, -42, 1024, -1024, 999_999, Int.MaxValue, Int.MinValue).foreach { n =>
       val back = Arithmetic.digits(n).foldLeft(0L)((acc, d) => acc * 10 + d)
-      assertEquals(back, n.toLong, s"digits($n) does not reassemble to $n")
+      assertEquals(back, math.abs(n.toLong), s"digits($n) does not reassemble to |$n|")
     }
   }
 
