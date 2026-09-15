@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Twenty-two individual mistakes are a diary and nobody rereads a diary. Eleven
+Thirty-two individual mistakes are a diary and nobody rereads a diary. Fourteen
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -22,7 +22,7 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | :-- | :--- | :-: | :--- |
 | 1 | Bit-to-byte conversion written from memory | 3 | two of three |
 | 2 | Two quantities that coincide under the current configuration | 2 | no — a test passed for the wrong reason |
-| 3 | Off-by-one in a limit | 1 | no — the boundary has no call site |
+| 3 | Off-by-one in a limit | 2 | no — the boundary has no call site, and the second occurrence is prose |
 | 4 | A constant is only as tested as the arithmetic that exposes it | 2 confirmed, 6 latent | no — one latent since pinned, five documented |
 | 5 | A generator built inside the by-name parameter it should drive | 1 | no — a test passed on a degenerate input |
 | 6 | A contract no implementation of that signature can satisfy | 3 | no — contracts are prose, and one of them is a checklist clause |
@@ -33,9 +33,10 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 11 | A fixture that cannot exhibit the property under test | 2 | no — and the failure it finally produced blamed the wrong file |
 | 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
 | 13 | A measurement taken while its subject is still changing | 2 | no — it passes intermittently, and when it fails it blames the wrong file |
+| 14 | An equality standing in for an inequality | 1 | no — it agrees with the original across the whole tested domain |
 
-Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 in
-**Module 3**. The file was
+Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 and 14
+in **Module 3**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
 day its defect appears.
@@ -152,6 +153,18 @@ only where their *algorithms* differ, and nowhere where only their shapes do.
 
 ## 3. Off-by-one in a limit
 
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Bench.medianNanos` | `if iterations <= 1` | `if iterations < 1` |
+| 2 | `Loops.factorial` Scaladoc | *"It wraps silently when `n >= 20`"* | wraps from 21; `20!` is exact |
+
+The two occurrences sit on opposite sides of the compiler. The first is a
+comparison the machine executes; the second is a sentence the machine never
+reads. The arithmetic mistake is identical, which is the point of filing them
+together.
+
+### Occurrence 1 — the guard
+
 ```text
 written                   rejects             intended            verdict
 -----------------------   -----------------   -----------------   -------
@@ -176,6 +189,47 @@ Then read the operator off the table rather than choosing it from intuition.
 **Why the build does not catch it.** `Exercise9BenchSpec` calls `medianNanos`
 with `1_000` and `2_000` only. The boundary the guard is about has no call site
 anywhere in the suite, so no assertion constrains it in either direction.
+
+### Occurrence 2 — the documented limit
+
+`Loops.factorial`'s Scaladoc opened with *"It wraps silently when `n >= 20`"*.
+The boundary is one higher:
+
+```text
+                                          value   <= Long.MaxValue ?
+-------------------------   -------------------   ------------------
+Long.MaxValue               9,223,372,036,854,775,807
+20!                         2,432,902,008,176,640,000   yes, exact
+21!                        51,090,942,171,709,440,000   no, 5.54x over
+```
+
+`20!` is the largest factorial a `Long` holds, so the documented domain
+excluded the one input that most needed to be in it.
+
+What makes this occurrence worth filing rather than merely fixing is that **the
+correct number was already in the file, twice.** Four lines below the new
+sentence, the Scaladoc it was added to still read *"Above `n = 20` a `Long`
+silently wraps"*; and `Exercise4LoopsSpec` asserts
+
+```scala
+assertEquals(Loops.factorial(20), 2_432_902_008_176_640_000L, "the largest that fits a Long")
+```
+
+Three statements of one boundary, in two files, disagreeing — and the suite
+green throughout.
+
+**The rule for occurrence 2.** A documented limit is stated once. When a domain
+is written in a Scaladoc, delete the prose it supersedes rather than adding a
+sentence beside it; two statements of a boundary are a contradiction waiting for
+one of them to be edited. And a domain is pinned by an assertion on **both**
+sides of the limit — the last input that works and the first that does not —
+which is the discipline `Footprint.align` and `Arithmetic.digits` already
+follow in this repository.
+
+**Why the build does not catch it.** Nothing reads a Scaladoc. The suite
+asserts the true boundary at `factorial(20)` and stops there, so the first
+wrapping input has no call site — occurrence 1's failure mode exactly, arrived
+at from the other direction.
 
 ---
 
@@ -929,3 +983,97 @@ blames the implementation under test. This one failed with *"61,679 was reported
 as surviving and does not"*, which reads as an accusation against a `maxDepth`
 that was correct throughout. That is pattern 11's signature reappearing: a
 failing test naming the wrong file.
+
+---
+
+## 14. An equality standing in for an inequality
+
+A loop's termination test is `<`, and the recursion that replaces it tests `==`.
+Inside the intended domain the two are the same function. Outside it, one stops
+and the other does not — and because the replacement is tail-recursive, *not
+stopping* raises nothing.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Loops.fibonacci` | `if i == n then a` | `if i >= n then a`, from `while i < n` |
+
+The original and the translation, side by side:
+
+```text
+while i < n do ...          ->    if i == n then a else loop(i + 1, ...)
+       ^                                ^
+       an ordering                      an identity
+```
+
+For every `n >= 0` they agree, because `i` starts at 0 and rises by one: it
+reaches `n` before passing it, so the first `i` failing `i < n` is the first
+`i` satisfying `i == n`. That coincidence is the whole defect. It holds exactly
+where the tests look.
+
+For `n < 0` the two separate completely. Measured, by calling the compiled
+method from a plain `java` process rather than from the suite:
+
+```text
+                            result                     elapsed
+-------------------   ---------------------------   -----------
+reference(-3)                                   0        0 ms
+Loops.fibonacci(-3)          -1880398516846847095    4,136 ms
+```
+
+`i` never equals `-3` while rising from 0, so the recursion runs to
+`Int.MaxValue`, **wraps to `Int.MinValue`**, and climbs back to `-3`. That is
+`2^32 - 3 = 4,294,967,293` iterations at 0.96 ns each — consistent with the
+4,136 ms observed, and with a `goto` rather than a call.
+
+Which is the sharpest part of the pattern: **the tail call removed the symptom
+along with the stack.** A non-tail recursion with an unreachable base case dies
+in milliseconds with a `StackOverflowError` naming the method. This one has one
+frame and no allocation, so there is nothing to exhaust. It returns — late, and
+with a number that is a genuine Fibonacci value of a meaningless index.
+
+**The rule.** When transcribing a loop, the termination test is translated
+**literally**, and `==` is never the translation of `<`. Write the negation of
+the loop's own condition as the recursion's base case and stop there:
+
+```text
+while p do body        ->    if !p then <result> else loop(<step>)
+
+while i < n            ->    if i >= n then a         correct
+                             if i == n then a         agrees only while i <= n
+```
+
+An equality is safe as a base case only when the counter is *proved* to land on
+it. Rising by one from a known start is such a proof for `n >= 0` and no proof
+at all for the rest of the type — and the rest of the type is where the input
+came from.
+
+**Why the build does not catch it.** `Exercise4LoopsSpec` compares the
+implementation against the imperative original it was translated from, which is
+the right test — and it runs it over `(0 to 90)`, plus a recurrence check over
+`(2 to 90)`. Every fixture is non-negative, so the fixture cannot exhibit the
+divergence: pattern 11 again, in the one spec written specifically to catch a
+mistranslation. The neighbouring `reverseDigits` test does exercise negatives
+(`-42`, `-1024`); the `fibonacci` one does not, and the asymmetry is invisible
+until the two are read side by side.
+
+**Fixed**, and the regression pinned: `Exercise4LoopsSpec` now checks `-1`,
+`-3`, `-1000` and `Int.MinValue` against the reference. Note what that test
+would have cost *before* the fix, though, because it is the reason a defect
+like this is cheaper to prevent than to catch. Against the defective version
+every one of those calls climbs the whole `Int` range before terminating:
+
+```text
+n             iterations to reach it
+-----------   ----------------------
+-1                     4,294,967,295
+-3                     4,294,967,293
+-1000                  4,294,966,296
+Int.MinValue           2,147,483,648      (reached on the wrap itself)
+                       --------------
+x2 calls per n        30,064,769,064  ->  ~29 s at 0.96 ns
+```
+
+A spec file that completes in **18 ms** today would have taken half a minute to
+report a one-character mistake. Against the corrected version those same eight
+assertions are free. The guard that is cheap to keep was expensive to install —
+the usual shape of a fixture nobody wrote.
