@@ -22,7 +22,8 @@ object TailShapes:
     *
     * Returns `0L` for `n <= 0`.
     */
-  def sumNaive(n: Int): Long = ???
+  def sumNaive(n: Int): Long =
+    if n <= 0 then 0L else n + sumNaive(n - 1)
 
   /** The same sum, with the pending addition moved into a parameter.
     *
@@ -36,7 +37,12 @@ object TailShapes:
     * `sumNaive`. For `+` that is invisible. Part VI.21 is where it stops being
     * invisible, and Exercise 6 is where the spec makes it visible.
     */
-  def sumAcc(n: Int): Long = ???
+  def sumAcc(n: Int): Long =
+    @scala.annotation.tailrec
+    def loop(n: Int, acc: Long = 0L): Long =
+      if n <= 0 then acc
+      else loop(n - 1, acc + n)
+    loop(n)
 
   /** The same sum as an imperative loop, for comparison only.
     *
@@ -48,6 +54,14 @@ object TailShapes:
     * shape as `sumNaive`, as `sumAcc`, or as neither? Guide §6 answers it, and
     * §G asks you to defend the answer.
     */
-  def sumLoop(n: Int): Long = ???
+  def sumLoop(n: Int): Long =
+    var m = n
+    var acc = 0L
+
+    while m > 0
+    do
+      acc += m
+      m -= 1
+    acc
 
 end TailShapes
