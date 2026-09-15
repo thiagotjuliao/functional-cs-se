@@ -378,9 +378,9 @@ object EarlyExit:
     @scala.annotation.tailrec
     def loop(ls: MyList[A], acc: MyList[A] = Nil): MyList[A] =
       ls match
-        case Nil => acc
+        case Nil => acc.reverse
         case Cons(h, t) if p(h) => loop(t, acc.prepended(h))
-        case _: Cons[A] => acc
-    loop(xs).reverse
+        case _: Cons[A] => acc.reverse
+    loop(xs)
 
 end EarlyExit
