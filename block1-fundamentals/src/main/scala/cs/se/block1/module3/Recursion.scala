@@ -1,6 +1,7 @@
 package cs.se.block1.module3
 
 import cs.se.block1.module2.MyList
+import MyList.*
 
 /** Exercise 3 — tail recursion where the accumulator is not a running total.
   *
@@ -244,7 +245,14 @@ object EarlyExit:
     * Use it anyway, for symmetry with the standard library, and record the
     * objection in the Scaladoc rather than pretending it is absent.
     */
-  def indexOf[A](xs: MyList[A], x: A): Int = ???
+  def indexOf[A](xs: MyList[A], x: A): Int =
+    @scala.annotation.tailrec
+    def loop(ls: MyList[A], i: Int = 0): Int =
+      ls match
+        case Nil => -1
+        case Cons(h, _) if x == h => i
+        case Cons(_, t) => loop(t, i + 1)
+    loop(xs)
 
   /** Whether `p` holds for every element. `true` for the empty list.
     *
@@ -252,7 +260,12 @@ object EarlyExit:
     * list and combines with `&&` returns the right answer and is a different
     * function; the spec counts calls to `p`.
     */
-  def forall[A](xs: MyList[A], p: A => Boolean): Boolean = ???
+  @scala.annotation.tailrec
+  def forall[A](xs: MyList[A], p: A => Boolean): Boolean =
+    xs match
+      case Nil => true
+      case Cons(h, t) if p(h) => forall(t, p)
+      case _ => false
 
   /** Whether `p` holds for at least one element. `false` for the empty list.
     *
@@ -261,7 +274,12 @@ object EarlyExit:
     * State the relationship between this and `forall` in one line. There is
     * exactly one, it is an identity, and Block 2 will call it by name.
     */
-  def exists[A](xs: MyList[A], p: A => Boolean): Boolean = ???
+  @scala.annotation.tailrec
+  def exists[A](xs: MyList[A], p: A => Boolean): Boolean =
+    xs match
+      case Nil => false
+      case Cons(h, t) if !p(h) => exists(t, p)
+      case _ => true
 
   /** The longest prefix whose elements all satisfy `p`.
     *
@@ -272,6 +290,12 @@ object EarlyExit:
     * order for the same reason `digits` was. One `reverse` is the accepted
     * price; two traversals of the '''input''' is not.
     */
-  def takeWhile[A](xs: MyList[A], p: A => Boolean): MyList[A] = ???
+  def takeWhile[A](xs: MyList[A], p: A => Boolean): MyList[A] =
+    @scala.annotation.tailrec
+    def loop(ls: MyList[A], acc: MyList[A] = Nil): MyList[A] =
+      ls match
+        case Cons(h, t) if p(h) => loop(t, acc.prepended(h))
+        case _ => acc
+    loop(xs).reverse
 
 end EarlyExit
