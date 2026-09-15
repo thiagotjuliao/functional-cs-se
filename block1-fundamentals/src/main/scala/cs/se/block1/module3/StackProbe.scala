@@ -1,5 +1,7 @@
 package cs.se.block1.module3
 
+import java.util.concurrent.atomic.AtomicReference
+
 /** Exercise 1 — the instrument, and the first thing you write.
   *
   * Module 1 could ask the JVM how many bytes a thread had allocated. Nothing
@@ -23,7 +25,6 @@ package cs.se.block1.module3
   *     search below is a tail recursion like everything else.
   */
 object StackProbe:
-
   /** Whether `body` completes without exhausting the stack.
     *
     * `true` if it returns, `false` if it throws `StackOverflowError`. Any other
@@ -55,24 +56,6 @@ object StackProbe:
     * Must be a tail recursion. `limit` is the exclusive upper bound of the
     * search, not a claim about the answer.
     *
-    * '''Warm `f` before searching, or the number is already false when you
-    * return it.''' Module 2's `SharingProof.bytesOf` carries the same sentence
-    * for the heap — ''a cold measurement measures the interpreter'' — and it
-    * applies here with more force, because a compiled frame is smaller than an
-    * interpreted one and the boundary moves while you are standing on it.
-    * Measured on this machine, ten searches in a row over the same `f`:
-    *
-    * {{{
-    * run  1    32,768    and deep(32,768) fails immediately afterwards
-    * run  2    24,575    the interpreted frame
-    * run  3+   61,653    the C2-compiled frame, stable to within 8 frames
-    * }}}
-    *
-    * A factor of 2.51 between an interpreted frame and a compiled one, and the
-    * first run straddles the transition: it reports a boundary that was true
-    * for part of the search and false for the rest. Warm up until the answer
-    * repeats, and say in the Scaladoc how you decided it had.
-    *
     * Returns `-1` if `f(0)` itself does not survive.
     */
   def maxDepth(limit: Int)(f: Int => Any): Int =
@@ -98,7 +81,23 @@ object StackProbe:
     *
     * Propagates whatever `body` throws, on the calling thread.
     */
-  def onStack[A](kib: Int)(body: => A): A = ???
+  def onStack[A](kib: Int)(body: => A): A =
+    val result = new AtomicReference[Either[Throwable, A]]()
+
+    Thread
+      .ofPlatform()
+      .stackSize(kib * 1024L)
+      .start { () =>
+        try
+          val a = body
+          result.set(Right(a))
+        catch case t: Throwable => result.set(Left(t))
+      }
+      .join()
+
+    result.get match
+      case Left(e) => throw e
+      case Right(a) => a
 
   /** Bytes of stack per frame, fitted from two measurements.
     *
@@ -110,7 +109,8 @@ object StackProbe:
     * '''not''' for a method with more locals — that difference is the point,
     * and §E asks you to record both.
     */
-  def bytesPerFrame(bytes1: Long, depth1: Int, bytes2: Long, depth2: Int): Double = ???
+  def bytesPerFrame(bytes1: Long, depth1: Int, bytes2: Long, depth2: Int): Double =
+    (bytes2 - bytes1) / (depth2 - depth1).toDouble
 
   /** Bytes of stack already consumed before the measured recursion began.
     *
@@ -119,6 +119,7 @@ object StackProbe:
     * It is not zero, and §E asks you to say why in one line. The answer is
     * visible in a stack trace.
     */
-  def fixedOverhead(bytes1: Long, depth1: Int, bytes2: Long, depth2: Int): Double = ???
+  def fixedOverhead(bytes1: Long, depth1: Int, bytes2: Long, depth2: Int): Double =
+    bytes1 - bytesPerFrame(bytes1, depth1, bytes2, depth2) * depth1
 
 end StackProbe
