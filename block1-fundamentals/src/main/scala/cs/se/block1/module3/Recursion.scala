@@ -265,7 +265,7 @@ object EarlyExit:
     xs match
       case Nil => true
       case Cons(h, t) if p(h) => forall(t, p)
-      case _ => false
+      case _: Cons[A] => false
 
   /** Whether `p` holds for at least one element. `false` for the empty list.
     *
@@ -279,7 +279,7 @@ object EarlyExit:
     xs match
       case Nil => false
       case Cons(h, t) if !p(h) => exists(t, p)
-      case _ => true
+      case _: Cons[A] => true
 
   /** The longest prefix whose elements all satisfy `p`.
     *
@@ -294,8 +294,9 @@ object EarlyExit:
     @scala.annotation.tailrec
     def loop(ls: MyList[A], acc: MyList[A] = Nil): MyList[A] =
       ls match
+        case Nil => acc
         case Cons(h, t) if p(h) => loop(t, acc.prepended(h))
-        case _ => acc
+        case _: Cons[A] => acc
     loop(xs).reverse
 
 end EarlyExit
