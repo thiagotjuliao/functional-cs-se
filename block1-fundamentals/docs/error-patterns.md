@@ -1200,11 +1200,15 @@ bit the machine had already computed. `loop$7`, disassembled:
 Two conditional branches converging on one label. Reaching 84 from offset 8
 means nothing was dropped, and the correct answer there is `xs` itself — a
 persistent structure, so the sharing is unobservable. Reaching it from 57 means
-the prefix must be rebuilt. Merging the two labels costs 4,800,000 bytes on a
-100,000-element list that the predicate keeps whole, measured with
-`AllocationProbe`: 48 bytes per element, exactly two `Cons` cells where zero
-were needed. Splitting them costs one extra `areturn` and no extra test.
+the prefix must be rebuilt. Merging the two labels costs one of the two copies
+the rebuild makes: measured with `AllocationProbe` on a 100,000-element list the
+predicate keeps whole, 4,800,000 bytes against 2,400,000, or 48 bytes per
+element against 24. Splitting them costs one extra `areturn` and no extra test.
 
-Which makes the repair worth stating twice: **naming the constructors fixes the
-exhaustivity hole and the allocation at the same keystroke.** Challenge 30 in
-[`challenge-log.md`](challenge-log.md) carries the measurement.
+Not zero. The accumulator is built during the walk, and that it was unnecessary
+is learned only on arrival, by which time its cells exist; only the `reverse` is
+saved. This entry claimed zero when it was first written, and challenge 30 in
+[`challenge-log.md`](challenge-log.md) carries the corrected accounting.
+
+Which still makes the repair worth stating twice: **naming the constructors
+fixes the exhaustivity hole and half the allocation at the same keystroke.**

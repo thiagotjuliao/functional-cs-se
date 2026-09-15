@@ -2063,15 +2063,38 @@ Splitting them costs **one extra `areturn` and no extra test**. Nothing is
 added; label 84 is given a twin.
 
 Which is the finding worth keeping: **the repair for pattern 15 and this
-optimisation are the same edit.** Naming `case Nil` and `case Cons(_, _)`
-separately restores the exhaustivity check *and* hands over the free case. The
-wildcard did not only cost safety against a future constructor — it cost
-4,800,000 bytes on a common input, and both bills are the same character.
+optimisation are the same edit.** Naming the constructors separately restores
+the exhaustivity check *and* gives the `Nil` exit something different to say.
 
-The optimisation is a cliff rather than a gradient: either nothing was dropped
-and the cost is zero, or something was and the whole prefix is paid for twice. A
-`MyList` is linked head-to-tail, so a prefix shares nothing with its input but
-the elements, and there is no partial case in between.
+**How much it saves, corrected.** This answer first claimed the split takes the
+keep-everything case to zero. It does not, and the mistake is worth leaving
+visible because it is an error about *when* a cost is incurred rather than about
+how large it is. The accumulator is built during the walk; that nothing needed
+dropping is learned only on arrival at `Nil`, by which time its cells are
+allocated and instantly garbage. Only the `reverse` is saved.
+
+Measured at `n = 100,000`, the two variants agreeing on five predicates:
+
+```text
+                                   p keeps everything   p drops the second half
+--------------------------------   ------------------   -----------------------
+both exits reverse                      4,800,000 B           2,400,000 B
+only the dropping exit reverses         2,400,000 B           2,400,000 B
+                                   ------------------   -----------------------
+per element kept                         48 -> 24 B            48 -> 48 B
+```
+
+Halved on the input that keeps everything, unchanged on the input that drops.
+Zero is reachable but not by this edit: it requires not building the accumulator
+at all — scanning for the first failure without allocating, and building only if
+one is found. That costs a second walk of the *prefix*, which is not the second
+walk of the *input* the exercise's Scaladoc rules out, so it stays open as a
+design choice rather than closed by the contract.
+
+The saving is a cliff rather than a gradient: either nothing was dropped and one
+of the two copies disappears, or something was and the whole prefix is still
+paid for twice. A `MyList` is linked head-to-tail, so a prefix shares nothing
+with its input but the elements, and there is no partial case in between.
 
 ### 31. `EarlyExit.indexOf(MyList(1, 2, 3), 1L)` compiles. Predict the result before running it.
 
