@@ -823,16 +823,122 @@ Build it before you need it.
       7 easy, 16 medium, 10 hard.
 - [ ] Read JVM Specification §2.5.2 and §2.6, and §2.6.5 on why the JVM has no
       tail-call instruction.
-- [ ] Before writing any code, classify these six expressions by hand, and say
+- [x] Before writing any code, classify these six expressions by hand, and say
       for each whether the call to `f` is in tail position and why:
       `f(x)` · `1 + f(x)` · `if p then f(x) else 0` · `f(x) match { ... }` ·
       `try f(x) catch { ... }` · `f(g(x))`. Guide §5.
-      Your answers: `______________________`
-- [ ] Predict, before running E2, the relationship between the largest `n` that
+
+      **Worked as a dialogue, and worked late.** E1 through E3 were already
+      implemented when this box was answered, so "before writing any code" was
+      not honoured. Recorded rather than quietly ticked: the box measures
+      whether the classification preceded the implementation, and here it did
+      not.
+
+      One rule decides all six — **follow the value.** If the value the call
+      produces is handed straight back to the caller, untouched, the call is in
+      tail position; if anything consumes it first, it is not. The property is
+      read off the page, with nothing known about `f`.
+
+      ```text
+      expression                   call   tail?   what consumes the value
+      --------------------------   ----   -----   ----------------------------
+      f(x)                         f      yes*    nothing  (*if it is the body)
+      1 + f(x)                     f      no      the +, pending in the frame
+      if p then f(x) else 0        f      yes     nothing - the if already chose
+      f(x) match { ... }           f      no      the pattern test (scrutinee)
+      try f(x) catch { ... }       f      no      nothing - see below
+      f(g(x))                      g      no      the invoke of f
+                                   f      yes*    nothing  (*if it is the body)
+      ```
+
+      Four of the six fell out of the rule directly. Three points needed more
+      than the rule, and two of them were corrections made in the exchange:
+
+      - **`f(x)` is conditional, not automatic.** A call is in tail position
+        only if it occupies the method's *result* position. `f(x)` written as a
+        statement, with `g(x)` after it, is a call whose value is discarded and
+        whose frame still has work ahead. Tail position is a property of a
+        **call**, never of an expression — which `f(g(x))` makes unavoidable,
+        since it holds two calls and earns two opposite verdicts.
+      - **`if` and `match` are the same construct with the order reversed**, and
+        the position of the call decides everything:
+        ```text
+        x match { case _ => f(x) }      tail   - the call is the RESULT
+        f(x) match { case _ => ... }    not    - the call is the SCRUTINEE
+        ```
+        The `if` costs nothing because by the time `f(x)` starts, the
+        condition has already been evaluated and the branch already taken:
+        the selection happens *before* the call, not after it. The `match`
+        scrutinee is the mirror image — the value returns and must still be
+        tested against the patterns, and then the chosen branch must still run.
+      - **`try` is the one the rule does not catch.** Nothing consumes the
+        value: on a normal return it passes through the `try` untouched, which
+        is exactly why the expression reads like tail position. What keeps the
+        frame alive is not pending work but the **exception table** it carries —
+        the map from bytecode ranges to handlers that makes the `catch`
+        reachable while `f(x)` runs. Discarding the frame at the moment of the
+        call would discard the handler with it, and a throw from any depth below
+        would have nothing to land on. The frame survives for the *abnormal*
+        return, and the exception never has to occur: the possibility alone
+        costs the frame.
+
+        This is why §D's last box confines `StackOverflowError` to
+        `StackProbe`. The `try` that protects the instrument is the same
+        construct the other eight exercises spend the module eliminating.
+
+      **Tail position is necessary and not sufficient.** All six verdicts are
+      syntactic, but *elimination* is not: the call also has to target the
+      enclosing method, and that method must not be overridable, or the `goto`
+      has no statically known target. Guide §26, and the reason §C requires
+      every `@tailrec` in this module to sit on a `private`, `final` or
+      method-local definition.
+- [x] Predict, before running E2, the relationship between the largest `n` that
       `sumNaive` survives and the largest that `sumAcc` survives. State it as a
       *class*, not a number, and say why a number would be the wrong form of
       answer. Guide §23.
-      Your answer: `______________________`
+
+      **Worked as a dialogue, and worked late**, for the same reason as the box
+      above: E2 was already implemented and already measured. Recorded rather
+      than quietly ticked.
+
+      **The class.** `sumNaive` has a stack ceiling; `sumAcc` has none. The two
+      ceilings are not two sizes of the same thing — they are imposed by
+      different resources entirely:
+
+      ```text
+      sumNaive   ceiling imposed by the STACK   one frame per level, ~14k
+      sumAcc     ceiling imposed by the TYPE    one frame in total, 2^31 - 1
+      ```
+
+      `sumAcc`'s limit is `Int.MaxValue` because that is the largest value its
+      *parameter* holds. Widen the parameter to `Long` and the limit rises with
+      it, without `-Xss` being touched. Nothing about the stack participates.
+
+      **Why a number is the wrong form of answer**, in two layers, the first of
+      which is the one that decides the form:
+
+      1. **It is a category error, not an imprecision.** To write "`sumAcc`
+         survives 150,000× more" you must divide one ceiling by the other, and
+         division presupposes two quantities of the same kind. The ratio
+         therefore asserts, silently, that `sumAcc` *has* a stack ceiling —
+         merely a larger one. It converts a categorical difference into a
+         quantitative one and destroys the very fact it was meant to report.
+         What one believes after accepting the number is that `sumAcc` fails
+         too, eventually, at some large enough `n`, for the same reason. It
+         never does. There is no `n` that overflows it, because no stack is
+         growing. The question "how many times larger?" is not inaccurate; it is
+         malformed.
+      2. **And the surviving number is not a property of the code either.** Only
+         `sumNaive` has a ceiling to quote, and it belongs to the machine: §23
+         measures 13,123 at 256 KiB against 520,945 at 8 MiB — 40× from one flag
+         — and within a single process the boundary rises by 2.51× as C2
+         replaces interpreted frames with compiled ones. A test asserting that
+         number is asserting `-Xss` and the JIT's progress, not the
+         transformation.
+
+      Hence what E2's spec asserts: that the tail-recursive spelling survives an
+      input the naive one cannot, and never an absolute depth. Module 2's
+      argument about ratios against absolutes, moved from the heap to the stack.
 
 ### B. Implementation — Exercises
 
