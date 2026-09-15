@@ -14,8 +14,8 @@ of Exercise 3, layout arithmetic cross-checked against the `Footprint`
 implementation of Exercise 7.
 
 The file spans the whole block: Module 1 holds challenges 1 to 15, Module 2
-continues from 16 further down. Numbering is continuous so that any challenge can
-be cited by number alone.
+continues from 16 and Module 3 from 29, further down. Numbering is continuous so
+that any challenge can be cited by number alone.
 
 ---
 
@@ -1892,3 +1892,263 @@ The general move, and it is the one the next block is built on: **when a law
 cannot be checked, change the type until the illegal operation cannot be
 written.** That is B2-M4 stated in a sentence — *ADTs, opaque types,
 unrepresentable invalid states*.
+
+---
+
+# Module 3 — Stack Optimization & Control Flow Elimination
+
+Numbering continues from 28. The discipline is unchanged, and this module adds
+one source of evidence to the two already in use: the **disassembly of the
+lifted loop**. Where Module 2 argued from cell counts, several answers here are
+settled by which label two conditional branches jump to.
+
+| Exercise | Challenges | Status |
+| :--- | :--- | :--- |
+| E1 `StackProbe` | — | **owed** — closed without a Step 4 round |
+| E2 `TailShapes` | — | **owed** — closed without a Step 4 round |
+| E3 `Arithmetic` | — | **owed** — closed without a Step 4 round |
+| E4 `Loops` | — | **owed** — closed without a Step 4 round |
+| E5 `EarlyExit` | 3 | recorded |
+
+Four exercises carry no entry, and the table says so rather than omitting the
+rows. E1 to E4 were implemented, tested and committed without the audit round;
+the defect that produced pattern 14 was found by reading `Loops.fibonacci`
+afterwards, not by a challenge. §G cannot close until those four have entries.
+
+---
+
+## E5 — `EarlyExit`
+
+### 29. `indexOf` compiles to a `MatchError` fallthrough and the other three do not. Why does the difference exist, what does it cost if `MyList` grows a third case, and was it a choice?
+
+**Answered unaided on the consequence, and partially on the cause.** The answer
+given was that the wildcard was chosen to simplify, and that it leaves any
+additional case falling into the default silently. The consequence is exactly
+right. Two things were missing: *what the wildcard does to the compiler*, and
+whether "simplify" describes all three sites.
+
+**The wildcard does not silence a warning — it deletes the check.** Compiled
+side by side, on a `Toy` enum that is `MyList` with the third case Block 3 would
+want (`Concat`), under the project's own `Compile` flags:
+
+```text
+object Wild   case Nil / case Cons(h,t) if p(h) / case _
+object Total  case Nil / case Cons(h,t) if p(h) / case Cons(_,_)
+```
+
+```text
+-- [E029] Pattern Match Exhaustivity Warning: Toy.scala:22:4
+22 |    xs match
+   |    ^^
+   |    match may not be exhaustive.
+   |
+   |    It would fail on pattern case: Toy.Concat(_, _)
+No warnings can be incurred under -Werror
+1 warning found
+1 error found
+```
+
+One error, and it is on line 22 — the **named-constructor** version. The
+wildcard version, fifteen lines above it, produced nothing. The compiler already
+knows the answer; `case _` is precisely what stops it being asked.
+
+The residue is visible in the module's own bytecode. `loop$6`, the lifted loop
+of `indexOf`, ends at offset 88 with `new MatchError; athrow`. `forall`,
+`exists` and `loop$7` contain no such instruction:
+
+```text
+function      MatchError in the compiled body
+-----------   -------------------------------
+indexOf         yes  (loop$6, offset 88)
+forall          no
+exists          no
+takeWhile       no  (loop$7)
+```
+
+That `athrow` reads as dead code and is the compiler's own admission that it
+could not prove the match total. Its absence reads as tighter code and is the
+loss of the detector.
+
+**What it costs is a plausible wrong value, not a crash.** Three elements, all
+satisfying `p`, reached through the new constructor:
+
+```text
+Wild.forall (flat  , _ > 0) = true     correct
+Wild.forall (grown , _ > 0) = false    WRONG - no element fails p
+Total.forall(grown , _ > 0) = MatchError: Concat(Cons(1,Cons(2,Nil)),Cons(3,Nil))
+```
+
+`grown` holds the same three elements as `flat`, behind one `Concat`. The
+wildcard version returns `false` for a list on which `p` holds everywhere; the
+named version names the class and the line that needs a new branch. This is the
+exact mechanism `MyList`'s own Scaladoc relies on when it says a third case
+*"would break every incomplete match in the codebase"* — the breakage is the
+feature, and `case _` opts out of it.
+
+**"To simplify" is true at one of the three sites.** In `forall` and `exists`,
+`case _ => false` replaces `case Cons(_, _) => false`: nine characters, no
+structure saved. The guard forces a second `Cons` alternative either way; the
+only choice made was how to spell it. In `takeWhile` the word is earned, and it
+is the worst place to earn it:
+
+```text
+case _ => acc     merges TWO semantically different terminations
+                  - the list ended            (Nil)
+                  - an element failed p       (Cons whose head is rejected)
+```
+
+Both return `acc`, which is always a plausible list. A `Concat` there does not
+raise — it truncates.
+
+**And it was not a policy.** `indexOf` sits in the same object, written in the
+same session, and names both `Cons` alternatives. Three functions switch the
+check off and one keeps it, with nothing in the file explaining the difference.
+That is the usual shape of this defect: not a decision taken wrongly once, but a
+decision not taken, and therefore inconsistent with itself. Recorded as
+[`error-patterns.md`](error-patterns.md) pattern 15.
+
+### 30. `takeWhile` costs 48 bytes per element. There is an input on which the right answer allocates zero — which, why is sharing safe, and can you detect it without a second traversal of the input?
+
+**Answered unaided on the input, and not on the other two parts.** The input is
+the one where `p` keeps everything, and the answer there is `xs` itself.
+
+Measured with `AllocationProbe`, `n = 100,000`, after warm-up:
+
+```text
+function                       bytes allocated     per element
+----------------------------   ---------------   -------------
+indexOf   (no match)                         0               0
+forall    (whole list)                       0               0
+takeWhile (p rejects first)                  0               0
+takeWhile (p keeps everything)       4,800,000              48
+```
+
+A `Cons` is 24 bytes (Module 2, §5), so 48 is exactly **two cells per element**:
+one built by the accumulator, one built by the `reverse`.
+
+**Why returning `xs` is safe is not "same contents" — it is that nothing can
+observe the difference.** In a mutable structure this would be textbook
+aliasing: a write through the result would be visible through the input. What
+buys the safety is persistence. Every field of `MyList` is a `val` and the ADT
+has no mutator, so no operation distinguishes *the result is `xs`* from *the
+result is a copy of `xs`*, except `eq` — and the enum's structural equality does
+not expose it. `Exercise5EarlyExitSpec` closes on `.toScalaList`, so the suite
+cannot see it either. It is the argument Module 2 already used to let
+`prepended` share the whole tail, applied to the whole structure instead of to a
+suffix.
+
+**The detection needs no second traversal because it has already been
+performed.** `loop$7`, disassembled:
+
+```text
+  5: instanceof  MyList$Cons
+  8: ifeq        84          <- not a Cons: the list ran out
+ ...
+ 49: Function1.apply         <- p(h)
+ 57: ifeq        84          <- the guard rejected: an element was dropped
+ ...
+ 84: aload_3 ; areturn       <- return acc
+```
+
+Two distinct conditional branches converging on one label. The machine
+discriminates the two terminations one instruction before the result is
+produced, and `case _` then discards which one happened:
+
+```text
+reached 84 from offset  8   ->  nothing was dropped    ->  the answer is xs
+reached 84 from offset 57   ->  something was dropped  ->  the answer is acc.reverse
+```
+
+Splitting them costs **one extra `areturn` and no extra test**. Nothing is
+added; label 84 is given a twin.
+
+Which is the finding worth keeping: **the repair for pattern 15 and this
+optimisation are the same edit.** Naming `case Nil` and `case Cons(_, _)`
+separately restores the exhaustivity check *and* hands over the free case. The
+wildcard did not only cost safety against a future constructor — it cost
+4,800,000 bytes on a common input, and both bills are the same character.
+
+The optimisation is a cliff rather than a gradient: either nothing was dropped
+and the cost is zero, or something was and the whole prefix is paid for twice. A
+`MyList` is linked head-to-tail, so a prefix shares nothing with its input but
+the elements, and there is no partial case in between.
+
+### 31. `EarlyExit.indexOf(MyList(1, 2, 3), 1L)` compiles. Predict the result before running it.
+
+**Predicted correctly — `0` — with the enabling mechanism named and its type
+wrong, and the deciding mechanism not named.** The answer given was that `A` is
+inferred as `AnyVal` because `MyList` is covariant.
+
+Covariance is right, and it is load-bearing. Cloned with the variance annotation
+removed and nothing else changed:
+
+```text
+11 |  val r = InvList.indexOf(xs, 1L)
+   |                              ^^
+   |                              Found:    (1L : Long)
+   |                              Required: Int
+```
+
+Invariant, `A` is pinned to `Int` by the first argument and the call does not
+typecheck at all.
+
+**The inferred type is not `AnyVal`; it is the union `Int | Long`.** The project
+compiles under `-source:future`, which `build.sbt` describes as opting into
+*"the next-generation Scala 3 semantics"*, and one of those is inferring union
+types rather than widening to a nominal least upper bound. The same flag is what
+makes the compiler object:
+
+```text
+-- [E225] Type Warning: Eq.scala:12:57
+12 |    EarlyExit.indexOf(xs, 1L)
+   |              ^^^^^^^
+   |    A type argument was inferred to be union type Int | Long
+   |    This may indicate a programming error.
+```
+
+**So the hole is narrower than it first appears.** `Compile / scalacOptions`
+carries `-Werror`, so in production code this call is a compile error. It is a
+warning only in `Test`, where `build.sbt` deliberately drops `-Werror`.
+
+**What the union does not do is make `1L` match.** That is decided at offset 58
+of `loop$6`, `BoxesRunTime.equals`, which implements Scala's cooperative
+equality: an operand that is a `java.lang.Number` is unwrapped and compared
+numerically *across box types*.
+
+```text
+java  Long(1).equals(Integer(1))         = false
+scala BoxesRunTime.equals(Long, Integer) = true
+```
+
+It is the same rule that makes `1 == 1L` true in Scala and false in Java —
+deliberate, not accidental. Hence the asymmetry between the three calls:
+
+```text
+call                             A inferred      result   why
+------------------------------   -------------   ------   --------------------------
+indexOf(MyList(1,2,3), 1L)       Int | Long            0   inside the numeric tower
+indexOf(MyList(1,2,3), 1.0)      Int | Double          0   inside the numeric tower
+indexOf(MyList(1,2,3), "3")      Int | String         -1   outside it: falls to .equals
+```
+
+Neither mechanism alone produces the surprise. Without covariance the call does
+not compile. Without cooperative equality it compiles and returns `-1`, which is
+worse — wrong without being detectable.
+
+**The generic signature launders the comparison.** Written directly, the same
+comparison is a hard error in both scopes, because `-source:future` enables
+multiversal equality:
+
+```text
+-- [E172] Type Error: Eq.scala:15:17
+15 |    val direct = 1 == "3"
+   |                 ^^^^^^^^
+   |         Values of types Int and String cannot be compared with == or !=
+```
+
+Inside `indexOf`, `x` and `h` have literally the same type `A`, so the
+unrelated-types check has nothing to compare. It is not evaded; it is
+inapplicable by construction. The repair is `using CanEqual[A, A]`, which hands
+the proof back to the caller — Block 2 machinery, and out of scope here. What is
+in scope is that `indexOf`'s Scaladoc records this objection beside the one it
+already records about `-1`.

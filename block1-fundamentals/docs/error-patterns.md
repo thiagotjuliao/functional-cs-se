@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Thirty-two individual mistakes are a diary and nobody rereads a diary. Fourteen
+Thirty-five individual mistakes are a diary and nobody rereads a diary. Fifteen
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -34,8 +34,9 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
 | 13 | A measurement taken while its subject is still changing | 2 | no — it passes intermittently, and when it fails it blames the wrong file |
 | 14 | An equality standing in for an inequality | 1 | no — it agrees with the original across the whole tested domain |
+| 15 | A wildcard standing in for the constructors it currently covers | 3 | no — the defect is the removal of the check that would report it |
 
-Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 and 14
+Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 to 15
 in **Module 3**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
@@ -1077,3 +1078,128 @@ A spec file that completes in **18 ms** today would have taken half a minute to
 report a one-character mistake. Against the corrected version those same eight
 assertions are free. The guard that is cheap to keep was expensive to install —
 the usual shape of a fixture nobody wrote.
+
+---
+
+## 15. A wildcard standing in for the constructors it currently covers
+
+A `match` over a closed ADT ends in `case _`. Today the wildcard covers exactly
+the constructors the author had in mind, so the branch is correct and the suite
+is green. What it also does — and this is the whole of the defect — is **switch
+off the exhaustivity checker for that match**, silently and for good. The check
+that would report the next constructor is the one the wildcard removed.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `EarlyExit.forall` | `case _ => false` | `case Cons(_, _) => false` |
+| 2 | `EarlyExit.exists` | `case _ => true` | `case Cons(_, _) => true` |
+| 3 | `EarlyExit.takeWhile`, in `loop` | `case _ => acc` | `case Nil => acc` and `case Cons(_, _) => acc`, separately |
+
+Occurrence 3 is the one that merges two *different* terminations — the list ran
+out, and an element failed the predicate — and it is also the one where the
+merge costs something beyond safety; see the closing note.
+
+`EarlyExit.indexOf`, in the same object and written in the same session, names
+both `Cons` alternatives and is unaffected. Three sites switch the check off and
+one keeps it, with nothing in the file explaining the difference: the defect is
+not a decision taken wrongly, it is a decision not taken.
+
+**What it costs.** Compiled side by side on a `Toy` enum that is `MyList` with
+the third case Block 3 would want, and run on three elements that all satisfy
+`p`, one of them reached through the new constructor:
+
+```text
+Wild.forall (flat  , _ > 0) = true     correct
+Wild.forall (grown , _ > 0) = false    WRONG - no element fails p
+Total.forall(grown , _ > 0) = MatchError: Concat(Cons(1,Cons(2,Nil)),Cons(3,Nil))
+```
+
+Not a crash — a plausible wrong value. The named version names the class and the
+line that needs a new branch; the wildcard version reports `false` for a list on
+which the predicate holds everywhere. This is precisely the mechanism `MyList`'s
+own Scaladoc relies on when it says a third case *"would break every incomplete
+match in the codebase"*: the breakage is the feature, and `case _` opts out of
+it.
+
+**The rule.** Over a `sealed` or `enum` scrutinee, `case _` is not written —
+name the constructor, **including when it is the only one left**. Checkable by
+eye, and by grep: every `case _ =>` in a file that matches on a closed ADT is
+either a wildcard over an open type or this pattern. The saving it offers is
+nine characters; what it spends is the compiler's only means of finding the
+match again later.
+
+**Why the build does not catch it.** Because the defect *is* the removal of the
+detector. The two spellings, compiled together under the project's own `Compile`
+flags:
+
+```text
+-- [E029] Pattern Match Exhaustivity Warning: Toy.scala:22:4
+22 |    xs match
+   |    ^^
+   |    match may not be exhaustive.
+   |
+   |    It would fail on pattern case: Toy.Concat(_, _)
+No warnings can be incurred under -Werror
+1 warning found
+1 error found
+```
+
+One error, on the **named-constructor** version. The wildcard version, fifteen
+lines above it, produced nothing at all. `-Wall -Werror` is fully armed here and
+has nothing to fire at: the match genuinely is exhaustive, by construction,
+because a wildcard matches everything.
+
+The residue is visible in the bytecode, where it reads as an improvement.
+`loop$6`, the lifted loop of `indexOf`, ends with `new MatchError; athrow`;
+`forall`, `exists` and `loop$7` contain no such instruction:
+
+```text
+function      MatchError in the compiled body
+-----------   -------------------------------
+indexOf         yes  (loop$6, offset 88)
+forall          no
+exists          no
+takeWhile       no  (loop$7)
+```
+
+That `athrow` is unreachable code today. It is also the compiler's own admission
+that it could not prove the match total — which is exactly the state you want it
+to stay in. **A match that can throw `MatchError` is one the compiler is still
+reasoning about; a match that cannot is one it has stopped reasoning about.**
+
+And the suite cannot separate them either, now or ever. `MyList` has two cases,
+so `case _` and `case Cons(_, _)` are the same function on every input that
+exists. No test over the current ADT can tell them apart; only a change to a
+different file, in a later block, can — and by then the three call sites are no
+longer being looked at.
+
+**Why this is not an occurrence of pattern 2.** The shape matches — two
+spellings agreeing under the current configuration, here the arity of the ADT
+rather than compressed oops. The fourth field is what separates them. In
+pattern 2 the check never existed: all five parameters are `Int` and the type
+checker has nothing to compare. Here the check exists, works, and is switched
+off by the defect itself.
+
+**The cost is not only safety.** In occurrence 3 the wildcard also discards a
+bit the machine had already computed. `loop$7`, disassembled:
+
+```text
+  5: instanceof  MyList$Cons
+  8: ifeq        84          <- not a Cons: the list ran out
+ ...
+ 57: ifeq        84          <- the guard rejected: an element was dropped
+ ...
+ 84: aload_3 ; areturn       <- return acc
+```
+
+Two conditional branches converging on one label. Reaching 84 from offset 8
+means nothing was dropped, and the correct answer there is `xs` itself — a
+persistent structure, so the sharing is unobservable. Reaching it from 57 means
+the prefix must be rebuilt. Merging the two labels costs 4,800,000 bytes on a
+100,000-element list that the predicate keeps whole, measured with
+`AllocationProbe`: 48 bytes per element, exactly two `Cons` cells where zero
+were needed. Splitting them costs one extra `areturn` and no extra test.
+
+Which makes the repair worth stating twice: **naming the constructors fixes the
+exhaustivity hole and the allocation at the same keystroke.** Challenge 30 in
+[`challenge-log.md`](challenge-log.md) carries the measurement.
