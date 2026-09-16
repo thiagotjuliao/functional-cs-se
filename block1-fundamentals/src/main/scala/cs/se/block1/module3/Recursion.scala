@@ -79,11 +79,11 @@ object Arithmetic:
   def digits(n: Int): MyList[Int] =
     @scala.annotation.tailrec
     def loop(
-        m: Int,
+        m: Long,
         acc: MyList[Int] = MyList()
     ): MyList[Int] =
-      if m > n then acc
-      else loop(m / 10, acc.prepended(m % 10))
+      if m == 0 then acc
+      else loop(m / 10, acc.prepended((m % 10).toInt))
     if n == 0 then MyList(0) else loop(Math.abs(n.toLong))
 
   /** The number of Collatz steps from `n` down to 1, counting the last step.
