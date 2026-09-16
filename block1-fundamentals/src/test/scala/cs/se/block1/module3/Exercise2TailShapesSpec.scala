@@ -36,8 +36,15 @@ class Exercise2TailShapesSpec extends Module3Harness:
 
     // The separation is the result. The number is a property of this machine's
     // stack and is reported rather than asserted - guide §23.
+    //
+    // The factor asks for one order of magnitude and not two. This ceiling
+    // moves by up to 2.51x inside a single process as C2 replaces interpreted
+    // frames with compiled ones, observed here between 13,711 and 41,139 on
+    // consecutive runs of this very suite. A threshold whose headroom is the
+    // same size as the drift fails intermittently, and blames the
+    // implementation when it does - error-patterns.md pattern 13.
     assert(
-      10_000_000L > ceiling.toLong * 100,
+      10_000_000L > ceiling.toLong * 10,
       s"the two shapes should differ by orders of magnitude, not by a margin; sumNaive stops at $ceiling"
     )
   }
@@ -57,8 +64,14 @@ class Exercise2TailShapesSpec extends Module3Harness:
     val large = StackProbe.onStack(4096)(StackProbe.maxDepth(1 << 22)(TailShapes.sumNaive))
     report("sumNaive ceiling at 256 KiB", small)
     report("sumNaive ceiling at 4 MiB", large)
+    // 16x the stack, so a fixed frame would buy about 16x the depth. The two
+    // measurements are taken separately and each can land on either side of
+    // C2's 2.51x step, so the worst honest ratio is 16 / 2.51 = 6.4 and the
+    // threshold has to sit below that with room left over. Pattern 13 again:
+    // the margin is set wider than the drift that was actually observed, not
+    // wider than the drift that was expected.
     assert(
-      large > small * 8,
+      large > small * 4,
       s"the ceiling is a property of -Xss, not of the function: $small -> $large. If these are " +
         "close, the measurement is not measuring the stack"
     )
