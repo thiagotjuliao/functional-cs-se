@@ -79,19 +79,11 @@ object Arithmetic:
   def digits(n: Int): MyList[Int] =
     @scala.annotation.tailrec
     def loop(
-        n: Long,
-        q: Long = 10,
-        r: Long = 0,
-        d: Long = 1,
+        m: Int,
         acc: MyList[Int] = MyList()
     ): MyList[Int] =
-      if d > n then acc
-      else
-        val n_ = n - r
-        val r_ = (n_ % q) / d
-        val d_ = d * 10
-        val q_ = q * 10
-        loop(n_, q_, r_, d_, acc.prepended(r_.toInt))
+      if m > n then acc
+      else loop(m / 10, acc.prepended(m % 10))
     if n == 0 then MyList(0) else loop(Math.abs(n.toLong))
 
   /** The number of Collatz steps from `n` down to 1, counting the last step.
@@ -378,7 +370,7 @@ object EarlyExit:
     @scala.annotation.tailrec
     def loop(ls: MyList[A], acc: MyList[A] = Nil): MyList[A] =
       ls match
-        case Nil => acc.reverse
+        case Nil => xs
         case Cons(h, t) if p(h) => loop(t, acc.prepended(h))
         case _: Cons[A] => acc.reverse
     loop(xs)

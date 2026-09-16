@@ -60,11 +60,23 @@ object StackProbe:
     */
   def maxDepth(limit: Int)(f: Int => Any): Int =
     @scala.annotation.tailrec
-    def loop(n: Int = 0): Int =
-      if n > limit then limit
-      else if !survives(f(n)) then n - 1
-      else loop(n + 1)
-    loop()
+    def largestHi(lo: Int, hi: Int): Int =
+      if hi - lo == 1 then lo
+      else
+        val mid = (hi + lo) >>> 1
+        if survives(f(mid)) then largestHi(mid, hi)
+        else largestHi(lo, mid)
+
+    @scala.annotation.tailrec
+    def getUpperHi(hi: Int = 1, n: Int = 0): Int =
+      if n > 30 then limit
+      else if !survives(f(hi)) then hi
+      else getUpperHi(hi * 2, n + 1)
+
+    if !survives(f(0)) then -1
+    else
+      val upperHi = getUpperHi()
+      largestHi(0, upperHi)
 
   /** Run `body` on a fresh platform thread with a stack of `kib` kibibytes and
     * return its result.
