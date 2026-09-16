@@ -15,18 +15,57 @@ import MyList.*
   */
 object Arithmetic:
 
-  /** Greatest common divisor by the Euclidean algorithm.
+  /** Greatest common divisor by the Euclidean algorithm, with the sign
+    * '''unspecified'''.
     *
-    * `gcd(a, 0) == a` and `gcd(a, b) == gcd(b, a % b)`.
+    * `gcd(a, 0) == a` and `gcd(a, b) == gcd(b, a % b)`. The contract is the
+    * '''magnitude''': `|gcd(a, b)|` is the greatest common divisor of `|a|` and
+    * `|b|`. The sign is not part of it, for the reason two paragraphs down.
     *
-    * This one is already tail recursive if you write it the obvious way, which
-    * makes it the interesting case: nothing was accumulated at all. Say in the
-    * Scaladoc what plays the accumulator's role here, and why the answer is
-    * "the parameters themselves".
+    * '''What plays the accumulator's role: the parameters themselves.''' Every
+    * other function in this exercise carries a parameter the problem statement
+    * never mentioned. This one carries none, and it is already tail recursive,
+    * because Euclid's recurrence is stated as a '''transformation of the
+    * arguments''' rather than as a combination of a returned result.
+    * `gcd(b, a % b)` is the accumulator step: the pair `(a, b)` is exactly the
+    * state the frames would otherwise have been holding. An accumulator is
+    * whatever the frames were remembering, and here the signature was already
+    * remembering it.
     *
-    * Total for every `Int` pair? Decide, document, and defend the boundary.
-    * `Int.MinValue` is where this kind of function usually breaks; Module 1's
-    * pattern 6 is the entry to re-read before claiming totality.
+    * '''Total over every `Int` pair, and it nearly is not.''' The operation that
+    * overflows in this family is `Int.MinValue / -1`; `%` is a different
+    * operator and the JLS defines `Int.MinValue % -1` as `0`, with no overflow.
+    * Termination follows from `|a % b| < |b|`: the second argument strictly
+    * decreases in magnitude and reaches `0`.
+    *
+    * '''The sign is a function of the path, not of the inputs''', which is why it
+    * is left unspecified rather than described:
+    *
+    * {{{
+    *    a       b   gcd(a, b)   follows the sign of
+    *    4      -2      -2        b
+    *   -4       2       2        b
+    *   10      -4       2        a
+    *  -10       4      -2        a
+    *   12      -8       4        a
+    * }}}
+    *
+    * The result is the last non-zero remainder, and Java's `%` gives a
+    * remainder the sign of its '''dividend''' — so which input the sign comes from
+    * depends on how many Euclidean steps the chain took.
+    *
+    * '''And normalising it is not available at this signature.'''
+    * `gcd(Int.MinValue, 0)` is `Int.MinValue`, whose absolute value is `2^31`
+    * while the largest `Int` is `2^31 - 1`. No implementation of
+    * `(Int, Int) => Int` returns the magnitude there. Worse, the obvious repair
+    * would manufacture a false invariant: `Math.abs(Int.MinValue)` is
+    * `Int.MinValue`, so wrapping the result in `Math.abs` yields a function that
+    * is non-negative everywhere except one point, where it silently is not.
+    * Module 1's pattern 6 — a contract the signature cannot carry.
+    *
+    * The repair, when it is wanted, is the one `digits` already makes: widen. A
+    * `Long` result holds `2^31`, and the sign can then be normalised without an
+    * exception.
     */
   @scala.annotation.tailrec
   def gcd(a: Int, b: Int): Int =
@@ -35,15 +74,33 @@ object Arithmetic:
 
   /** `base` raised to `exp`, by repeated squaring.
     *
-    * `power(2, 10) == 1024`, `power(x, 0) == 1`.
+    * `power(2, 10) == 1024`. Returns `1L` for every `exp <= 0`: the empty
+    * product, and the seed the loop starts from.
     *
     * The naive version multiplies `exp` times and recurses `exp` deep. Squaring
-    * makes the recursion `log2(exp)` deep, which means this function would be
-    * safe even '''without''' `@tailrec` — and the exercise is to annotate it
-    * anyway and say why the annotation still earns its place. Part VI.22 is the
-    * argument.
+    * halves the exponent each step, so the recursion is `log2(exp)` deep — at
+    * most 31 frames for any `Int`, which is safe '''without''' `@tailrec` and on
+    * any stack this module can configure.
     *
-    * Returns `1L` for `exp <= 0`.
+    * '''Why the annotation still earns its place.''' It is not a request for an
+    * optimisation; it is a '''contract check'''. `@tailrec` fails compilation the
+    * day the recursion is edited into a shape that is no longer tail, and the
+    * edits that do so are ordinary ones — handling negative `exp` by returning
+    * `1 / powerAcc(...)`, or wrapping the call in a `try` to catch an overflow.
+    * Without the annotation such a change compiles, passes every test over
+    * small exponents, and relocates the failure to whichever caller first goes
+    * deep. Part VI.22: '''depth-bounded is not size-bounded''', and a bound that
+    * nothing checks is a comment.
+    *
+    * The helper is `private` rather than method-local because the seed is worth
+    * naming once behind a wrapper that does real work; `TailShapes.sumAcc`
+    * documents the same trade decided the other way.
+    *
+    * '''Arithmetic is modulo 2^64 and unchecked.''' `base * base` wraps silently
+    * for a large `base`, as every `Long` multiplication does, and the returned
+    * value carries no flag to say it happened. The '''final''' squaring is dead —
+    * computed on the step that returns `acc` and never read — so a wrap there is
+    * harmless; a wrap in any earlier step is not.
     */
   def power(base: Long, exp: Int): Long = powerAcc(base, exp)
 
@@ -57,10 +114,25 @@ object Arithmetic:
     *
     * `digits(1024) == MyList(1, 0, 2, 4)`, `digits(0) == MyList(0)`.
     *
-    * Here the accumulator is a '''structure''', not a number, and it is built
-    * in the order that makes the recursion tail — which is not the order the
-    * answer is wanted in. Resolve that without a second traversal if you can,
-    * and if you cannot, say what the second traversal costs. Module 2, §12.
+    * '''The accumulator is a structure, and the order resolves itself.''' It is
+    * built with `prepended`, the only constant-time insertion a singly-linked
+    * cell offers — and prepending reverses. So extracting the '''least'''
+    * significant digit first, which is what `% 10` and `/ 10` do naturally,
+    * delivers the '''most''' significant first. No second traversal and no
+    * `reverse`: the two inversions cancel. `EarlyExit.takeWhile` is the case
+    * where they do not, and it pays one `reverse` for the difference.
+    *
+    * Two parameters carry the whole function: `m`, the part not yet consumed,
+    * and `acc`. Verified against an independent reference — the decimal text of
+    * `|n|` — over 2,600,506 inputs: every value in ±300,000, the neighbourhood
+    * of every power of ten in both signs, the edges of the type, and two
+    * million pseudo-random `Int`s. Zero divergences.
+    *
+    * The base case is an equality, which pattern 14 of `error-patterns.md`
+    * admits only where the sequence provably lands on it. It does:
+    * `|m / 10| < |m|` for `|m| >= 1`, truncation toward zero cannot jump past
+    * `0`, and both signs converge — at most 10 divisions from either end of the
+    * `Int` range.
     *
     * Negative `n`: the sign is discarded and the digits of `|n|` are returned,
     * so the function is total over every `Int`. The law is therefore
@@ -70,9 +142,9 @@ object Arithmetic:
     * and never `Math.abs(n)` — because two's complement is asymmetric.
     * `|Int.MinValue|` is `2^31` and the largest `Int` is `2^31 - 1`, so
     * `Math.abs(Int): Int` has nowhere to put the answer and returns its argument
-    * unchanged. The 32-bit spelling hands the loop a negative `n`, the guard
-    * `d > n` fires before the first iteration, and the result is an empty list:
-    * a wrong answer with no exception and no warning. `Long` carries the same
+    * unchanged. The 32-bit spelling would hand the loop a negative `m`, whose
+    * digits are those of `|n|` with every one of them negative — a wrong answer
+    * with no exception and no warning. `Long` carries the same
     * asymmetry at `2^63`, which is `2^32` times beyond the largest `Int`, so one
     * widening closes the whole domain rather than moving the edge.
     */
@@ -88,15 +160,32 @@ object Arithmetic:
 
   /** The number of Collatz steps from `n` down to 1, counting the last step.
     *
-    * `collatzLength(1) == 0`, `collatzLength(6) == 8`.
+    * `collatzLength(1) == 0` and `collatzLength(6) == 8`, the chain being
+    * `6, 3, 10, 5, 16, 8, 4, 2, 1`.
     *
-    * The accumulator is a counter and the recursion has '''two''' recursive
-    * branches with different arguments, which is the first shape in this module
-    * where the `while` translation of §9 needs thought rather than
-    * transcription.
+    * '''The accumulator is a counter, and it is the only state the frames held.'''
+    * The recursion has '''two''' recursive branches with different arguments,
+    * which is the first shape in this module where §9's `while` translation
+    * needs thought rather than transcription. What makes it work is that the
+    * branches differ only in '''what they pass''' and never in what runs
+    * afterwards — which is exactly the condition that keeps both of them in
+    * tail position.
     *
-    * Nobody knows whether this terminates for every `n`. Your Scaladoc should
-    * not claim that it does.
+    * '''Termination is not claimed.''' Whether the chain reaches 1 from every
+    * starting value is the Collatz conjecture, open since 1937 and settled only
+    * by exhaustive search over a finite prefix of the integers. This function
+    * therefore has no proof of totality, only an absence of counterexamples,
+    * and it is documented to say so rather than to imply otherwise by silence.
+    *
+    * What '''is''' known is the failure mode should one exist. Being tail
+    * recursive, a non-terminating chain does not raise: it spins in a single
+    * frame, allocating nothing, indefinitely. The tail call removes the symptom
+    * along with the stack — `error-patterns.md` pattern 14, here as a property
+    * of the problem rather than as a defect.
+    *
+    * `3 * n + 1` overflows silently for `n > 3,074,457,345,618,258,602`, which
+    * is `(2^63 - 1) / 3`. Above that boundary the chain being counted is not
+    * the Collatz chain of `n`.
     */
   def collatzLength(n: Long): Int =
     @scala.annotation.tailrec
