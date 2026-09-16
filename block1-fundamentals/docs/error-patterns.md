@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Thirty-five individual mistakes are a diary and nobody rereads a diary. Fifteen
+Thirty-six individual mistakes are a diary and nobody rereads a diary. Fifteen
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -32,7 +32,7 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 10 | A quantity compared against a model of a neighbouring quantity | 5 | no — the tolerances were wide enough, and the fifth is a verb in a comment |
 | 11 | A fixture that cannot exhibit the property under test | 2 | no — and the failure it finally produced blamed the wrong file |
 | 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
-| 13 | A measurement taken while its subject is still changing | 2 | no — it passes intermittently, and when it fails it blames the wrong file |
+| 13 | A measurement taken while its subject is still changing | 3 | no — it passes intermittently, and when it fails it blames the wrong file |
 | 14 | An equality standing in for an inequality | 1 | no — it agrees with the original across the whole tested domain |
 | 15 | A wildcard standing in for the constructors it currently covers | 3 | no — the defect is the removal of the check that would report it |
 
@@ -948,6 +948,7 @@ calls, a spread of 8 frames.
 | :-- | :--- | :--- | :--- |
 | 1 | `Exercise1StackProbeSpec` | `!survives(deep(found + 1))`, on the first, cold search | a depth safely above the boundary, measured warm |
 | 2 | `StackProbe.maxDepth` Scaladoc | *"Binary search"* | a binary search over an `f` that has already been warmed |
+| 3 | `StackProbe.maxDepth` body | `loop(n + 1)` — a linear climb | the binary search the Scaladoc above it specifies |
 
 Occurrence 1 is a margin of **one frame** — 0.0016% — on a quantity that drifts
 by 8 between consecutive warm calls and by a factor of 2.51 across compilation.
@@ -984,6 +985,39 @@ blames the implementation under test. This one failed with *"61,679 was reported
 as surviving and does not"*, which reads as an accusation against a `maxDepth`
 that was correct throughout. That is pattern 11's signature reappearing: a
 failing test naming the wrong file.
+
+**Occurrence 3 is the sharpest of the three, and it needs the pattern's title
+read more strictly.** In occurrences 1 and 2 the measurement was taken *while*
+the subject happened to be changing. Here **the measurement is the cause of the
+change**: reaching the boundary by climbing one at a time takes some fifteen
+thousand invocations of the very method whose frame size is being measured, and
+fifteen thousand invocations is what C2 waits for.
+
+Three searches, one JVM, one fresh 1 MiB thread, `f = sumNaive`, `limit = 40,000`:
+
+```text
+                                            answer
+--------------------------------------   ----------
+binary  (cold, the first thing that runs)     14,999
+linear  (the committed maxDepth)              40,000
+binary  (warm, after the linear scan)         39,999
+```
+
+Row 2 is the `limit` itself: the linear search found no boundary, walked to the
+end of the interval and returned the caller's own argument as a measurement. Row
+3 is the control — the *same* binary search, after the linear scan has run,
+reports 39,999 rather than 14,999. The algorithm did not change; only the tier
+did. The factor is at least 2.67x, a floor rather than a value because rows 2 and
+3 both saturated, against the 2.51x this entry already records.
+
+**The rule this adds** to the two already stated: count how many times the
+instrument touches the subject, and prefer the instrument that touches it least
+— not for speed, but because **every touch is a warm-up**. Binary search was
+specified here for that reason and not for its complexity class. Repaired with
+exponential search establishing the upper witness before the binary phase
+narrows: 34 probes against ~15,000, and `Exercise1StackProbeSpec` fell from tens
+of seconds to 0.296 s. Challenge 32 in [`challenge-log.md`](challenge-log.md)
+carries the full measurement.
 
 ---
 

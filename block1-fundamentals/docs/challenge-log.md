@@ -1904,16 +1904,20 @@ settled by which label two conditional branches jump to.
 
 | Exercise | Challenges | Status |
 | :--- | :--- | :--- |
-| E1 `StackProbe` | — | **owed** — closed without a Step 4 round |
-| E2 `TailShapes` | — | **owed** — closed without a Step 4 round |
-| E3 `Arithmetic` | — | **owed** — closed without a Step 4 round |
-| E4 `Loops` | — | **owed** — closed without a Step 4 round |
+| E1 `StackProbe` | 2 | recorded |
+| E2 `TailShapes` | 1 | recorded |
+| E3 `Arithmetic` | 2 | recorded |
+| E4 `Loops` | 1 | recorded |
 | E5 `EarlyExit` | 3 | recorded |
 
-Four exercises carry no entry, and the table says so rather than omitting the
-rows. E1 to E4 were implemented, tested and committed without the audit round;
-the defect that produced pattern 14 was found by reading `Loops.fibonacci`
-afterwards, not by a challenge. §G cannot close until those four have entries.
+E1 to E4 were implemented, tested and committed **without** the audit round, and
+this table carried four `owed` rows until the debt was paid in one sitting —
+challenges 32 to 37, which appear after E5's because the file records audits in
+the order they happened. The cost of the delay is visible in the entries: the
+defect behind pattern 14 was found by rereading `Loops.fibonacci` rather than by
+a question, and `maxDepth` spent four exercises reporting a number that was a
+property of its own argument. The rule now is that a green suite opens the
+round, not the commit.
 
 ---
 
@@ -2175,3 +2179,387 @@ inapplicable by construction. The repair is `using CanEqual[A, A]`, which hands
 the proof back to the caller — Block 2 machinery, and out of scope here. What is
 in scope is that `indexOf`'s Scaladoc records this objection beside the one it
 already records about `-1`.
+
+## E1 — `StackProbe`
+
+### 32. `maxDepth`'s Scaladoc says binary search and the body climbs by one. State the cost, then run both on the same `f` and the same fresh 1 MiB thread and predict which returns the larger number.
+
+**The cost was answered unaided and in the wrong unit; the measurement was
+answered "I don't know".** The answer given was `log2 n` against `n`, which is
+the ratio between the *probe counts* and is correct as such.
+
+The cost is not in the count, because a probe is not a constant. Each probe is
+itself a recursion of depth `n`, so what accumulates is the sum:
+
+```text
+            probes           frames pushed in total
+---------   --------------   ------------------------------
+linear      k + 1            0 + 1 + 2 + ... + k    ~ k^2 / 2
+binary      ~log2(L)         the sum of the midpoints, a
+                             series that halves     ~ L
+```
+
+The linear search does not make `k` cheap probes; it makes `k` increasingly
+expensive ones. At `L = 40,000` that is over three orders of magnitude.
+
+**And the cost is the lesser half.** Three searches, one JVM, one fresh 1 MiB
+thread, `f = sumNaive`, `limit = 40,000`:
+
+```text
+                                            answer
+--------------------------------------   ----------
+binary  (cold, the first thing that runs)     14,999
+linear  (the committed maxDepth)              40,000
+binary  (warm, after the linear scan)         39,999
+```
+
+**The linear search warms the method it is measuring.** Reaching the boundary
+takes some fifteen thousand invocations of `sumNaive`, by which point C2 has
+replaced the interpreted frames with compiled ones. A compiled frame is smaller,
+so more of them fit: the ceiling rises underneath the search.
+
+Row 2 is `40,000` exactly — the `limit` that was passed in. The linear search
+**found no boundary at all**; it walked to the end of the interval without
+overflowing and returned the caller's own argument as though it were a
+measurement.
+
+Row 3 is the control that closes the argument. The same binary search that said
+14,999 cold says 39,999 after the linear scan has run. The search algorithm did
+not change; only the state of the JIT did. So the finding is not "linear and
+binary disagree" but **"the ceiling is not the same before and after warming,
+and the linear search is what warms it"**. The factor is `>= 2.67x`, a floor
+rather than a value, because rows 2 and 3 both saturated at `limit` — against
+the guide's §23 measurement of 2.51x between interpreted and compiled frames.
+
+Which is why the Scaladoc specified binary search, and the reason is not speed:
+**an instrument that touches its subject sixteen times measures something closer
+to the subject than one that touches it fifteen thousand times.** Nor is the
+cold 14,999 "the truth" — those sixteen probes warm it a little too. There is no
+number; there is a number plus a JIT state, which is what §E means by recording
+the configuration beside every measurement, and what `Module3Harness` means when
+it says a ceiling test may never assert an absolute depth.
+
+Recorded as the third occurrence of [`error-patterns.md`](error-patterns.md)
+pattern 13, and the sharpest of the three: in the other two the measurement was
+taken *while* the subject changed. Here the measurement is the cause.
+
+**Repaired during this round**, with exponential search establishing the upper
+witness before the binary phase narrows it. `f(1), f(2), f(4), ...` until one
+fails, then binary between the last survivor and the first failure. Measured
+after the repair, on the same 1 MiB thread with a counting `f`:
+
+```text
+limit =     40,000  ->  maxDepth =     40,000   probes = 34   deepest n probed = 65,536
+limit =  1,048,576  ->  maxDepth =     41,487   probes = 34   deepest n probed = 65,536
+```
+
+34 probes against ~15,000: the instrument perturbs some 440x less, and the
+`Exercise1StackProbeSpec` suite went from tens of seconds to **0.296 s**. The
+fitted frame size landed exactly on the guide's prediction:
+
+```text
+maxDepth at 256 KiB       13,079     (guide: 13,123)
+maxDepth at 4 MiB        258,845
+fitted bytes per frame     16.00     (guide §3: 16.00)
+fitted fixed overhead     52,885 B
+```
+
+### 33. `maxDepth` returns `limit` when the boundary lies above it. Compare that with `indexOf`'s `-1`, which is already documented as in-band signalling. One of the two is worse.
+
+**Answered unaided and inverted, with a premise that argues the opposite of its
+conclusion.** The answer given was that `-1` is worse *because a valid index is
+never negative*.
+
+That premise is exactly what makes `-1` safe. "A valid index is never negative"
+says `-1` lies **outside** the set of legitimate answers, so no correct call can
+return it meaning anything else. Apply the same sentence to `maxDepth`: `limit`
+is a perfectly legitimate answer, because the boundary can genuinely be at
+`limit`. The sentinel lives inside the set of true results and the two readings
+collide.
+
+```text
+                 sentinel   a legitimate answer?   can the caller distinguish?
+--------------   --------   --------------------   ---------------------------
+indexOf             -1             no               yes: if (i >= 0)
+maxDepth          limit            YES              no expression exists
+```
+
+The two rows above are measured, not argued — same `f`, same thread, equally
+cold JVMs:
+
+```text
+maxDepth(   40,000)(sumNaive)  =  40,000      saturated
+maxDepth(1,048,576)(sumNaive)  =  41,487      the real boundary
+```
+
+Holding only the first number, nothing distinguishes it from a real boundary at
+40,000. What the caller loses is not the information but **the ability to ask**.
+
+The suite proves it by working around it:
+
+```scala
+assert(found < limit, "if the search saturates its limit it has not found a boundary")
+```
+
+That passes only because the test chose `1 << 20`, knowing in advance the
+boundary is far below. It is a heuristic resting on external knowledge, and it
+returns a false negative in precisely the case where the boundary equals the
+limit.
+
+**Two objections were being conflated, and separating them is the answer:**
+
+1. **The sentinel lies inside the domain of real answers.** `maxDepth` has this;
+   `indexOf` does not.
+2. **The sentinel has the same type as a real answer**, so nothing stops a
+   caller using it as one — `xs(indexOf(xs, y))` compiles. Both have this.
+
+`indexOf` commits (2). `maxDepth` commits both, which is what makes it worse —
+and the objection already written into `indexOf`'s Scaladoc is (2), the milder
+one.
+
+**Still open after the repair.** Exponential search fixed the invariant; the
+saturation moved rather than left:
+
+```scala
+Math.min(largestHi(0, upperHi), limit)
+```
+
+`limit` no longer bounds the search — the measurement above shows the gallop
+probing to 65,536 when the caller asked for 40,000, which in a stack probe means
+probes deeper than authorised, and deep probes are the ones that warm. It then
+clamps after the fact, reproducing the collision. A fabricated witness also
+survives in the escape hatch, `if n > 30 then Int.MaxValue`, which hands the
+binary phase a `hi` that no `survives` call ever observed failing — the same
+witness-by-decree the repair removed from `loop(0, limit)`, reachable only for an
+`f` surviving 2^30 frames.
+
+---
+
+## E2 — `TailShapes`
+
+### 34. Does `sumLoop` compile to the shape of `sumNaive`, of `sumAcc`, or of neither? Name the instruction that decides it, and one difference that survives between the two you group.
+
+**Answered unaided and correctly on both counts** — the shape of `sumAcc`, and
+the `goto` decides. The surviving difference was not given.
+
+What makes the `goto` the criterion is what stands *after* the call:
+
+```text
+sumNaive    13: invokevirtual sumNaive
+            16: ladd            <- work pending AFTER the return,
+            17: lreturn            which is why the frame must survive
+
+sumAcc      24: goto 0          <- nothing pending: the frame is reused
+sumLoop     17: goto 4
+```
+
+`sumNaive` is the only one that grows a stack because it is the only one with an
+instruction waiting for the value to come back.
+
+**The difference that survives** was described by this author already, in
+`fibonacci`'s Scaladoc, about a different exercise:
+
+```text
+sumLoop  (imperative)          sumAcc  (loop$1, compiled)
+--------------------------     ------------------------------
+13: lstore_3    acc in place   10: istore 4    n-1 into a FRESH slot
+14: iinc 2, -1  m in place     16: lstore 5    acc+n into a FRESH slot
+17: goto 4                     18: iload 4
+                               20: istore_1    only now n = ...
+                               21: lload 5
+                               23: lstore_2    only now acc = ...
+                               24: goto 0
+```
+
+The `while` overwrites in place: `iinc 2, -1` is one instruction that decrements
+a local where it sits. The compiled tail call stores both new values into fresh
+slots and only then overwrites the parameters — four extra slot operations per
+iteration. That is the price of a language promising simultaneous evaluation of
+arguments on a machine that has no simultaneous assignment, and it is what
+`fibonacci`'s Scaladoc states: *"the JVM has no simultaneous assignment, so the
+compiled tail call stores both new values into fresh slots and only then
+overwrites the parameters"*. Written about Exercise 4, confirmed here in
+Exercise 2's bytecode.
+
+A second, smaller difference: **`sumLoop` is one method and `sumAcc` is three** —
+the public one, the lifted `loop$1`, and `loop$default$2$1()`, which exists only
+to produce `0L`. C2 inlines all of it; the bytecode does not.
+
+So the honest answer to §G is stronger than "the same shape": it is **the same
+control flow with more data movement**. The pure version is not free at the
+bytecode level. It is free at the *register* level, after C2 allocates, and that
+is what makes the trade worth taking.
+
+---
+
+## E3 — `Arithmetic`
+
+### 35. Is `gcd` total? Give `gcd(4, -2)` and `gcd(Int.MinValue, 0)`. One of those two answers is a value no implementation of `def gcd(a: Int, b: Int): Int` could improve on.
+
+**Answered unaided and correctly on both**, including the harder half: the
+magnitude, not the sign, is the irreparable one.
+
+It is total, and nearly is not. The division that overflows in this family is
+`Int.MinValue / -1`; `%` is not the same operator. The JLS defines
+`Int.MinValue % -1` as `0`, with no overflow, so the Euclidean chain passes
+through the hole the Scaladoc points at.
+
+**The two failures are different in kind:**
+
+```text
+gcd(4, -2)  = -2                 the sign: a choice NOT made      repairable
+gcd(MIN, 0) = -2147483648        the magnitude: a hole in the TYPE  not
+```
+
+`|Int.MinValue| = 2^31` and the largest `Int` is `2^31 - 1`. No implementation of
+that signature returns the absolute value here — pattern 6, a contract the
+signature cannot carry.
+
+**And the obvious repair of the first has a trap this author already
+documented.** Normalising with `Math.abs` would produce a function that is
+non-negative across the whole domain except one point, where it silently returns
+a negative:
+
+```text
+Math.abs(Int.MinValue) = -2147483648
+```
+
+That is worse than the present state, because it manufactures a false invariant.
+It is `digits`' own Scaladoc applied to another function: *"`Math.abs(Int): Int`
+has nowhere to put the answer and returns its argument unchanged."* And the real
+repair is also already written three exercises back — widen. A `Long` result
+holds `2^31`, and the sign can then be normalised without exception, exactly as
+`Math.abs(n.toLong)` closed `digits`.
+
+**Documenting the sign is not available either.** Mapped across the domain to
+look for a short rule, there is none:
+
+```text
+   a         b    gcd(a,b)   follows the sign of
+-----------  ------  ---------  -------------------
+          4      -2         -2   b
+         -4       2          2   b
+         10      -4          2   a
+        -10       4         -2   a
+         12      -8          4   a
+```
+
+The result is the last non-zero remainder, and Java's `%` gives a remainder the
+sign of its *dividend* — so which input the sign comes from depends on how many
+Euclidean steps the chain took. It is a function of the path, not of the input
+signs. The two honest options are therefore to widen and normalise, or to declare
+`|gcd|` the contract and the sign unspecified.
+
+### 36. `digits` carries five parameters. What do `q`, `r` and `d` contribute that `n / 10` would not?
+
+**Answered "I don't know".** The answer is nothing — none of the three.
+
+Verified against a two-parameter version:
+
+```text
+2,600,506 inputs checked; divergences: 0
+```
+
+covering every value in ±300,000, the neighbourhood of every power of ten in both
+signs, the edges of the type, and two million pseudo-random `Int`s.
+
+**The design was a different idea, not a worse version of the standard one**, and
+it is worth naming because it is coherent:
+
+```text
+the standard version   the window stands still (always the last digit) and the NUMBER moves
+this version           the number stands still and the WINDOW moves
+```
+
+`d = 10^i` is where the window is, `q = 10^(i+1)` where it ends, and
+`(n % q) / d` reads "mask off everything above the window, discard everything
+below it". Then, one at a time:
+
+**`q` is not state, it is a copy.** `q` is `d * 10` at every call. A value
+derivable from another carries no information; it is a second recording of the
+same fact that someone must keep in step by hand.
+
+**`r` is invisible by construction.** `digits(1024)`, with the column that
+matters:
+
+```text
+iter   n (param)   r    n-r     d       q     (n-r)%q   /d = digit
+  1      1024      0   1024     1      10          4        4
+  2      1024      4   1020    10     100         20        2
+  3      1020      2   1018   100    1000         18        0
+  4      1018      0   1018  1000   10000       1018        1
+  5      1018      1     -   10000     -          -     d > n: stop
+```
+
+The `n` column runs **1024 -> 1024 -> 1020 -> 1018**. The number is being
+damaged: the extracted digit is subtracted as though it were worth 1 when it was
+worth `10^i`. The answer is right anyway, because `/ d` discards everything below
+the window and the damage is always below it. `r` does not contribute; it
+corrupts a part of the number nobody looks at again.
+
+**`d` is real state**, but only because the number was not shifted. Shift it and
+`d` is always 1 and goes too. What is left is
+`loop(m / 10, acc.prepended(m % 10))`.
+
+**What was right, and it is the hard part.** Extracting least-significant-first
+and prepending yields most-significant-first without a second traversal, which is
+exactly what the exercise asked for. The five parameters are around the right
+idea rather than in place of it.
+
+**The rule: state derivable from other state is not state.** Each redundant
+parameter is an invariant maintained by hand with nothing checking it. `q == d *
+10` holds today because both recursive calls happen to be written correctly; a
+third branch that updates `d` and forgets `q` produces wrong digits with no
+compile error, no exception, and `-Wall -Werror` satisfied, because both are
+`Long`. Not filed in `error-patterns.md`: the function is correct, and that file
+is for defects that pass green, not for design weight. The concrete cost, from
+challenge 34, is five "fresh slot then overwrite parameter" pairs per iteration
+where two would do.
+
+---
+
+## E4 — `Loops`
+
+### 37. Pattern 14 forbids `==` as the translation of `<`. `reverseDigits` tests `if m == 0`. Why is that one correct, and does the proof hold over the whole `Int` domain?
+
+**Answered unaided and correctly in one line** — `m / 10` always reaches 0. The
+proof and the domain were drawn out.
+
+Pattern 14 admits an equality as a base case only when the counter is *proved* to
+land on it. Here the proof has three parts:
+
+```text
+1. it decreases    |m| >= 1  =>  |m/10| < |m|
+2. it cannot jump  |m| <= 9  =>  m/10 == 0 exactly  (truncation toward zero)
+3. from both sides      -2 -> 0      and      2 -> 0
+```
+
+Bounded at **10 divisions** from either extreme:
+
+```text
+-2147483648 -> -214748364 -> ... -> -21 -> -2 -> 0      [10]
+ 2147483647 ->  214748364 -> ... ->  21 ->  2 -> 0      [10]
+```
+
+**It holds over the whole `Int` domain, `Int.MinValue` included**, because the
+only division that overflows is `/ -1` and this loop divides by a constant:
+
+```text
+Int.MinValue / -1 = -2147483648    overflows, returns its argument
+Int.MinValue / 10 =  -214748364    does not
+```
+
+**The contrast is the lesson:**
+
+```text
+                 step         target   the counter...
+--------------   ----------   ------   ----------------------------------
+fibonacci        i <- i + 1      n     moves AWAY from the target when n < 0
+reverseDigits    m <- m / 10     0     always approaches, |m| decreasing
+```
+
+Pattern 14's rule was never "do not use `==`". It is **"`==` only where the
+sequence provably lands on it"**. `fibonacci` had a region of the domain where
+the counter travelled away from its target; `reverseDigits` converges across the
+whole domain, and `0` is a fixed point of its own step (`0 / 10 == 0`). `n` was
+never a fixed point of `i + 1` — only a value on a ray.

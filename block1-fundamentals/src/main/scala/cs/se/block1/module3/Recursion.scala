@@ -358,11 +358,23 @@ object EarlyExit:
     * makes the recursion tail is the reverse of the order wanted.
     *
     * One `reverse` of the '''prefix''' is the price, and that is not a figure of
-    * speech. Rebuilding the prefix costs two `Cons` cells per element kept —
-    * 48 bytes against the 24 a non-tail spelling would allocate, measured at
-    * 4,800,000 bytes for 100,000 elements. Stack safety is bought here with
-    * exactly one extra copy of the result, and Exercise 6 makes that exchange
-    * the subject rather than a side effect.
+    * speech: rebuilding costs two `Cons` cells per element kept, 48 bytes
+    * against the 24 a non-tail spelling would allocate. Stack safety is bought
+    * with exactly one extra copy of the result, and Exercise 6 makes that
+    * exchange the subject rather than a side effect.
+    *
+    * '''The prefix is not always rebuilt.''' Reaching `Nil` means nothing was
+    * dropped, so the answer is `xs` itself and the `reverse` is skipped — 24
+    * bytes per element rather than 48, measured at 2,400,000 against 4,800,000
+    * over 100,000 elements. Returning the input is safe because `MyList` is
+    * persistent: no operation distinguishes the result from a copy of it except
+    * `eq`, which the enum's structural equality does not expose.
+    *
+    * It halves rather than zeroes, and the reason is a matter of '''when''' rather
+    * than of how much. The accumulator is built during the walk, and that it was
+    * unnecessary is learned only on arrival, by which time its cells exist and
+    * are instantly garbage. Only the `reverse` is saved; reaching zero would
+    * mean not building the accumulator at all.
     *
     * What is never paid is a second traversal of the '''input'''.
     */
