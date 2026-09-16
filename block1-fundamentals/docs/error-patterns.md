@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Thirty-six individual mistakes are a diary and nobody rereads a diary. Fifteen
+Thirty-seven individual mistakes are a diary and nobody rereads a diary. Sixteen
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -35,8 +35,9 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 13 | A measurement taken while its subject is still changing | 3 | no — it passes intermittently, and when it fails it blames the wrong file |
 | 14 | An equality standing in for an inequality | 1 | no — it agrees with the original across the whole tested domain |
 | 15 | A wildcard standing in for the constructors it currently covers | 3 | no — the defect is the removal of the check that would report it |
+| 16 | A value test that spends a resource it never mentions | 1 | no — it passes 18 runs in 19, and the failure blames the implementation |
 
-Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 to 15
+Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 to 16
 in **Module 3**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
@@ -1246,3 +1247,81 @@ saved. This entry claimed zero when it was first written, and challenge 30 in
 
 Which still makes the repair worth stating twice: **naming the constructors
 fixes the exhaustivity hole and half the allocation at the same keystroke.**
+
+---
+
+## 16. A value test that spends a resource it never mentions
+
+The assertion is about arithmetic. Nothing in it names the stack, the heap or
+the clock. But *evaluating the fixture* consumes one of them, and the amount
+available varies between runs — so the test fails on a quantity it does not
+mention, and the stack trace accuses the implementation.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Exercise2TailShapesSpec`, *"all three agree wherever all three survive"* | `sumNaive(10_000)` on whatever thread MUnit supplies | the same assertion on a thread of a stated size |
+
+The test's own name states the precondition — *wherever all three survive* — and
+the fixture violates it intermittently. Caught once in 19 runs:
+
+```text
+==> X Exercise2TailShapesSpec.all three agree wherever all three survive
+      java.lang.StackOverflowError: null
+        at cs.se.block1.module3.TailShapes$.sumNaive(TailShapes.scala:39)
+        at cs.se.block1.module3.TailShapes$.sumNaive(TailShapes.scala:39)
+        ...
+```
+
+**10,000 is not a small number for this function.** Measured cold, on the
+default thread, as the first thing a fresh JVM does with it — eight separate
+processes:
+
+```text
+41,521   16,383   41,511   41,487   41,455   16,383   41,459   41,509
+```
+
+Bimodal, because the search either does or does not cross C2's step while it
+runs. Against 16,383 the fixture has a margin of 1.64x.
+
+**And the real margin is smaller than any of those numbers, because none of them
+can be taken at the moment that matters.** The value test runs *first* in the
+suite, when nothing has touched `sumNaive` and its frames are interpreted and at
+their largest. The ceiling test that would report the number runs afterwards —
+and by then the value test has already warmed the method. Measuring the quantity
+raises it, so **the suite cannot report the number that decides its own first
+assertion**. The 16,383 above is an upper bound on a boundary nobody can
+observe in place.
+
+**The rule.** A test that asserts a *value* must not put its fixture near a
+*resource* boundary. Two repairs, and the second is preferred wherever the
+resource is part of the module's subject matter:
+
+```text
+keep the fixture far below any plausible bound   -> the bound must come from the
+                                                    COLD measurement, never the warm
+state the resource instead of hoping for it      -> StackProbe.onStack(8192) { ... }
+```
+
+"Far below" is not a feeling. It is a ratio against a measured cold bound, and
+the same discipline pattern 13 asks for one level up: the margin is set against
+the drift that was observed, not against the drift that was expected.
+
+**Why the build does not catch it.** Three reasons, and the third is the one
+that wastes an afternoon:
+
+  - It passes. Eighteen runs out of nineteen, and the nineteenth looks like
+    infrastructure flakiness rather than a defect in the fixture.
+  - `-Wall -Werror` has no opinion about the magnitude of an integer literal.
+    Nothing distinguishes `10_000` from `1_000` to a type checker.
+  - When it does fail, **the failure names the implementation**. The trace is
+    forty frames of `TailShapes.sumNaive`, which is pattern 11's signature —
+    a failing test blaming the wrong file. And it is worse here than usual,
+    because `sumNaive` is *specified* to overflow: the failure reads as the
+    function doing exactly its job, so the reflex is to doubt the expected value
+    rather than the environment the fixture was evaluated in.
+
+**Not an occurrence of pattern 13.** There, an assertion is made *about* a
+quantity that drifts. Here nothing is measured and nothing in the assertion
+drifts — `sumNaive(10_000) == 50_005_000` is true at every tier. What drifts is
+the *cost of evaluating it*, which is invisible in the assertion's text. The two
+share a discipline and not a shape.

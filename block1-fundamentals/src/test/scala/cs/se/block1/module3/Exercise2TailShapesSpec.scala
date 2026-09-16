@@ -6,7 +6,28 @@ class Exercise2TailShapesSpec extends Module3Harness:
   private def expected(n: Int): Long = n.toLong * (n + 1) / 2
 
   test("all three agree wherever all three survive") {
-    List(0, 1, 2, 3, 10, 1_000, 10_000).foreach { n =>
+    List(0, 1, 2, 3, 10, 1_000).foreach { n =>
+      assertEquals(TailShapes.sumNaive(n), expected(n), s"sumNaive($n)")
+      assertEquals(TailShapes.sumAcc(n), expected(n), s"sumAcc($n)")
+      assertEquals(TailShapes.sumLoop(n), expected(n), s"sumLoop($n)")
+    }
+
+    // 10,000 is not a small number for sumNaive, and this is the least
+    // affordable place in the suite to pretend that it is: the value test runs
+    // first, when the method is coldest and its interpreted frames are at their
+    // largest. Measured cold on a fresh JVM, the ceiling comes out at 16,383 or
+    // at about 41,500 depending on whether C2 steps in during the search - and
+    // it is lower still at the instant this line runs, because nothing has
+    // touched sumNaive yet and any probe that measures the ceiling raises it.
+    // The suite cannot report the number that decides this assertion.
+    //
+    // Observed: StackOverflowError inside sumNaive(10_000), once in 19 runs,
+    // reported against a function behaving exactly as specified.
+    //
+    // The agreement under test is about values and not about depth, so the
+    // stack is stated rather than hoped for. error-patterns.md pattern 16.
+    StackProbe.onStack(8192) {
+      val n = 10_000
       assertEquals(TailShapes.sumNaive(n), expected(n), s"sumNaive($n)")
       assertEquals(TailShapes.sumAcc(n), expected(n), s"sumAcc($n)")
       assertEquals(TailShapes.sumLoop(n), expected(n), s"sumLoop($n)")
