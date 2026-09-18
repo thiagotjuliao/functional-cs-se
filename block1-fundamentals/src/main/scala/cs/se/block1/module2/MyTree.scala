@@ -1,7 +1,6 @@
 package cs.se.block1.module2
 
 import cs.se.block1.module2.MyList.*
-import scala.math.Ordering.Implicits.infixOrderingOps
 
 /** Exercises 6, 7 and 9 — the binary search tree, where sharing stops being a
   * curiosity.
@@ -40,17 +39,17 @@ object MyTree:
       * it stops being true the moment the tree degenerates, which is exactly
       * what Exercise 9 provokes.
       */
-    def insert(x: A)(using Ordering[A]): MyTree[A] = t match
+    def insert(x: A)(using ord: Ordering[A]): MyTree[A] = t match
       case Leaf => Branch(x, Leaf, Leaf)
-      case Branch(v, l, r) if x < v => Branch(v, l.insert(x), r)
-      case Branch(v, l, r) if x > v => Branch(v, l, r.insert(x))
+      case Branch(v, l, r) if ord.lt(x, v) => Branch(v, l.insert(x), r)
+      case Branch(v, l, r) if ord.gt(x, v) => Branch(v, l, r.insert(x))
       case t => t
 
     /** Whether `x` is present. `O(depth)`, and for the same reason. */
-    def contains(x: A)(using Ordering[A]): Boolean = t match
+    def contains(x: A)(using ord: Ordering[A]): Boolean = t match
       case Leaf => false
-      case Branch(v, l, _) if x < v => l.contains(x)
-      case Branch(v, _, r) if x > v => r.contains(x)
+      case Branch(v, l, _) if ord.lt(x, v) => l.contains(x)
+      case Branch(v, _, r) if ord.gt(x, v) => r.contains(x)
       case _ => true
 
     /** Number of `Branch` nodes. `Leaf` counts as zero. */
