@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Forty-five individual mistakes are a diary and nobody rereads a diary. Twenty
+Forty-six individual mistakes are a diary and nobody rereads a diary. Twenty
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -32,7 +32,7 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 10 | A quantity compared against a model of a neighbouring quantity | 5 | no — the tolerances were wide enough, and the fifth is a verb in a comment |
 | 11 | A fixture that cannot exhibit the property under test | 2 | no — and the failure it finally produced blamed the wrong file |
 | 12 | A measurement recorded where nothing can re-run it | 3 | no — two of the three were wrong when measured, and the suite was green |
-| 13 | A measurement taken while its subject is still changing | 3 | no — it passes intermittently, and when it fails it blames the wrong file |
+| 13 | A measurement taken while its subject is still changing | 4 | no — it passes intermittently, and the fourth reaches a checklist field instead of an assertion |
 | 14 | An equality standing in for an inequality | 1 | no — it agrees with the original across the whole tested domain |
 | 15 | A wildcard standing in for the constructors it currently covers | 3 | no — the defect is the removal of the check that would report it |
 | 16 | A value test that spends a resource it never mentions | 1 | no — it passes 18 runs in 19, and the failure blames the implementation |
@@ -954,6 +954,7 @@ calls, a spread of 8 frames.
 | 1 | `Exercise1StackProbeSpec` | `!survives(deep(found + 1))`, on the first, cold search | a depth safely above the boundary, measured warm |
 | 2 | `StackProbe.maxDepth` Scaladoc | *"Binary search"* | a binary search over an `f` that has already been warmed |
 | 3 | `StackProbe.maxDepth` body | `loop(n + 1)` — a linear climb | the binary search the Scaladoc above it specifies |
+| 4 | `Module3Harness.maxSurviving` | a binary search entered cold | a search over an `f` already warmed, as `probeBytes` does |
 
 Occurrence 1 is a margin of **one frame** — 0.0016% — on a quantity that drifts
 by 8 between consecutive warm calls and by a factor of 2.51 across compilation.
@@ -1023,6 +1024,44 @@ exponential search establishing the upper witness before the binary phase
 narrows: 34 probes against ~15,000, and `Exercise1StackProbeSpec` fell from tens
 of seconds to 0.296 s. Challenge 32 in [`challenge-log.md`](challenge-log.md)
 carries the full measurement.
+
+**Occurrence 4 is the same defect one level up, in the shared harness**, and it
+is the one that reached a checklist field. `Module3Harness` carries two
+instruments side by side:
+
+```scala
+protected def maxSurviving(limit: Int)(f: Int => Any): Int = ...   // no warm-up
+
+/** Bytes allocated while evaluating `body`, after warm-up. */
+protected def probeBytes[A](body: => A): Long =
+  (0 until 20).foreach(_ => body)      // twenty iterations before measuring
+  AllocationProbe.measure(body)._2
+```
+
+Warm-up discipline for allocation, none for depth — the same asymmetry
+occurrence 2 records between `bytesOf` and `maxDepth`, reproduced inside one
+file ten lines apart. The consequence is that the *same expression*, in the
+same forked JVM, reports two different ceilings depending on which spec ran
+first:
+
+```text
+                                      E6 + E7 together    each spec alone
+  MyList.foldRight, measured in E6              16,895             16,895
+  MyList.foldRight, measured in E7              30,862             16,895
+  foldRightLazy, measured in E7                  7,751              3,879
+```
+
+E6's own binary search invokes `cells(n).foldRight(...)` thousands of times and
+leaves the method compiled; E7 then measures the compiled frame. Run E7 alone
+and it agrees with E6 exactly. Neither number is wrong and neither is a property
+of `foldRight`: each is a property of `foldRight` *plus an unnamed JIT state*.
+
+**What makes this occurrence worse than 1 to 3** is where the number was going.
+Occurrences 1 to 3 fed assertions, which fail loudly when they are wrong. This
+one feeds `report`, and `report` feeds the §E field `MyList.foldRight: ______`,
+where the number is written down once, without its conditions, and reread later
+as a constant. Challenge 41 has the full account.
+
 
 ---
 

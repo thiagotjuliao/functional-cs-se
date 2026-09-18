@@ -30,8 +30,17 @@ object SafeFold:
     * — which is most test fixtures — and computes something else. Guide §21,
     * and the spec folds with subtraction for precisely this reason.
     *
-    * Costs one extra spine, `n` cells. §E asks for the measured number and for
-    * one line naming the exchange rate you just paid.
+    * Costs one extra spine, `n` cells. Measured over `n = 100,000`: `foldLeft`
+    * allocates 2,399,640 bytes and this allocates 4,800,040, a delta of
+    * 2,400,400 = 100,016 cells of 24 bytes.
+    *
+    * The exchange rate: '''one cell of heap, permanently, for every frame of
+    * stack avoided.''' The stack was free and bounded; the heap is charged and
+    * unbounded, which is exactly why the trade is worth making.
+    *
+    * It is also the version that actually removes the ceiling. Searched to a
+    * limit of 2,097,152 it never overflows, while `foldRightComposed` — which
+    * costs twice as much per element — overflows at 30,816. Challenge 42.
     */
   def foldRightSafe[A, B](xs: MyList[A], z: B)(f: (A, B) => B): B =
     xs.reverse.foldLeft(z)((acc, a) => f(a, acc))
@@ -42,11 +51,35 @@ object SafeFold:
     * value: each step composes a new closure, and the whole composition is
     * applied to `z` at the end.
     *
-    * It works, and it is instructive because the cost lands somewhere else. The
-    * spine is gone and a chain of closures has taken its place — and when that
-    * chain is finally applied, it calls itself down the whole length. Measure
-    * both its allocation and its ceiling before writing the Scaladoc, and say
-    * plainly whether this version fixes the problem or relocates it.
+    * '''It relocates the problem.''' It does not fix it.
+    *
+    * The chain costs 48.02 bytes per element, two objects rather than one:
+    *
+    * {{{
+    * closure   b => g(f(a, b))     24 bytes    allocated while building
+    * box       of f's result       24 bytes    allocated while applying
+    *                               --------
+    *                               48 bytes per element
+    * }}}
+    *
+    * The second is the accumulator being boxed — `f: (A, B) => B` is generic,
+    * `B` erases to `Object`. Switching `B` from `Long` to `Int` moves the figure
+    * to 40.02, which is the 8-byte difference between the two boxes and could
+    * not happen if the object were a list cell.
+    *
+    * And the ceiling, searched to a limit of 2,097,152:
+    *
+    * {{{
+    * build the chain, never apply it    2,097,151   never overflows
+    * build and apply                       30,816
+    * foldRightSafe                      2,097,151   never overflows
+    * }}}
+    *
+    * Building is a `foldLeft` and has no ceiling. The whole ceiling is in the
+    * application: each closure is `b => g(f(a, b))`, so applying the last calls
+    * `g`, which calls its own `g`, down the entire chain — the original
+    * recursion, deferred from build time to apply time. The cost moves twice,
+    * stack to heap and heap back to stack. Challenge 42.
     *
     * This is the first sighting of the structure Block 3 builds properly.
     * Guide §16.
@@ -76,10 +109,28 @@ object LazyFold:
     * '''suspended''' inside the by-name argument rather than evaluated before
     * `f` is entered.
     *
-    * For an `f` that always forces its second argument, this has exactly the
-    * same ceiling as `MyList.foldRight`. Verify that rather than assuming it —
-    * the spec asks for the number, and a fix that silently fixed nothing would
-    * look identical from the outside.
+    * For an `f` that always forces its second argument, this does '''not''' have
+    * the same ceiling as `MyList.foldRight`. It has roughly a '''quarter''' of
+    * it — 7,751 against 30,862 in one suite run, 3.98 frames per element.
+    *
+    * The stack captured at the deepest point shows why: four frames per level
+    * where the strict fold uses one.
+    *
+    * {{{
+    * LazyFold$.foldRightLazy$$anonfun$1    the thunk, a Function0
+    * LazyFold$.foldRightLazy               the recursion, inside the thunk
+    * $anonfun$adapted$1                    the boxing adapter, B erased
+    * <the caller's f>                      f itself
+    * }}}
+    *
+    * The cause is an inversion of order. Strict `foldRight` evaluates the
+    * recursion '''before''' entering `f`, so `f`'s frames are born on the way
+    * back up, one at a time. Here the recursion happens '''inside''' `f`, when
+    * the argument is forced, so `f`, the adapter and the thunk stay live at
+    * every level below. Challenge 43.
+    *
+    * What the by-name parameter buys is not stack. It is the option not to
+    * descend at all, which is `existsLazy` below.
     */
   def foldRightLazy[A, B](xs: MyList[A], z: => B)(f: (A, => B) => B): B =
     xs match
@@ -96,9 +147,29 @@ object LazyFold:
     * — and `existsLazy` must not overflow, while a strict `foldRight` over the
     * same list does.
     *
-    * State in the Scaladoc which of the two ceilings this removes and which it
-    * leaves standing. §E asks the same question and will not accept "it is
-    * faster".
+    * '''It removes the ceiling on work and not the one on stack.'''
+    *
+    * {{{
+    *                              match at index 3      no match
+    * existsLazy    over 1e6       survives              StackOverflowError
+    * existsStrict  over 1e6       StackOverflowError    StackOverflowError
+    *
+    * largest n with no match, existsLazy      3,199
+    * largest n with no match, existsStrict   18,431
+    * }}}
+    *
+    * Where the predicate decides early the cost is the prefix up to the match —
+    * 4 elements and 112 bytes out of a million — and neither ceiling is reached.
+    * The top-left cell is not stack relief: it survived because `p(a) || acc` is
+    * `true` at the fourth element, `||` short-circuits, `acc` is never forced
+    * and the remaining 999,996 levels never exist.
+    *
+    * Where the predicate does not decide — any list with no match, or whose
+    * match lies past index ~3,199 — the recursion descends in full at the four
+    * frames per level documented above, and overflows '''earlier''' than the
+    * strict version, by a factor of 5.76.
+    *
+    * Laziness makes the descent avoidable, never cheaper. Challenge 44.
     */
   def existsLazy[A](xs: MyList[A], p: A => Boolean): Boolean =
     foldRightLazy(xs, false)((a, acc) => p(a) || acc)

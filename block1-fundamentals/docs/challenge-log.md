@@ -1897,7 +1897,7 @@ unrepresentable invalid states*.
 
 # Module 3 — Stack Optimization & Control Flow Elimination
 
-Numbering continues from 28, and runs to 40. The discipline is unchanged, and this module adds
+Numbering continues from 28, and runs to 44. The discipline is unchanged, and this module adds
 one source of evidence to the two already in use: the **disassembly of the
 lifted loop**. Where Module 2 argued from cell counts, several answers here are
 settled by which label two conditional branches jump to.
@@ -1909,8 +1909,8 @@ settled by which label two conditional branches jump to.
 | E3 `Arithmetic` | 2 | recorded |
 | E4 `Loops` | 1 | recorded |
 | E5 `EarlyExit` | 3 | recorded |
-| E6 `SafeFold` | 0 | owed |
-| E7 `LazyFold` | 0 | owed |
+| E6 `SafeFold` | 2 | recorded |
+| E7 `LazyFold` | 2 | recorded |
 | E8 `Rotations` | 0 | closed without a round, recorded as such |
 | E9 `Avl` | 3 | recorded |
 
@@ -2722,3 +2722,243 @@ So the change removed no allocation from Module 2. It removed the **dependency**
 on an optimisation that happened to be working. The measurements read 24 bytes
 per node by courtesy of C2 before, and by construction after. Filed as pattern
 20.
+
+---
+
+## E6 — `SafeFold`
+
+Audited after E9, in the round that paid off the two rows this table carried as
+`owed`. Both answers correct the exercise's own Scaladoc, which still asserted
+what the measurements contradict.
+
+### 41. The same `MyList.foldRight`, in the same JVM, measured by two specs of one suite: 16,895 in E6 and 30,862 in E7. What causes the difference, which number belongs in §E, and what would make the two agree?
+
+**Answered partially** — the mechanism was named (interpreted frame against
+compiled frame) and attributed to the wrong warm-up. Running each spec alone
+isolates it:
+
+```text
+                                      E6 + E7 together    each spec alone
+  MyList.foldRight, measured in E6              16,895             16,895
+  MyList.foldRight, measured in E7              30,862             16,895
+  foldRightLazy, measured in E7                  7,751              3,879
+```
+
+The middle row settles the attribution. `foldRightLazy` runs immediately before
+that measurement in **both** columns, so it cannot be what changed. What changed
+is that **E6 ran first**: its own binary search invokes
+`cells(n).foldRight(...)` thousands of times and leaves the method JIT-compiled
+in the forked JVM. E7 then finds it compiled, with frames roughly half the size,
+and measures twice the depth. The third row is the mirror — `foldRightLazy`
+doubles too, for the same reason.
+
+**The defect is in the instrument, and it is visible ten lines apart in the
+harness:**
+
+```scala
+protected def maxSurviving(limit: Int)(f: Int => Any): Int = ...   // no warm-up
+
+/** Bytes allocated while evaluating `body`, after warm-up. */
+protected def probeBytes[A](body: => A): Long =
+  (0 until 20).foreach(_ => body)      // twenty iterations before measuring
+  AllocationProbe.measure(body)._2
+```
+
+Warm-up discipline for allocation, none for depth. `maxSurviving` enters the
+binary search cold — first call `f(131072)`, then 65536, then 32768 — and
+converges while the method is still migrating from interpreted to compiled.
+
+**Neither number belongs in §E as written.** They are not competing estimates of
+one quantity:
+
+```text
+  16,895   the ceiling during the transition, with nothing run before it
+  30,862   the ceiling once E6 left the method compiled
+```
+
+Both are real. Neither is a property of `foldRight` — each is a property of
+`foldRight` *plus a JIT state the field does not name*. The harness already
+states the principle for assertions, and it applies to the field as well:
+
+> *"Ceiling tests ... may **never** assert an absolute depth ... Assert the
+> separation, and let `report` print the number."*
+
+What belongs in the field is the pair: the number and the state it was taken in.
+Written alone it will be reread as a constant of `foldRight`, and it is not one.
+
+**The repair** is to make `maxSurviving` symmetric with `probeBytes`: warm the
+subject before searching — a few thousand invocations at an `n` small enough
+never to overflow — and only then start the binary search. Both specs then
+converge, because both measure the compiled method instead of catching it at
+different points on the curve. It belongs **inside** `maxSurviving`: the defect
+is the instrument's, and fixing it in one spec would leave the other wrong.
+
+**And the guide's 14,990** is a third measurement in a third undeclared
+condition. The cold figure here, 16,895, is 12.7% above it, and the checklist
+asks for an explanation of anything past "a few percent". But the honest answer
+is that **comparing two measurements neither of which declares its conditions is
+not a comparison**. Fix the instrument, measure again, and the comparison starts
+to mean something — and may well still diverge, then for a nameable reason.
+
+Filed as the fourth occurrence of pattern 13.
+
+### 42. `foldRightComposed` allocates 48.02 bytes per element, exactly two 24-byte objects. Which two? And does it fix the overflow or relocate it?
+
+**Answered half correctly.** The composed function is one of the two; the other
+was given as a cell of `xs`, which the spec had already ruled out three lines
+above the measurement:
+
+```scala
+// Both spines are built outside the probe. Left inside, `cells` would add
+// its own cell and its boxed `Integer` to every element ...
+val ls = cells(small)
+val bytesSmall = probeBytes(SafeFold.foldRightComposed(ls, 0L)((a, b) => a + b))
+```
+
+Varying only the accumulator's type names the second object:
+
+```text
+  B = Long,  build + apply     48.02 bytes per element
+  B = Int,   build + apply     40.02
+  B = Long,  build only        24.01
+```
+
+A `MyList` cell does not change size with the `z` passed to the fold. The eight
+bytes that move are exactly the difference between `java.lang.Long` (24) and
+`java.lang.Integer` (16). It is the accumulator being boxed: `f: (A, B) => B` is
+generic, `B` erases to `Object`, and every application of `f` produces a
+primitive that needs a box to come back as `B`.
+
+```text
+  closure    b => g(f(a, b))       24 bytes    allocated while building
+  box        of f's result         24 bytes    allocated while applying
+                                   --------
+                                   48 bytes per element
+```
+
+The third row of the table dates them: building the chain without ever applying
+it costs 24 per element, not 48. The boxes are born when the chain runs.
+
+**It relocates.** Answered correctly and unaided. The three ceilings, searched
+to a limit of 2,097,152:
+
+```text
+  build the chain, never apply it        2,097,151   (= the limit; never overflows)
+  build and apply (foldRightComposed)       30,816
+  foldRightSafe                          2,097,151   (= the limit; never overflows)
+```
+
+Building has no ceiling at all — it is a `foldLeft`, tail recursive. The whole
+ceiling is in the application, and it returns at 30,816, the same order as the
+`foldRight` the technique was meant to repair. Each closure is
+`b => g(f(a, b))`, where `g` is the previous step's closure: applying the last
+calls `g`, which calls its own `g`, down the entire chain. The depth is the `n`
+of the original recursion, deferred from build time to apply time, with an
+`apply` frame per level instead of the fold's.
+
+So the cost moves twice: stack during the fold becomes heap at 48 bytes per
+element, and that heap becomes stack again at application. `foldRightSafe`
+removes the ceiling outright for 24 bytes per element. **Of the two techniques,
+the one that looks more sophisticated costs double and does not solve the
+problem.**
+
+---
+
+## E7 — `LazyFold`
+
+### 43. The Scaladoc claims a strict `f` gives `foldRightLazy` "exactly the same ceiling as `MyList.foldRight`". Measured: 7,751 against 30,862, near four frames per element. What does `=> B` add at each level?
+
+**Answered partially** — the `Function0` was named, which is one of the four.
+The stack captured at the deepest point of both folds over six elements:
+
+```text
+MyList.foldRight — one frame per level
+
+    MyList$.foldRight
+    MyList$.foldRight
+    MyList$.foldRight
+    ...
+
+foldRightLazy — four frames per level, the block repeating
+
+    LazyFold$.foldRightLazy$$anonfun$1      the thunk: the Function0
+    LazyFold$.foldRightLazy                 the recursion, now inside the thunk
+    Spec.$anonfun$adapted$1                 the boxing adapter
+    Spec.$init$...$$anonfun$2               f itself
+```
+
+In order of entry: `f` is invoked with its argument unevaluated; the
+**adapter** — `f: (A, => B) => B` is generic, `B` erases to `Object`, and the
+compiler emits an `$anonfun$adapted` that boxes the `Long` and accommodates the
+by-name; the **thunk**, whose `apply` runs when `f` forces `b`; and
+**`foldRightLazy`**, the recursive call now made from inside the thunk — which
+calls `f` again, one level down.
+
+**The root cause is an inversion of order.** Strict `foldRight` evaluates
+`t.foldRight(z)(f)` *before* entering `f`, so `f`'s frames are born on the way
+back up, one at a time, and never accumulate — which is why the captured strict
+stack shows `f` exactly once, at the top. In the lazy version the recursion
+happens *inside* `f`, when the argument is forced, so `f`'s frame, the adapter's
+and the thunk's stay live at every level below.
+
+Four frames against one; the binary search measured **3.98 per element**. The
+stack and the measurement agree.
+
+The Scaladoc is not merely imprecise, it is inverted: for a strict `f` the
+by-name parameter does not preserve the ceiling, it **divides it by four**.
+What laziness buys is not stack — it is the option not to descend.
+
+### 44. Which of the two ceilings does `existsLazy` remove and which does it leave? Is there a million-element input on which it still overflows? Does it overflow before or after a strict `exists`?
+
+**All three answered the wrong way round** — stack rather than work, no such
+input, and after rather than before. One table settles all three:
+
+```text
+                                         match at index 3      no match
+  existsLazy      over 1,000,000          survives             StackOverflowError
+  existsStrict    over 1,000,000          StackOverflowError   StackOverflowError
+
+  largest n with no match, existsLazy       3,199
+  largest n with no match, existsStrict    18,431
+  ratio strict / lazy                        5.76 x
+```
+
+**It removes the ceiling on work.** With the match at index 3 it visits 4
+elements of a million and spends 112 bytes. The ceiling on **stack** stands
+exactly where it was, and per challenge 43 it stands lower: 3,199 against
+18,431.
+
+The top-left cell is what makes the wrong answer tempting — `existsLazy`
+survives where the strict version overflows, which looks like stack relief. It
+is not. It survived because it never descended: `p(a) || acc` is `true` at the
+fourth element, `||` short-circuits, `acc` is never forced, and the remaining
+999,996 levels never exist. The stack did not get cheaper; it stopped being
+used.
+
+**The overflowing input exists and is the ordinary case:** any million-element
+list with **no match**, or whose match lies past index ~3,199. `p(a)` is `false`
+throughout, `||` forces `acc` at every level, and each level pays the four
+frames of challenge 43.
+
+The spec had already said so. It measures *"elements visited with no match =
+**512**"* — a million in the matching case and 512 in the non-matching one. That
+512 is not arbitrary: it is small enough not to overflow, and it is there
+because the no-match case does not survive large numbers.
+
+**Before, not after.** 3,199 against 18,431. Laziness discounts nothing from the
+descent; it only offers the chance not to descend.
+
+**What the Scaladoc should say:**
+
+> `existsLazy` removes the ceiling on **work** and not the one on **stack**.
+> Where the predicate decides early, the cost is the prefix up to the match — 4
+> elements and 112 bytes out of a million — and neither ceiling is reached.
+> Where it does not decide, the recursion descends in full at 4 frames per
+> element and overflows at 3,199, against 18,431 for the strict `foldRight`.
+> Laziness makes the descent **avoidable**, never cheaper; where it is
+> unavoidable it costs 5.76 times more.
+
+That is the contrast that closes the module. `foldRightSafe` removes the stack
+ceiling permanently for 24 bytes per element; `existsLazy` removes no ceiling at
+all and is still the right choice for a predicate that decides early, because
+the ceiling it avoids is the one on work, and that one is `O(n)` against `O(1)`.
