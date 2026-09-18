@@ -1060,7 +1060,28 @@ of `foldRight`: each is a property of `foldRight` *plus an unnamed JIT state*.
 Occurrences 1 to 3 fed assertions, which fail loudly when they are wrong. This
 one feeds `report`, and `report` feeds the §E field `MyList.foldRight: ______`,
 where the number is written down once, without its conditions, and reread later
-as a constant. Challenge 41 has the full account.
+as a constant.
+
+**And it did not merely add noise — it reversed two findings.** The audit round
+of E6 and E7 answered four challenges from this instrument's cold output, and
+when the warm-up was added, two of the four conclusions inverted:
+
+```text
+                                     from the cold instrument    warm
+  foldRightLazy against foldRight        6.2x worse              0.80x better
+  existsLazy against existsStrict        overflows earlier       overflows later
+```
+
+Both had been written up with derivations, tables and a captured stack listing
+behind them. The derivations were sound; the numbers they were reasoning about
+described a method caught mid-compilation. A measurement taken while its subject
+is still changing does not produce an imprecise finding — it can produce the
+opposite finding, fully argued. Challenges 41, 43 and 44 carry the full account,
+including what the cold readings had claimed.
+
+**Repaired** by warming inside `maxSurviving`: 200 rounds at depth 128, 25,600
+invocations, past C2's threshold. The two specs that disagreed now report 24,695
+and 24,694.
 
 
 ---

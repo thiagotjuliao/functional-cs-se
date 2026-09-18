@@ -39,8 +39,8 @@ object SafeFold:
     * unbounded, which is exactly why the trade is worth making.
     *
     * It is also the version that actually removes the ceiling. Searched to a
-    * limit of 2,097,152 it never overflows, while `foldRightComposed` — which
-    * costs twice as much per element — overflows at 30,816. Challenge 42.
+    * limit of 4,194,304 it never overflows, while `foldRightComposed` — which
+    * costs twice as much per element — overflows at 30,860. Challenge 42.
     */
   def foldRightSafe[A, B](xs: MyList[A], z: B)(f: (A, B) => B): B =
     xs.reverse.foldLeft(z)((acc, a) => f(a, acc))
@@ -70,9 +70,9 @@ object SafeFold:
     * And the ceiling, searched to a limit of 2,097,152:
     *
     * {{{
-    * build the chain, never apply it    2,097,151   never overflows
-    * build and apply                       30,816
-    * foldRightSafe                      2,097,151   never overflows
+    * build the chain, never apply it    4,194,303   never overflows
+    * build and apply                       30,860
+    * foldRightSafe                      4,194,303   never overflows
     * }}}
     *
     * Building is a `foldLeft` and has no ceiling. The whole ceiling is in the
@@ -110,11 +110,18 @@ object LazyFold:
     * `f` is entered.
     *
     * For an `f` that always forces its second argument, this does '''not''' have
-    * the same ceiling as `MyList.foldRight`. It has roughly a '''quarter''' of
-    * it — 7,751 against 30,862 in one suite run, 3.98 frames per element.
+    * the same ceiling as `MyList.foldRight` — and the difference runs the
+    * opposite way to the obvious guess. Warm, it survives '''deeper''':
     *
-    * The stack captured at the deepest point shows why: four frames per level
-    * where the strict fold uses one.
+    * {{{
+    *                        default    -XX:-Inline
+    * foldRightLazy           30,865          3,423
+    * MyList.foldRight        24,695         15,405
+    * ratio                    0.80 x         4.50 x
+    * }}}
+    *
+    * The by-name parameter adds three frames of structure per level, visible in
+    * a captured stack and in the `-XX:-Inline` column:
     *
     * {{{
     * LazyFold$.foldRightLazy$$anonfun$1    the thunk, a Function0
@@ -123,11 +130,17 @@ object LazyFold:
     * <the caller's f>                      f itself
     * }}}
     *
-    * The cause is an inversion of order. Strict `foldRight` evaluates the
-    * recursion '''before''' entering `f`, so `f`'s frames are born on the way
-    * back up, one at a time. Here the recursion happens '''inside''' `f`, when
-    * the argument is forced, so `f`, the adapter and the thunk stay live at
-    * every level below. Challenge 43.
+    * The cause of the extra frames is an inversion of order. Strict `foldRight`
+    * evaluates the recursion '''before''' entering `f`, so `f`'s frames are born
+    * on the way back up, one at a time. Here the recursion happens '''inside'''
+    * `f`, when the argument is forced, so `f`, the adapter and the thunk stay
+    * live at every level below.
+    *
+    * In compiled code C2 folds three of the four into one physical frame, and
+    * what remains is narrower than the strict fold's. A logical frame is not a
+    * physical one: `Thread.getStackTrace` reports inlined frames, the ceiling
+    * does not. Measure the interpreted tier and you see the structure; measure
+    * the compiled tier and you see what is paid. Challenge 43.
     *
     * What the by-name parameter buys is not stack. It is the option not to
     * descend at all, which is `existsLazy` below.
@@ -154,8 +167,8 @@ object LazyFold:
     * existsLazy    over 1e6       survives              StackOverflowError
     * existsStrict  over 1e6       StackOverflowError    StackOverflowError
     *
-    * largest n with no match, existsLazy      3,199
-    * largest n with no match, existsStrict   18,431
+    * largest n with no match, existsLazy     30,861
+    * largest n with no match, existsStrict   17,638
     * }}}
     *
     * Where the predicate decides early the cost is the prefix up to the match —
@@ -165,11 +178,15 @@ object LazyFold:
     * and the remaining 999,996 levels never exist.
     *
     * Where the predicate does not decide — any list with no match, or whose
-    * match lies past index ~3,199 — the recursion descends in full at the four
-    * frames per level documented above, and overflows '''earlier''' than the
-    * strict version, by a factor of 5.76.
+    * match lies past index ~30,861 — the recursion descends in full and
+    * overflows. Later than the strict version, by 1.75x, for the reason
+    * `foldRightLazy` above documents: compiled, the by-name structure costs
+    * less stack than the strict fold's frame, though interpreted it costs 4.5x
+    * more.
     *
-    * Laziness makes the descent avoidable, never cheaper. Challenge 44.
+    * Laziness makes the descent '''avoidable'''. That is the property to rely
+    * on; the stack difference either way is the JIT's, not the technique's.
+    * Challenge 44.
     */
   def existsLazy[A](xs: MyList[A], p: A => Boolean): Boolean =
     foldRightLazy(xs, false)((a, acc) => p(a) || acc)

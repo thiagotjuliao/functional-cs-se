@@ -984,7 +984,13 @@ All nine live in `src/main/scala/cs/se/block1/module3/`, one spec each under
 - [ ] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module3`, with
       **one documented exception**: `StackProbe`'s search is a measuring
       instrument and may use local mutability, exactly as `AllocationProbe` and
-      `Bench` do in Module 1. Name the lines here: `______________________`
+      `Bench` do in Module 1. Name the lines here:
+
+      `none — the exception was offered and not used. There is no var anywhere`
+      `in src/main/scala/cs/se/block1/module3, StackProbe included: its search`
+      `is two @tailrec local defs (StackProbe.scala:129 and :137), so the`
+      `instrument measures the elimination of mutable control flow without`
+      `using any.`
 - [ ] Zero `while` loops in `src/main/scala/cs/se/block1/module3`, including in
       `StackProbe`. The instrument gets mutability, not control flow — this
       module is about eliminating `while`, and an instrument that uses one to
@@ -1002,47 +1008,119 @@ Produced by *your* `StackProbe`, on this machine, with the JVM configuration
 named. An unrecorded measurement is an unperformed measurement.
 
 - [ ] **The ceiling.** Largest `n` surviving on the default test thread:
-      - `sumNaive`: `______` · `sumAcc` at `n = 10,000,000`: `______`
-      - `MyList.foldRight`: `______` · `MyList.foldLeft` at 200,000: `______`
+      - `sumNaive`: `14,335` · `sumAcc` at `n = 10,000,000`: `survives`
+      - `MyList.foldRight`: `24,672` · `MyList.foldLeft` at 200,000: `survives`
       - The guide measured 14,335 and 14,990 for the first and third. If yours
         differ by more than a few percent, say what differs:
-        `______________________`
+
+        `sumNaive` matches exactly. `foldRight` does not, and what differs is the
+        **instrument, not the method**. `sumNaive` is measured by
+        `StackProbe.maxDepth`, whose exponential search was repaired in challenge
+        32 and which touches its subject few enough times to report a settled
+        number. `foldRight` was measured by `Module3Harness.maxSurviving`, which
+        entered its binary search cold and returned whatever point of the
+        interpreted-to-compiled transition it happened to converge on — 16,895 or
+        30,862 in the same JVM, depending only on which spec ran first. Challenge
+        41 diagnoses it and pattern 13 occurrence 4 files it; `maxSurviving` now
+        warms 200 rounds at depth 128 before searching, and the two specs agree
+        to within one: 24,695 and 24,694. The guide's 14,990 is a third
+        undeclared state, so the 65% gap is not a property of this machine.
 
 - [ ] **The frame.** Run `maxDepth` on threads of 256 KiB, 512 KiB, 1 MiB and
       8 MiB, fit `stack = a × depth + b`, and record both coefficients:
 
-      | stack | max depth | bytes/frame |
+      | stack | max depth | stack/depth |
       | ---: | ---: | ---: |
-      | 256 KiB | `______` | `______` |
-      | 512 KiB | `______` | `______` |
-      | 1 MiB | `______` | `______` |
-      | 8 MiB | `______` | `______` |
+      | 256 KiB | `13,057` | `20.08` |
+      | 512 KiB | `29,475` | `17.79` |
+      | 1 MiB | `62,221` | `16.85` |
+      | 8 MiB | `520,917` | `16.10` |
 
-      - `a` = `______ bytes/frame` · `b` = `______ bytes` of stack already used
-      - Why `b` is not zero: `______________________`
+      - `a` = `16.00 bytes/frame` · `b` = `53,214 bytes` of stack already used
+      - Why `b` is not zero:
+
+        The thread is not empty when `maxDepth` starts counting. `Thread.run`,
+        the `onStack` body, `maxDepth` itself and its search are already on the
+        stack, and the JVM reserves guard pages at the far end that the thread
+        never gets to use. 53,214 bytes is 52 KiB — a fifth of the 256 KiB
+        thread, and 0.6% of the 8 MiB one.
+
+        The third column is the same fact from the other side: naive
+        `stack / depth` reads 20.08 at 256 KiB and 16.10 at 8 MiB, converging on
+        `a` from above as the fixed 52 KiB is diluted. Reporting any single row
+        of that column as "bytes per frame" would overstate the frame by up to
+        25%. Fitting two points eliminates `b` instead of averaging it in.
+
+      - Measured warm. The first `onStack(256)` call returned **3,839** before
+        `deep` had been warmed — less than a third of the settled value, and the
+        same defect as pattern 13 occurrence 4.
 
 - [ ] **The trade.** `foldRightSafe` against `foldLeft` over `n = 100,000`:
-      - `foldLeft`: `______ bytes` · `foldRightSafe`: `______ bytes`
-      - delta: `______ bytes` = `______ cells`. Name what those cells are:
-        `______________________`
+      - `foldLeft`: `2,399,640 bytes` · `foldRightSafe`: `4,800,040 bytes`
+      - delta: `2,400,400 bytes` = `100,016 cells`. Name what those cells are:
+
+        The reversed spine. `foldRightSafe` is
+        `xs.reverse.foldLeft(z)((acc, a) => f(a, acc))`, so it builds a second
+        complete list before folding it. That list is garbage the instant the
+        fold ends and live for every step of it.
+
       - The guide measured a delta of 2,400,400. This is stack converted into
         heap; state the exchange rate you just paid, in one line:
-        `______________________`
+
+        **One 24-byte heap cell, live for the duration of the fold, per stack
+        frame avoided.** Worth paying because the stack was free but hard-capped
+        at ~24,700 frames, while the heap is charged but bounded only by the
+        collector — `foldRightSafe` survives 4,194,303 and has no ceiling this
+        machine can find.
+
+      - Matches the guide to the byte. This is the §E measurement least exposed
+        to pattern 13: allocation stops moving once the method is warm, and
+        `probeBytes` has warmed its subject from the start.
 
 - [ ] **Laziness.** `existsLazy` finding a match at element 3 of 1,000,000:
-      - elements visited: `______` · bytes allocated: `______`
-      - and with no match present: `______` · `______`
+      - elements visited: `4` · bytes allocated: `112`
+      - and with no match present: `512 of 512` · `18,448 bytes`
+
+        The no-match probe runs over 512 elements rather than a million, and the
+        512 is not arbitrary: with no match the recursion descends in full, and a
+        million overflows.
+
       - Which of the two ceilings this removes, and which it does not:
-        `______________________`
+
+        It removes the ceiling on **work** and leaves the one on **stack**
+        standing. Four elements of a million is `O(1)` against `O(n)`. The stack
+        ceiling is still there — 30,861 with no match, against 17,638 for a
+        strict `exists`.
+
+        `existsLazy` surviving a million where the strict version overflows is
+        **not** stack relief, which is the reading to resist: `||` short-circuits
+        at the fourth element, `acc` is never forced, and the remaining 999,996
+        levels never exist. The stack did not get cheaper, it stopped being used.
+        Challenges 43 and 44 carry why the compiled tier makes the descent look
+        1.25x cheaper than the strict fold and the interpreted tier 4.5x dearer.
 
 - [ ] **Balance.** Insert `0, 1, ..., 4095` in ascending order:
-      - plain `MyTree.insert`: depth `______`
-      - `Avl.insertBalanced`: depth `______` · the AVL bound
-        `1.44 log2(n + 2)` = `______`
-      - rotations performed over the whole build: `______`
-      - bytes for one insert into the balanced result: `______`
+      - plain `MyTree.insert`: depth `4,096`
+      - `Avl.insertBalanced`: depth `13` · the AVL bound
+        `1.44 log2(n + 2)` = `17.28`
+      - rotations performed over the whole build: `4,083`
+
+        4,083 of 4,096 inserts rotate. Ascending input is the worst case: every
+        insert but thirteen lands on a node that has just gone out of balance.
+        Each performs at most one rotation, single or double, however large the
+        tree.
+
+      - bytes for one insert into the balanced result: `400`
+
+        13 path nodes + 1 new leaf + 2 rotation nodes = 16 × 24, plus one 16-byte
+        `Integer` box. The model's ceiling is 17 × 24 = 408.
+
       - Module 2 measured 98,328 bytes for one insert into the degenerate tree.
-        The ratio you have just bought: `______ ×`
+        The ratio you have just bought: `245.9 ×`
+
+        Re-measured here at **98,344**, sixteen bytes more than Module 2
+        recorded — one `Integer` box, from inserting a value outside the
+        −128..127 cache. The ratio above uses the figure measured here.
 
 ### F. Engineering Hygiene
 

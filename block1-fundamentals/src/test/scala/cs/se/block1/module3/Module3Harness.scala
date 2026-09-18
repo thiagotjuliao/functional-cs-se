@@ -39,10 +39,42 @@ abstract class Module3Harness extends munit.FunSuite:
       val _ = body; true
     catch case _: StackOverflowError => false
 
+  /** Depth and round count for the warm-up below.
+    *
+    * `WarmDepth` must be deep enough that `f` reaches its recursive body and
+    * shallow enough that it cannot overflow on any `-Xss`; the product with
+    * `WarmRounds` is what has to clear C2's compilation threshold, and 25,600
+    * invocations clears it with room to spare.
+    */
+  private val WarmDepth = 128
+  private val WarmRounds = 200
+
   /** The largest `n` in `[0, limit)` for which `f(n)` survives, by binary
     * search, assuming survival is monotone in `n`.
+    *
+    * '''The warm-up is not an optimisation and removing it changes the
+    * answer.''' A compiled frame is smaller than an interpreted one — §23
+    * measured 2.51x — so a search entered cold converges while `f` is still
+    * migrating between the two tiers, and returns a number that was true for
+    * part of the search and false for the rest.
+    *
+    * The cost of omitting it is not theoretical. `MyList.foldRight` was
+    * measured by two specs of this suite, in one forked JVM, as 16,895 and
+    * 30,862: E6's own search left the method compiled and E7 then measured the
+    * compiled frame. Run either spec alone and both report 16,895. Neither
+    * number is wrong; neither is a property of `foldRight` alone.
+    *
+    * This mirrors `probeBytes` below, which has warmed its subject from the
+    * start. The asymmetry — warm-up discipline for allocation, none for
+    * depth — is occurrence 4 of pattern 13 in `error-patterns.md`, and
+    * challenge 41 of `challenge-log.md` carries the measurements.
+    *
+    * It belongs here rather than at the call sites: the defect was the
+    * instrument's, and fixing it in one spec would have left the others wrong.
     */
   protected def maxSurviving(limit: Int)(f: Int => Any): Int =
+    (0 until WarmRounds).foreach(_ => survives(f(WarmDepth)): Unit)
+
     @annotation.tailrec
     def loop(lo: Int, hi: Int): Int =
       if lo >= hi - 1 then lo
