@@ -51,7 +51,7 @@ end Boxing
   *
   * The spec asserts the ratio between them. Re-running the suite with
   * `-XX:-DoEscapeAnalysis` must make that assertion fail — and the failure is
-  * the proof. See `docs/checklist.md` §E.
+  * the proof. See `docs/checklist/b1-m1.md` §E.
   */
 object Escape:
 
@@ -72,7 +72,7 @@ object Escape:
     * `.getOrElse(0.0)` that turns a loud defect into a silent wrong answer.
     *
     * The interpolated message costs one captured `Function0` per call, 24 bytes,
-    * whether or not the requirement holds; see `docs/challenge-log.md`, entry 6.
+    * whether or not the requirement holds; see `docs/challenge-log/b1-m1.md`, entry 6.
     * That cost is constant in the input size and was accepted deliberately.
     *
     * Constraints:
@@ -105,7 +105,7 @@ object Escape:
     * Note that `Array.tabulate` boxes the loop index: `Function1` has no
     * specialised variant with a reference return type, so each call goes through
     * the erased `apply(Object): Object`. That accounts for 3,197,952 of the
-    * 10,398,016 bytes recorded in `docs/checklist.md`, §E — a third of this
+    * 10,398,016 bytes recorded in `docs/checklist/b1-m1.md`, §E — a third of this
     * function's allocation is not `Vec2` at all.
     */
   def collectVecs(xs: Array[Double], ys: Array[Double]): Array[Vec2] =
@@ -139,7 +139,7 @@ object Footprint:
   // bytes on the way out. Each doc below therefore names the assertion that
   // would fail if the value were wrong — or states plainly that none would, and
   // how wrong it could be. See `docs/error-patterns.md`, pattern 4, for the
-  // replay that produced these ranges, and `docs/challenge-log.md`, entry 9, for
+  // replay that produced these ranges, and `docs/challenge-log/b1-m1.md`, entry 9, for
   // the technique that pins one.
 
   /** Object header: an 8-byte mark word plus a 4-byte klass pointer.
@@ -230,7 +230,7 @@ object Footprint:
     * value in `0, 1, 2, 3, 4` passed the entire suite — including **zero**, a
     * `Boolean` field costing nothing at all — because `align8(12 + 0)` and
     * `align8(12 + 4)` are both 16. The derivation is in
-    * `docs/challenge-log.md`, entry 9.
+    * `docs/challenge-log/b1-m1.md`, entry 9.
     */
   val BooleanBytes: Int = 1
 

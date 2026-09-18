@@ -20,21 +20,30 @@ functional-cs-se/
  │    ├── src/main/scala/...        // exercise implementations
  │    ├── src/test/scala/...        // one MUnit spec per exercise
  │    └── docs/                     // Requirements & Learning central
- │         ├── checklist.md         // the acceptance contract
- │         ├── challenge-log.md     // Step 4 answers, with their derivations
- │         ├── error-patterns.md    // defects by pattern, not by exercise
+ │         ├── checklist.md         // index: one row per module, boxes and status
+ │         ├── checklist/           // the acceptance contract, one file per module
+ │         │    ├── b1-m1.md
+ │         │    ├── b1-m2.md
+ │         │    └── b1-m3.md
+ │         ├── challenge-log.md     // index: which module holds which challenge
+ │         ├── challenge-log/       // Step 4 answers, with their derivations
+ │         │    ├── b1-m1.md        //   challenges 1-15
+ │         │    ├── b1-m2.md        //   challenges 16-28
+ │         │    └── b1-m3.md        //   challenges 29-44
+ │         ├── error-patterns.md    // defects by pattern, NOT split by module
  │         ├── quiz/                // recall sets, one page per module
  │         └── theory/
  │              ├── references.md
  │              ├── module1_jvm.md
- │              └── module2_structures.md
+ │              ├── module2_structures.md
+ │              └── module3_stack.md
  ├── block2-category-types/         // Subproject 2
  ├── block3-effect-concurrency/     // Subproject 3
  ├── block4-distributed-streams/    // Subproject 4
  └── annex-foundations/             // Subproject 5 — the Annex Track (optional)
       ├── src/main/scala/...
       ├── src/test/scala/...
-      └── docs/                     // same five artifacts as a block
+      └── docs/                     // same five artifacts, un-split: one entry so far
            ├── checklist.md
            ├── challenge-log.md
            ├── error-patterns.md

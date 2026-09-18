@@ -67,7 +67,7 @@ abstract class Module3Harness extends munit.FunSuite:
     * This mirrors `probeBytes` below, which has warmed its subject from the
     * start. The asymmetry — warm-up discipline for allocation, none for
     * depth — is occurrence 4 of pattern 13 in `error-patterns.md`, and
-    * challenge 41 of `challenge-log.md` carries the measurements.
+    * challenge 41 of `challenge-log/b1-m3.md` carries the measurements.
     *
     * It belongs here rather than at the call sites: the defect was the
     * instrument's, and fixing it in one spec would have left the others wrong.

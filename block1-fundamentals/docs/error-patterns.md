@@ -629,7 +629,7 @@ are therefore right-associative, so `mid #:: l #::: r` groups as
 `mid #:: (l #::: r)` — not the grouping the eye reads left to right. Here that
 was harmless, because the two groupings denote the same sequence, but harmless by
 coincidence rather than by design. The parse is now declared. Challenge 16 of
-[`challenge-log.md`](challenge-log.md) carries it.
+[`challenge-log.md`](challenge-log/b1-m2.md) carries it.
 
 **The rule.** When the invariant is structural, let the constructor carry it.
 Checkable by eye: if a function computes the shape — it picks a midpoint, it
@@ -1022,7 +1022,7 @@ instrument touches the subject, and prefer the instrument that touches it least
 specified here for that reason and not for its complexity class. Repaired with
 exponential search establishing the upper witness before the binary phase
 narrows: 34 probes against ~15,000, and `Exercise1StackProbeSpec` fell from tens
-of seconds to 0.296 s. Challenge 32 in [`challenge-log.md`](challenge-log.md)
+of seconds to 0.296 s. Challenge 32 in [`challenge-log.md`](challenge-log/b1-m3.md)
 carries the full measurement.
 
 **Occurrence 4 is the same defect one level up, in the shared harness**, and it
@@ -1307,7 +1307,7 @@ element against 24. Splitting them costs one extra `areturn` and no extra test.
 Not zero. The accumulator is built during the walk, and that it was unnecessary
 is learned only on arrival, by which time its cells exist; only the `reverse` is
 saved. This entry claimed zero when it was first written, and challenge 30 in
-[`challenge-log.md`](challenge-log.md) carries the corrected accounting.
+[`challenge-log.md`](challenge-log/b1-m3.md) carries the corrected accounting.
 
 Which still makes the repair worth stating twice: **naming the constructors
 fixes the exhaustivity hole and half the allocation at the same keystroke.**

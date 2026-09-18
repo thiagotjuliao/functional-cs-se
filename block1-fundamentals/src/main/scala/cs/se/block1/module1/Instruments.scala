@@ -28,7 +28,7 @@ object AllocationProbe:
   /** The HotSpot-specific bean, resolved once at object initialisation.
     *
     * Three preconditions this `ThreadMXBean` type does not express, all of them
-    * recorded with their evidence in `docs/challenge-log.md`, entry 4:
+    * recorded with their evidence in `docs/challenge-log/b1-m1.md`, entry 4:
     *
     *   - **The JVM must be forked.** Type identity here is the pair *(binary
     *     name, defining loader)*, and a REPL or a layered sbt classloader

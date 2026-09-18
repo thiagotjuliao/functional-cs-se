@@ -101,7 +101,7 @@ object Avl:
     * and `fromSeq` `O(n log n)`. The price, from Module 2's `Footprint`:
     * `Branch` is header 12 + three 4-byte references = 24 bytes exactly, and an
     * added `Int` gives 28, which aligns to 32. A third more per node, across
-    * the whole tree, permanently. Challenge 38 carries the derivation.
+    * the whole tree, permanently. Challenge 38 of `docs/challenge-log/b1-m3.md` carries the derivation.
     */
   def balanceFactor[A](t: MyTree[A]): Int = t match
     case Leaf => 0
