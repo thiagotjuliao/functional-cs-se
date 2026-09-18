@@ -1260,6 +1260,49 @@ mention, and the stack trace accuses the implementation.
 | # | Where | What was written | What was meant |
 | :-- | :--- | :--- | :--- |
 | 1 | `Exercise2TailShapesSpec`, *"all three agree wherever all three survive"* | `sumNaive(10_000)` on whatever thread MUnit supplies | the same assertion on a thread of a stated size |
+| 2 | `Exercise6SafeFoldSpec`, *"foldRightComposed ... relocates the cost"* | `probeBytes(...)` at `n = 50_000`, against a ceiling of ~30,800 | a probe at a size that owes the ceiling nothing |
+| 3 | `Exercise7LazyFoldSpec`, *"foldRightLazy is a right fold"* | a value check at `n = 5_000`, against a cold ceiling near 2,000 | `n = 512` |
+| 4 | `Exercise7LazyFoldSpec`, *"existsLazy stops at the first hit"* | `counted.get == 1_000_000` on the **no-match** path | the same count on a list short enough to traverse |
+
+Occurrences 2 to 4 are the same shape as 1 and were all written by the exercise
+author, not by the implementer — which is worth saying plainly, because three
+red tests in a row read as three defects in `Folds.scala` and were none.
+
+**Occurrence 2 also refutes the obvious repair.** Sizing the probe from the
+ceiling the suite has just measured looks like exactly the discipline this
+pattern asks for, and it still fails: run `Exercise6SafeFoldSpec` whole and the
+million-element test above shifts the JIT enough that a probe at *half* the
+number measured three lines earlier overflows.
+
+```text
+largest n that foldRightComposed survives, same suite, four runs
+  30,816      30,856      30,804      30,812
+probe at composedCeiling / 2  =  15,428      ->  StackOverflowError
+```
+
+The rule's phrase *the bound must come from the cold measurement* is therefore
+not a preference for one measurement over another. Where the subject is the
+stack, **no measurement the suite can take is cold enough to license a fixture
+near the bound**, so the fixture has to leave the bound's neighbourhood
+entirely. The licence to use a small `n` comes from somewhere else: in
+occurrence 2, from an assertion that allocation is linear in `n`, which makes
+2,048 and 50,000 measure the same per-element quantity.
+
+**Occurrence 4 is the extreme case and deserves its own line**, because it is
+not a fixture that is merely too large — it is one that *cannot* be satisfied.
+`existsLazy` short-circuits on a hit and only on a hit; with nothing to stop at,
+`||` forces its right operand at every step and the recursion descends the whole
+list. A correct implementation, measured:
+
+```text
+existsLazy(cells(1_000_000), _ ==  3)   survives, p applied 4 times
+existsLazy(cells(1_000_000), _ == -1)   StackOverflowError at ~1,385 elements
+existsLazy(cells(1_000),     _ == -1)   survives, p applied 1,000 times
+```
+
+The assertion asked the early exit to rescue the one case that contains no early
+exit. No implementation of that signature passes it, which makes it an
+occurrence of pattern 6 as much as of this one.
 
 The test's own name states the precondition — *wherever all three survive* — and
 the fixture violates it intermittently. Caught once in 19 runs:
@@ -1325,3 +1368,97 @@ quantity that drifts. Here nothing is measured and nothing in the assertion
 drifts — `sumNaive(10_000) == 50_005_000` is true at every tier. What drifts is
 the *cost of evaluating it*, which is invisible in the assertion's text. The two
 share a discipline and not a shape.
+
+---
+
+## 17. A pattern-matching lambda where the function takes more than one parameter
+
+`{ case (a, b) => e }` is not a lambda with a destructuring binder. It is a
+*pattern-matching anonymous function*, and when the expected type is `FunctionN`
+with N greater than 1 the expansion manufactures the tuple that the pattern then
+takes apart:
+
+```text
+written                        compiled as
+{ case (a, b) => e }           (x1, x2) => (x1, x2) match { case (a, b) => e }
+```
+
+The parameters were already separate. The tuple exists only to be destructured
+on the next line.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `LazyFold.existsLazy` | `foldRightLazy(xs, false): case (a, acc) => p(a) \|\| acc` | `(a, acc) => p(a) \|\| acc` |
+
+**With strict parameters the manufactured tuple costs nothing.** Measured on two
+folds, `case` against the plain lambda, everything else identical:
+
+```text
+                              n          bytes      per element
+foldRightComposed  case    2,048         98,344        48.02
+foldRightComposed  plain   2,048         98,344        48.02
+foldLeft           case  100,000      2,399,640            —
+foldLeft           plain 100,000      2,399,640            —
+```
+
+Zero difference, byte for byte. Escape analysis proves the tuple never escapes
+and scalar replacement deletes it. Anyone who avoids `case` here for performance
+is avoiding nothing.
+
+**With a by-name parameter it is not a cost — it is a different program.**
+Building `(x1, x2)` evaluates `x2`, and where `f: (A, => B) => B`, `x2` is the
+suspension. The laziness dies in the pattern, before the body is entered and
+therefore before `||` can short-circuit. The same body, folded over
+`cells(10)` with an `f` that returns `-1` on the first element:
+
+```text
+{ case (a, b) => ... }      p applied 10 times
+  (a, b)    => ...          p applied  1 time
+```
+
+Both return `-1`. Ten times the work for the same answer, and at a million
+elements the difference is a `StackOverflowError` against four frames.
+
+**The rule.** Count the parameters of the *function type*, never the shape of
+the value being bound:
+
+```text
+(A, B)   => C      two parameters              (a, b) => ...     case re-tuples
+((A, B)) => C      one parameter, a tuple      case (k, v) =>    genuine destructuring
+(A, => B) => B     a by-name parameter         (a, b) => ...     not a preference
+```
+
+`Map.foreach`, `List[(A, B)].map` and `Option[(A, B)].flatMap` are the second
+row: the function really does receive one `Tuple2`, and `case` is the right and
+only concise spelling. `foldLeft`, `foldRight` and every other `Function2` are
+the first.
+
+**Why the build does not catch it.** Four reasons, and the fourth is why the
+habit survives long enough to reach the one place it matters:
+
+  - Both spellings are well typed and neither produces a warning under
+    `-Wall -Werror`. The expansion is in the language specification, not a
+    compiler wart.
+  - There is no allocation to profile, per the table above, so no measurement
+    taken for any other purpose will surface it.
+  - **`existsLazy` still returns the right answer.** `true` for a present
+    element, `false` for an absent one, at every size the test can reach. Only
+    the *count* of applications and the *ceiling* differ, and a suite that
+    asserted the boolean alone — the natural suite to write for a predicate —
+    would be green. This one counts, and counted 1,000,000 where it wanted 4.
+  - The habit is reinforced for free everywhere else. Of the twelve
+    `case (`-shaped binders in this repository's main sources, one is textbook
+    correct (`VarIntCodec.decode`, a `flatMap` over `Option[(Int, Int)]` with a
+    guard and two clauses), two are defensible (`Bits` and `Sets` fold with a
+    tuple *accumulator*, which a plain lambda cannot destructure in its
+    parameter list), eight are `Function2`s over strict parameters where the
+    spelling is redundant and free — and one is the defect. Exactly one function
+    type in the repository has a by-name parameter, and that is where the
+    eleven harmless repetitions were spent.
+
+**The repair.** The nine redundant `Function2` spellings were converted to plain
+lambdas — not because they cost anything, but so that a surviving `case (` in
+this repository's main sources means one of the two legitimate shapes and the
+eye-check above stays cheap. The three that remain are named in the paragraph
+above. The suite is unchanged by the conversion: 101 passing before and after, on
+the same eleven `NotImplementedError`s from the two exercises still unwritten.
