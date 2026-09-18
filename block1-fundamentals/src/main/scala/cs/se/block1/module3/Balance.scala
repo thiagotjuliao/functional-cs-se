@@ -1,6 +1,8 @@
 package cs.se.block1.module3
 
 import cs.se.block1.module2.MyTree
+import MyTree.*
+import cs.se.block1.module3.Rotations.*
 
 /** Exercise 8 — changing a tree's shape without changing what it holds.
   *
@@ -29,12 +31,16 @@ object Rotations:
     * rotation that cannot be performed is not an error, it is a no-op, and the
     * rebalancing in Exercise 9 relies on that being total.
     */
-  def rotateRight[A](t: MyTree[A]): MyTree[A] = ???
+  def rotateRight[A](t: MyTree[A]): MyTree[A] = t match
+    case Branch(v, Branch(lv, ll, lr), r) => Branch(lv, ll, Branch(v, lr, r))
+    case other => other
 
   /** Rotate `t` left: the right child becomes the root. The mirror of
     * `rotateRight`, and the spec asserts they are mirrors by composing them.
     */
-  def rotateLeft[A](t: MyTree[A]): MyTree[A] = ???
+  def rotateLeft[A](t: MyTree[A]): MyTree[A] = t match
+    case Branch(v, l, Branch(rv, rl, rr)) => Branch(rv, Branch(v, l, rl), rr)
+    case other => other
 
   /** The law that makes a rotation legal, as a predicate the spec can check.
     *
@@ -48,7 +54,8 @@ object Rotations:
     *
     * Express it through `MyTree.toMyList` and nothing else.
     */
-  def preservesOrder[A](before: MyTree[A], after: MyTree[A]): Boolean = ???
+  def preservesOrder[A](before: MyTree[A], after: MyTree[A]): Boolean =
+    before.toMyList == after.toMyList
 
 end Rotations
 
@@ -81,7 +88,9 @@ object Avl:
     * what caching would change and what it would cost in bytes per node.
     * Module 2's `Footprint` has the arithmetic.
     */
-  def balanceFactor[A](t: MyTree[A]): Int = ???
+  def balanceFactor[A](t: MyTree[A]): Int = t match
+    case Leaf => 0
+    case Branch(_, l, r) => l.depth - r.depth
 
   /** Restore the AVL invariant at the root of `t`, assuming both subtrees
     * already satisfy it.
@@ -101,7 +110,17 @@ object Avl:
     * — a `rebalance` that rotates when it did not need to is correct and
     * allocates for nothing.
     */
-  def rebalance[A](t: MyTree[A])(using Ordering[A]): MyTree[A] = ???
+  def rebalance[A](t: MyTree[A]): MyTree[A] =
+    t match
+      case Branch(_, l, _) if balanceFactor(t) == 2 && balanceFactor(l) >= 0 =>
+        rotateRight(t)
+      case Branch(v, l, r) if balanceFactor(t) == 2 && balanceFactor(l) <= 0 =>
+        rotateRight(Branch(v, rotateLeft(l), r))
+      case Branch(_, _, r) if balanceFactor(t) == -2 && balanceFactor(r) <= 0 =>
+        rotateLeft(t)
+      case Branch(v, l, r) if balanceFactor(t) == -2 && balanceFactor(r) >= 0 =>
+        rotateLeft(Branch(v, l, rotateRight(r)))
+      case other => other
 
   /** Insert `x`, rebalancing on the way back up.
     *
@@ -116,7 +135,12 @@ object Avl:
     * An insert performs at most one rotation, single or double, however large
     * the tree. The spec counts them.
     */
-  def insertBalanced[A](t: MyTree[A], x: A)(using Ordering[A]): MyTree[A] = ???
+  def insertBalanced[A](t: MyTree[A], x: A)(using ord: Ordering[A]): MyTree[A] =
+    t match
+      case Leaf => Branch(x, Leaf, Leaf)
+      case Branch(v, l, r) if ord.lt(x, v) => rebalance(Branch(v, insertBalanced(l, x), r))
+      case Branch(v, l, r) if ord.gt(x, v) => rebalance(Branch(v, l, insertBalanced(r, x)))
+      case t => t
 
   /** Build a tree from `xs` by repeated `insertBalanced`, left to right.
     *
@@ -124,7 +148,9 @@ object Avl:
     * produce a depth within the AVL bound for the same input, and §E asks for
     * both numbers side by side.
     */
-  def fromSeq[A](xs: Seq[A])(using Ordering[A]): MyTree[A] = ???
+  def fromSeq[A](xs: Seq[A])(using Ordering[A]): MyTree[A] =
+    xs.foldLeft(Leaf: MyTree[A]): (t, a) =>
+      insertBalanced(t, a)
 
   /** The AVL depth bound for `n` nodes: `1.44 * log2(n + 2)`.
     *
@@ -133,6 +159,7 @@ object Avl:
     * weaker form, which is the safe direction to round in for an assertion.
     * Say in the Scaladoc why rounding the other way would make the test lie.
     */
-  def depthBound(n: Int): Double = ???
+  def depthBound(n: Int): Double =
+    1.44 * Math.log(n + 2) / Math.log(2)
 
 end Avl
