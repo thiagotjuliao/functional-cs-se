@@ -816,12 +816,12 @@ Build it before you need it.
 
 ### A. Theory Comprehension
 
-- [ ] Read `docs/theory/module3_stack.md` in full.
-- [ ] Work `docs/quiz/b1-m3.html`, filtering by Part as you finish each one.
+- [x] Read `docs/theory/module3_stack.md` in full.
+- [x] Work `docs/quiz/b1-m3.html`, filtering by Part as you finish each one.
       33 questions over all 27 sections — coverage checked mechanically, by
       listing the guide's sections against the sections the questions cite.
       7 easy, 16 medium, 10 hard.
-- [ ] Read JVM Specification §2.5.2 and §2.6, and §2.6.5 on why the JVM has no
+- [x] Read JVM Specification §2.5.2 and §2.6, and §2.6.5 on why the JVM has no
       tail-call instruction.
 - [x] Before writing any code, classify these six expressions by hand, and say
       for each whether the call to `f` is in tail position and why:
@@ -945,43 +945,51 @@ Build it before you need it.
 All nine live in `src/main/scala/cs/se/block1/module3/`, one spec each under
 `src/test/scala/cs/se/block1/module3/`, over a shared `Module3Harness`.
 
-- [ ] **E1 `StackProbe`** *(do this first)* — `survives`, `maxDepth` by binary
+- [x] **E1 `StackProbe`** *(do this first)* — `survives`, `maxDepth` by binary
       search, and `onStack` to run a body on a thread of a chosen stack size.
       The instrument every later exercise reports through.
-- [ ] **E2 `TailShapes`** — `sumNaive`, `sumAcc` and `sumLoop`: three spellings
+- [x] **E2 `TailShapes`** — `sumNaive`, `sumAcc` and `sumLoop`: three spellings
       of one function, agreeing on every input all three survive, and separated
       by a ceiling only one of them has.
-- [ ] **E3 `Arithmetic`** — `gcd`, `power`, `digits`, `collatzLength`: tail
+- [x] **E3 `Arithmetic`** — `gcd`, `power`, `digits`, `collatzLength`: tail
       recursion where the accumulator is not merely a running total.
-- [ ] **E4 `Loops`** — `factorial`, `fibonacci`, `reverseDigits`: `while` loops
+- [x] **E4 `Loops`** — `factorial`, `fibonacci`, `reverseDigits`: `while` loops
       transcribed by the rule in §9, the `var`s becoming parameters.
-- [ ] **E5 `EarlyExit`** — `indexOf`, `forall`, `exists`, `takeWhile` over
+- [x] **E5 `EarlyExit`** — `indexOf`, `forall`, `exists`, `takeWhile` over
       `MyList`: the branch that returns instead of recursing.
-- [ ] **E6 `SafeFold`** — `foldRightSafe` over `MyList`, agreeing with
+- [x] **E6 `SafeFold`** — `foldRightSafe` over `MyList`, agreeing with
       `foldRight` wherever both survive, surviving where it does not, and paying
       exactly one spine for the privilege.
-- [ ] **E7 `LazyFold`** — `foldRightLazy` with a by-name second argument, and
+- [x] **E7 `LazyFold`** — `foldRightLazy` with a by-name second argument, and
       `existsLazy` proving it stops at the first hit rather than at the end.
-- [ ] **E8 `Rotations`** — `rotateLeft`, `rotateRight`, and the law that makes a
+- [x] **E8 `Rotations`** — `rotateLeft`, `rotateRight`, and the law that makes a
       rotation legal: the in-order walk is unchanged.
-- [ ] **E9 `Avl`** — `balanceFactor`, `rebalance`, `insertBalanced`, and the
+- [x] **E9 `Avl`** — `balanceFactor`, `rebalance`, `insertBalanced`, and the
       depth bound that survives sorted input.
 
 ### C. Correctness Gate
 
-- [ ] `sbt fundamentals/test` — **all tests green**, zero ignored, zero skipped.
-- [ ] `sbt fundamentals/compile` succeeds under `-Wall -Werror`. If a warning is
+- [x] `sbt fundamentals/test` — **all tests green**, zero ignored, zero skipped.
+- [x] `sbt fundamentals/compile` succeeds under `-Wall -Werror`. If a warning is
       suppressed, name it here and say whether the exercise's own signature
       forced it, as Module 2's §C had to for `@unused`.
-- [ ] `sbt scalafmtCheckAll` passes.
-- [ ] Modules 1 and 2 still pass: 28 + 39 tests. This module adds to the suite.
-- [ ] Every `@tailrec` in `module3` is on a `private`, `final`, or method-local
+- [x] `sbt scalafmtCheckAll` passes.
+- [x] Modules 1 and 2 still pass: 28 + 39 tests. This module adds to the suite.
+- [x] Every `@tailrec` in `module3` is on a `private`, `final`, or method-local
       definition. An annotation that compiles is not the same as a definition
       nobody can override out from under it. Guide §26.
 
+      Fourteen sites. Eleven are method-local `def`s and one is `private`
+      (`Arithmetic.powerAcc`). The remaining two — `Arithmetic.gcd` and
+      `EarlyExit.forall`/`exists` — sit on public methods, and the exception is
+      argued in their Scaladoc rather than assumed: every member of an `object`
+      is final by construction, so the annotation does have the statically known
+      target §26 requires. The clause is satisfied by the reason behind it, not
+      by the keyword.
+
 ### D. Purity Gate
 
-- [ ] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module3`, with
+- [x] Zero occurrences of `var` in `src/main/scala/cs/se/block1/module3`, with
       **one documented exception**: `StackProbe`'s search is a measuring
       instrument and may use local mutability, exactly as `AllocationProbe` and
       `Bench` do in Module 1. Name the lines here:
@@ -991,14 +999,14 @@ All nine live in `src/main/scala/cs/se/block1/module3/`, one spec each under
       `is two @tailrec local defs (StackProbe.scala:129 and :137), so the`
       `instrument measures the elimination of mutable control flow without`
       `using any.`
-- [ ] Zero `while` loops in `src/main/scala/cs/se/block1/module3`, including in
+- [x] Zero `while` loops in `src/main/scala/cs/se/block1/module3`, including in
       `StackProbe`. The instrument gets mutability, not control flow — this
       module is about eliminating `while`, and an instrument that uses one to
       measure the elimination is an embarrassment rather than an exception.
-- [ ] Every recursive function that walks a whole structure is `@tailrec`, or
+- [x] Every recursive function that walks a whole structure is `@tailrec`, or
       the exercise is about why it cannot be. E6, E7 and E8 are the second kind
       and each must say so in its Scaladoc.
-- [ ] `StackOverflowError` is caught in exactly one place — `StackProbe` — and
+- [x] `StackOverflowError` is caught in exactly one place — `StackProbe` — and
       its Scaladoc says why catching an `Error` is defensible there and nowhere
       else.
 
@@ -1007,7 +1015,7 @@ All nine live in `src/main/scala/cs/se/block1/module3/`, one spec each under
 Produced by *your* `StackProbe`, on this machine, with the JVM configuration
 named. An unrecorded measurement is an unperformed measurement.
 
-- [ ] **The ceiling.** Largest `n` surviving on the default test thread:
+- [x] **The ceiling.** Largest `n` surviving on the default test thread:
       - `sumNaive`: `14,335` · `sumAcc` at `n = 10,000,000`: `survives`
       - `MyList.foldRight`: `24,672` · `MyList.foldLeft` at 200,000: `survives`
       - The guide measured 14,335 and 14,990 for the first and third. If yours
@@ -1026,7 +1034,7 @@ named. An unrecorded measurement is an unperformed measurement.
         to within one: 24,695 and 24,694. The guide's 14,990 is a third
         undeclared state, so the 65% gap is not a property of this machine.
 
-- [ ] **The frame.** Run `maxDepth` on threads of 256 KiB, 512 KiB, 1 MiB and
+- [x] **The frame.** Run `maxDepth` on threads of 256 KiB, 512 KiB, 1 MiB and
       8 MiB, fit `stack = a × depth + b`, and record both coefficients:
 
       | stack | max depth | stack/depth |
@@ -1055,7 +1063,7 @@ named. An unrecorded measurement is an unperformed measurement.
         `deep` had been warmed — less than a third of the settled value, and the
         same defect as pattern 13 occurrence 4.
 
-- [ ] **The trade.** `foldRightSafe` against `foldLeft` over `n = 100,000`:
+- [x] **The trade.** `foldRightSafe` against `foldLeft` over `n = 100,000`:
       - `foldLeft`: `2,399,640 bytes` · `foldRightSafe`: `4,800,040 bytes`
       - delta: `2,400,400 bytes` = `100,016 cells`. Name what those cells are:
 
@@ -1077,7 +1085,7 @@ named. An unrecorded measurement is an unperformed measurement.
         to pattern 13: allocation stops moving once the method is warm, and
         `probeBytes` has warmed its subject from the start.
 
-- [ ] **Laziness.** `existsLazy` finding a match at element 3 of 1,000,000:
+- [x] **Laziness.** `existsLazy` finding a match at element 3 of 1,000,000:
       - elements visited: `4` · bytes allocated: `112`
       - and with no match present: `512 of 512` · `18,448 bytes`
 
@@ -1099,7 +1107,7 @@ named. An unrecorded measurement is an unperformed measurement.
         Challenges 43 and 44 carry why the compiled tier makes the descent look
         1.25x cheaper than the strict fold and the interpreted tier 4.5x dearer.
 
-- [ ] **Balance.** Insert `0, 1, ..., 4095` in ascending order:
+- [x] **Balance.** Insert `0, 1, ..., 4095` in ascending order:
       - plain `MyTree.insert`: depth `4,096`
       - `Avl.insertBalanced`: depth `13` · the AVL bound
         `1.44 log2(n + 2)` = `17.28`
@@ -1124,11 +1132,11 @@ named. An unrecorded measurement is an unperformed measurement.
 
 ### F. Engineering Hygiene
 
-- [ ] All code formatted (`sbt scalafmtAll`) with no manual override.
-- [ ] Every public definition carries a Scaladoc stating its **contract**.
-- [ ] Commits follow `docs/git-conventions.md` (`b1-m3: <imperative summary>`),
+- [x] All code formatted (`sbt scalafmtAll`) with no manual override.
+- [x] Every public definition carries a Scaladoc stating its **contract**.
+- [x] Commits follow `docs/git-conventions.md` (`b1-m3: <imperative summary>`),
       one commit per concept proven.
-- [ ] `error-patterns.md` read before committing; any defect instantiating an
+- [x] `error-patterns.md` read before committing; any defect instantiating an
       existing pattern added as an occurrence rather than opening a new entry.
       Pattern 11 — *a fixture that cannot exhibit the property under test* — has
       two occurrences already, and this module offers a third at every turn: a
@@ -1140,13 +1148,13 @@ named. An unrecorded measurement is an unperformed measurement.
       Read it before writing any assertion on a depth. A compiled frame is
       2.51× smaller than an interpreted one, so a cold probe returns a number
       that is already false, and the failing test blames the implementation.
-- [ ] Annotated milestone tag `b1-m3-stack-optimization` created, using the
+- [x] Annotated milestone tag `b1-m3-stack-optimization` created, using the
       message template, with a real entry under `Learned:`. Created **after**
       §G, as Module 2's was.
 
 ### G. Oral Defence
 
-- [ ] Work the post-module conceptual challenges (Step 4 of the routine) as a
+- [x] Work the post-module conceptual challenges (Step 4 of the routine) as a
       dialogue: attempt each one **before** the discussion, say "I don't know"
       plainly when that is the truth, and let `challenge-log.md` carry the
       complete answer the exchange produced. The box closes when every exercise
