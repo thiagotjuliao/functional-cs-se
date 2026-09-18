@@ -1,6 +1,7 @@
 package cs.se.block1.module3
 
 import cs.se.block1.module2.MyList
+import MyList.*
 
 /** Exercise 6 — paying heap to buy stack.
   *
@@ -32,7 +33,8 @@ object SafeFold:
     * Costs one extra spine, `n` cells. §E asks for the measured number and for
     * one line naming the exchange rate you just paid.
     */
-  def foldRightSafe[A, B](xs: MyList[A], z: B)(f: (A, B) => B): B = ???
+  def foldRightSafe[A, B](xs: MyList[A], z: B)(f: (A, B) => B): B =
+    xs.reverse.foldLeft(z)((acc, a) => f(a, acc))
 
   /** `foldRightSafe` expressed the other way round, for comparison.
     *
@@ -49,7 +51,8 @@ object SafeFold:
     * This is the first sighting of the structure Block 3 builds properly.
     * Guide §16.
     */
-  def foldRightComposed[A, B](xs: MyList[A], z: B)(f: (A, B) => B): B = ???
+  def foldRightComposed[A, B](xs: MyList[A], z: B)(f: (A, B) => B): B =
+    xs.foldLeft(identity[B])((g, a) => b => g(f(a, b)))(z)
 
 end SafeFold
 
@@ -78,7 +81,10 @@ object LazyFold:
     * the spec asks for the number, and a fix that silently fixed nothing would
     * look identical from the outside.
     */
-  def foldRightLazy[A, B](xs: MyList[A], z: => B)(f: (A, => B) => B): B = ???
+  def foldRightLazy[A, B](xs: MyList[A], z: => B)(f: (A, => B) => B): B =
+    xs match
+      case Nil => z
+      case Cons(h, t) => f(h, foldRightLazy(t, z)(f))
 
   /** `exists`, expressed through `foldRightLazy` and nothing else.
     *
@@ -94,6 +100,7 @@ object LazyFold:
     * leaves standing. §E asks the same question and will not accept "it is
     * faster".
     */
-  def existsLazy[A](xs: MyList[A], p: A => Boolean): Boolean = ???
+  def existsLazy[A](xs: MyList[A], p: A => Boolean): Boolean =
+    foldRightLazy(xs, false)((a, acc) => p(a) || acc)
 
 end LazyFold
