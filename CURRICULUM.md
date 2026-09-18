@@ -43,9 +43,13 @@ functional-cs-se/
  └── annex-foundations/             // Subproject 5 — the Annex Track (optional)
       ├── src/main/scala/...
       ├── src/test/scala/...
-      └── docs/                     // same five artifacts, un-split: one entry so far
-           ├── checklist.md
-           ├── challenge-log.md
+      └── docs/                     // same five artifacts, same split
+           ├── checklist.md         // index + the Annex Backlog queue
+           ├── checklist/
+           │    └── a1.md
+           ├── challenge-log.md     // index
+           ├── challenge-log/
+           │    └── a1.md           //   challenges 1-30, numbered per entry
            ├── error-patterns.md
            ├── quiz/
            └── theory/
