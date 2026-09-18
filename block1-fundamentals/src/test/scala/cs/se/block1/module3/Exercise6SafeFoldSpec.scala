@@ -85,16 +85,40 @@ class Exercise6SafeFoldSpec extends Module3Harness:
       assertEquals(SafeFold.foldRightComposed(l, 0)(_ - _), l.foldRight(0)(_ - _), s"at n = $n")
     }
 
-    val n = 50_000
-    val l = cells(n)
-    report(
-      "foldRightComposed bytes",
-      probeBytes(SafeFold.foldRightComposed(l, 0L)((a, b) => a + b))
-    )
+    // The ceiling first, guarded, and the allocation probe deliberately
+    // nowhere near it.
+    //
+    // A probe sized from the ceiling looks careful and is not: the ceiling is
+    // not even stable *within one JVM*. Run this suite whole and the million-
+    // element test above shifts it enough that a probe at half the number just
+    // measured still overflows. The honest fix is not a bigger margin, it is a
+    // size that owes the ceiling nothing — and the linearity assertion below is
+    // what earns the right to use one, because it shows the per-element cost is
+    // the same at every n. `probeBytes` is unguarded by construction, so
+    // anything it touches must be safe on any -Xss, not merely on this one.
     val composedCeiling = maxSurviving(1 << 18) { m =>
       SafeFold.foldRightComposed(cells(m), 0L)((a, b) => a + b)
     }
     report("largest n that foldRightComposed survives", composedCeiling)
+
+    val small = 2_048
+    // Both spines are built outside the probe. Left inside, `cells` would add
+    // its own cell and its boxed `Integer` to every element and the per-element
+    // figure would describe list construction as much as the fold.
+    val ls = cells(small)
+    val ll = cells(2 * small)
+    val bytesSmall = probeBytes(SafeFold.foldRightComposed(ls, 0L)((a, b) => a + b))
+    val bytesLarge = probeBytes(SafeFold.foldRightComposed(ll, 0L)((a, b) => a + b))
+    report("foldRightComposed bytes", s"$bytesSmall at n = $small")
+    report("foldRightComposed bytes per element", bytesSmall.toDouble / small)
+    report("one cell, for comparison", Sharing.CellBytes)
+
+    assertRatio(
+      bytesLarge.toDouble,
+      2.0 * bytesSmall.toDouble,
+      0.05,
+      "doubling n must double the allocation — a chain of closures, one per element"
+    )
 
     // No assertion on which side of the comparison it lands. Whether building a
     // chain of closures removes the ceiling or merely moves it is the finding
