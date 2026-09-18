@@ -86,9 +86,7 @@ object MyTree:
       * quadratic in the number of nodes.
       */
     def toMyList: MyList[A] =
-      t.foldInOrder(Nil: MyList[A]):
-        case (ls, a) => ls.prepended(a)
-      .reverse
+      t.foldInOrder(Nil: MyList[A])((ls, a) => ls.prepended(a)).reverse
 
     /** Apply `f` to every value, preserving the *shape* of the tree.
       *
@@ -109,8 +107,7 @@ object MyTree:
     * which is the subject of Exercise 9.
     */
   def fromMyList[A](xs: MyList[A])(using Ordering[A]): MyTree[A] =
-    xs.foldLeft(Leaf: MyTree[A]):
-      case (t, a) => t.insert(a)
+    xs.foldLeft(Leaf: MyTree[A])((t, a) => t.insert(a))
 
   /** Build a perfectly balanced tree over the integers `lo` until `hi`.
     *
@@ -126,7 +123,6 @@ object MyTree:
         mid #:: (midPoints(lo, mid - 1) #::: midPoints(mid + 1, hi))
     end midPoints
 
-    midPoints(lo, hi - 1).foldLeft(Leaf: MyTree[Int]):
-      case (t, a) => t.insert(a)
+    midPoints(lo, hi - 1).foldLeft(Leaf: MyTree[Int])((t, a) => t.insert(a))
 
 end MyTree

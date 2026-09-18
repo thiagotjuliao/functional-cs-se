@@ -37,8 +37,7 @@ object MyList:
     * code, and the fix must not be quadratic.
     */
   def apply[A](items: A*): MyList[A] =
-    items.reverse.foldLeft(Nil):
-      case (acc, a) => Cons(a, acc)
+    items.reverse.foldLeft(Nil)((acc, a) => Cons(a, acc))
 
   extension [A](xs: MyList[A])
 
@@ -289,9 +288,7 @@ object MyList:
       * and nowhere else in this module's implementation.
       */
     def toScalaList: List[A] =
-      xs.foldLeft(scala.List.empty[A]):
-        case (ls, a) => a :: ls
-      .reverse
+      xs.foldLeft(scala.List.empty[A])((ls, a) => a :: ls).reverse
 
   end extension
 

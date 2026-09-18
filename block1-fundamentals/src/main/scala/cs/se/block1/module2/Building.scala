@@ -35,9 +35,7 @@ object Building:
     */
   def byAppend(n: Int): MyList[Int] =
     if n < 0 then Nil
-    else
-      (0 until n).foldLeft(Nil: MyList[Int]):
-        case (ls, a) => ls.appended(a)
+    else (0 until n).foldLeft(Nil: MyList[Int])((ls, a) => ls.appended(a))
 
   /** The same list, built by prepending and reversing once at the end.
     *
@@ -52,8 +50,7 @@ object Building:
     if n < 0 then Nil
     else
       (0 until n)
-        .foldLeft(Nil: MyList[Int]):
-          case (ls, a) => ls.prepended(a)
+        .foldLeft(Nil: MyList[Int])((ls, a) => ls.prepended(a))
         .reverse
 
   /** The ratio of the two, as the doubling test consumes it.
