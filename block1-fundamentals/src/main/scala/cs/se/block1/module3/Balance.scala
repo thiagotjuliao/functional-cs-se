@@ -81,12 +81,27 @@ object Avl:
     *
     * The AVL invariant is that this is in `{-1, 0, +1}` at every node.
     *
-    * Computing it by calling `MyTree.depth` on both children is `O(n)` per
-    * node, which makes a single insert `O(n log n)`. Real AVL trees cache the
-    * height in the node. This module's `MyTree` has nowhere to cache it, so:
-    * implement the honest slow version, measure it, and record in the Scaladoc
-    * what caching would change and what it would cost in bytes per node.
-    * Module 2's `Footprint` has the arithmetic.
+    * `MyTree.depth` caches nothing, so one call costs the subtree it is asked
+    * about. Worse, all four guards of `rebalance` open with `balanceFactor(t)`,
+    * and on a balanced node — nearly every node on the path — all four fail on
+    * that first test and recompute it from scratch. Measured:
+    *
+    * {{{
+    *      n   depth   depth() calls   nodes visited   visited / n
+    *   4096      13             104          32,763           8.0
+    * }}}
+    *
+    * `104 = 8 x 13`: eight traversals per level, thirteen levels. The subtree
+    * at the root holds n nodes, the next n/2, and the geometric sum gives ~8n —
+    * one insert walks the whole tree eight times. So `insertBalanced` is `O(n)`
+    * and `fromSeq` is `O(n^2)`, measured at 1.9, 6.8, 29.2 and 107.8 ms for
+    * n = 512, 1024, 2048, 4096. Doubling n quadruples the time.
+    *
+    * Caching the height in the node makes this `O(1)`, the insert `O(log n)`
+    * and `fromSeq` `O(n log n)`. The price, from Module 2's `Footprint`:
+    * `Branch` is header 12 + three 4-byte references = 24 bytes exactly, and an
+    * added `Int` gives 28, which aligns to 32. A third more per node, across
+    * the whole tree, permanently. Challenge 38 carries the derivation.
     */
   def balanceFactor[A](t: MyTree[A]): Int = t match
     case Leaf => 0
@@ -127,10 +142,23 @@ object Avl:
     * Same contract as `MyTree.insert` — a value already present returns an
     * equal tree — with the invariant of this object maintained afterwards.
     *
-    * Rebalancing happens as the recursion unwinds, which means this function is
-    * '''not''' tail recursive and must not be annotated. Say why in the
-    * Scaladoc, and say what bounds it instead. That bound is the entire
-    * difference between this exercise and Module 2's.
+    * Rebalancing happens as the recursion unwinds — each `Branch` is rebuilt and
+    * handed to `rebalance` on the way back up — so the recursive call is not the
+    * last operation and `@tailrec` would be rejected. What bounds it instead is
+    * the AVL invariant itself: the recursion is as deep as the tree, and the
+    * tree is at most `1.44 log2(n + 2)` deep. A billion elements recurse about
+    * 44 frames.
+    *
+    * That bound is the entire difference from Module 2. There, depth bounded the
+    * recursion too, but nothing bounded the depth: ascending input produced a
+    * spine of 4,096 frames. Here the promise is kept by the code rather than by
+    * the caller.
+    *
+    * The comparison goes through `ord.lt`/`ord.gt` rather than `x < v`. The
+    * latter expands to `new ord.OrderingOps(x)` — 24 bytes per comparison, one
+    * comparison per level — which escape analysis deletes only while this method
+    * stays under the inlining budget, and `rebalance` pushes it to the edge of
+    * that budget. Pattern 20 of `error-patterns.md` has the measurements.
     *
     * An insert performs at most one rotation, single or double, however large
     * the tree. The spec counts them.
@@ -157,7 +185,24 @@ object Avl:
     * Derived rather than measured, and used by the spec as a ceiling. The
     * classical bound is `1.4405 log2(n + 2) - 0.3277`; this is the rounded,
     * weaker form, which is the safe direction to round in for an assertion.
-    * Say in the Scaladoc why rounding the other way would make the test lie.
+    *
+    * Rounding the other way would make the test lie, because the ceiling has to
+    * clear the tallest tree AVL actually permits — the Fibonacci tree, which at
+    * height h holds `F(h + 2) - 1` nodes. Measured against it:
+    *
+    * {{{
+    *       n   tallest legal AVL   1.44 log2(n+2)   classical   margin
+    *    1023                  14            14.40       14.08     0.40
+    *    4096                  16            17.28       16.96     1.28
+    *   65535                  22            23.04       22.72     1.04
+    * }}}
+    *
+    * The thinnest margin measured is 0.40, and the `- 0.3277` term alone eats
+    * 0.33 of it. Tighten the constant as well and the ceiling drops below a
+    * height a correct AVL tree is allowed to reach: the assertion then fails on
+    * an implementation with no defect, and blames the tree rather than the
+    * model. A ceiling that is too loose can only fail to catch a bad tree; a
+    * ceiling that is too tight accuses a good one.
     */
   def depthBound(n: Int): Double =
     1.44 * Math.log(n + 2) / Math.log(2)

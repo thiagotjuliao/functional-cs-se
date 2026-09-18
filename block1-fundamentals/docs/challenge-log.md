@@ -1897,7 +1897,7 @@ unrepresentable invalid states*.
 
 # Module 3 — Stack Optimization & Control Flow Elimination
 
-Numbering continues from 28. The discipline is unchanged, and this module adds
+Numbering continues from 28, and runs to 40. The discipline is unchanged, and this module adds
 one source of evidence to the two already in use: the **disassembly of the
 lifted loop**. Where Module 2 argued from cell counts, several answers here are
 settled by which label two conditional branches jump to.
@@ -1909,6 +1909,10 @@ settled by which label two conditional branches jump to.
 | E3 `Arithmetic` | 2 | recorded |
 | E4 `Loops` | 1 | recorded |
 | E5 `EarlyExit` | 3 | recorded |
+| E6 `SafeFold` | 0 | owed |
+| E7 `LazyFold` | 0 | owed |
+| E8 `Rotations` | 0 | closed without a round, recorded as such |
+| E9 `Avl` | 3 | recorded |
 
 E1 to E4 were implemented, tested and committed **without** the audit round, and
 this table carried four `owed` rows until the debt was paid in one sitting —
@@ -2563,3 +2567,158 @@ sequence provably lands on it"**. `fibonacci` had a region of the domain where
 the counter travelled away from its target; `reverseDigits` converges across the
 whole domain, and `0` is a fixed point of its own step (`0 / 10 == 0`). `n` was
 never a fixed point of `i + 1` — only a value on a ray.
+
+---
+
+## E8 — `Rotations`
+
+E8 was implemented and committed in the same sitting as E9, and its audit round
+asked nothing about it. The rotations are four lines of pattern match whose only
+law — `preservesOrder` — the spec asserts directly, so no question about them
+survived contact with a green suite. Recorded here rather than left blank, so
+that the absence is a decision and not an omission. What E8 did produce is the
+first occurrence of pattern 18, filed in
+[`error-patterns.md`](error-patterns.md).
+
+---
+
+## E9 — `Avl`
+
+All three challenges were answered **"I don't know"**, plainly and at the time.
+The entries below are the answers as they were built afterwards, from the
+measurements, not a transcript of the exchange.
+
+### 38. In one `insertBalanced` on a 4,096-node AVL tree, how many times is `MyTree.depth` invoked and how many nodes does it visit? What does that make the complexity of `fromSeq`, and how does it compare with the Module 2 construction it was written to repair?
+
+`depth` caches nothing: answering for a subtree walks that subtree. So one
+`balanceFactor(t)` — two calls, `l.depth` and `r.depth` — visits `size(t) - 1`
+nodes.
+
+The multiplier is in the guards. All four begin with `balanceFactor(t)`, and on
+a balanced node — which is nearly every node on the path — all four fail on that
+first test. `&&` short-circuits, so `balanceFactor(l)` is never reached, but
+`balanceFactor(t)` is recomputed **four times from scratch**:
+
+```text
+     n   depth   depth() calls   nodes visited   visited / n
+    64       7              56             507           7.9
+   256       9              72           2,043           8.0
+  1024      11              88           8,187           8.0
+  4096      13             104          32,763           8.0
+```
+
+`104 = 8 x 13`: eight traversals per level (4 guards x 2 calls), thirteen
+levels. The subtree at the root holds `n` nodes, the next `n/2`, and the
+geometric sum gives `~8n` — **one insert walks the whole tree eight times over**.
+
+So `insertBalanced` is `O(n)` in time and `fromSeq` is `O(n^2)`. Measured, three
+warm-up builds discarded:
+
+```text
+  fromSeq(0 until  512)     1.9 ms
+  fromSeq(0 until 1024)     6.8 ms     x3.6
+  fromSeq(0 until 2048)    29.2 ms     x4.3
+  fromSeq(0 until 4096)   107.8 ms     x3.7
+```
+
+Doubling `n` quadruples the time. That is the signature of `O(n^2)`.
+
+**And the comparison is the uncomfortable half.** Module 2's `fromMyList` over
+ascending input was `O(n^2)` too — insert *i* walked a path of length *i*. In
+order of growth the construction **did not improve**. What was traded was "long
+path, cheap comparison" for "short path, expensive comparison".
+
+What did improve is not small:
+
+```text
+                        Module 2 (ascending)      E9
+  contains                    O(n)             O(log n)
+  allocation per insert   4,097 nodes          16 nodes
+  depth                       n = 4,096        13
+  construction                O(n^2)           O(n^2)      <- unchanged
+```
+
+A production AVL caches the height in the node: `balanceFactor` becomes `O(1)`,
+insert `O(log n)`, `fromSeq` `O(n log n)`. The price, from the Exercise 7
+`Footprint` arithmetic — `Branch` today is header 12 + three 4-byte references =
+24 bytes exactly; adding an `Int` gives 28, which aligns to **32**. A third more
+per node, across the whole tree, permanently. This module implements the honest
+slow version so that the 33% has something measured to be weighed against.
+
+### 39. `OrderingOps` measured 24 bytes. An object wrapping a single value should cost a header plus one field — 16 with compressed oops. What occupies the other 8, and what in its declaration makes that unavoidable?
+
+A thousand of them, allocated into a pre-existing array so that nothing could be
+elided:
+
+```text
+  1000 OrderingOps                      37,952 bytes
+  less 872 Integer outside the cache   -13,952          (872 x 16; -128..127 are cached)
+                                       -------
+  1000 OrderingOps                      24,000   ->  24 bytes each
+```
+
+The layout:
+
+```text
+  mark word                 8
+  class pointer             4
+  field lhs: T              4     the wrapped value
+  field $outer              4     the reference nobody wrote
+                           --
+                           20   ->  aligned to 8  ->  24
+```
+
+`$outer` is the answer. `OrderingOps` is declared **inside** the `Ordering`
+trait, not beside it:
+
+```scala
+trait Ordering[T]:
+  class OrderingOps(lhs: T):
+    def <(rhs: T) = lt(lhs, rhs)   // lt belongs to the enclosing Ordering
+```
+
+`<` must call `lt`, which lives on the enclosing instance. An inner class can
+only reach it by carrying a reference to that instance, and the compiler adds it
+as a field. It is also why the class cannot be a value class — the thing that
+would make it free: a value class has exactly one field, and `$outer` has
+already taken one.
+
+### 40. After `x < v` became `ord.lt(x, v)` in Module 2, the degenerate insert still cost exactly 98,344 bytes — not one byte less. If the wrapper had been allocated there, the number would have fallen by 4096 x 2 x 24. What does that say about that call site?
+
+That the wrapper **was never allocated there**. All four crossings, with escape
+analysis on and off:
+
+```text
+                                      EA on      EA off     difference
+  A  degenerate (4,096), x < v       98,344     294,952     4096 x 2 x 24
+  B  degenerate (4,096), ord.lt      98,344      98,344     0
+  C  AVL (13),           x < v          352         976       13 x 2 x 24
+  D  AVL (13),           ord.lt         352         352     0
+```
+
+The differences are exact: two wrappers per level, 24 bytes each. Escape
+analysis was the only thing holding A and C down, and `ord.lt` never depends on
+it.
+
+**The variable is not the depth of the tree and not the call site — it is the
+size of the method containing the comparison.** In `insert` the body is
+compare-recurse-rebuild; `OrderingOps.<` inlines, the JIT proves the object does
+not leave the method, and scalar replacement dissolves it into two stack slots.
+In `insertBalanced` that same body also carries `rebalance`, which drags in
+`balanceFactor`, `depth` and the four rotations. The method exceeds the inlining
+budget, `<` stops being inlined, and the object escapes for real.
+
+`insertBalanced` sat exactly on that threshold:
+
+```text
+  clean profile, measured alone           400 bytes    (ceiling 408)
+  after the suite's other four tests      712 bytes    = 400 + 13 x 24
+```
+
+Same source, same JVM, same run — one wrapper per level appearing because four
+earlier tests changed what the JIT had profiled.
+
+So the change removed no allocation from Module 2. It removed the **dependency**
+on an optimisation that happened to be working. The measurements read 24 bytes
+per node by courtesy of C2 before, and by construction after. Filed as pattern
+20.

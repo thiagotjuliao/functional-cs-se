@@ -10,7 +10,7 @@ them is ignorance of a mechanism. `LongBytes = 16` was written by someone who
 knows a `Long` is 64 bits; the error is in the conversion, not in the knowledge.
 
 That is why this file is organised by **pattern** rather than by exercise.
-Thirty-seven individual mistakes are a diary and nobody rereads a diary. Sixteen
+Forty-five individual mistakes are a diary and nobody rereads a diary. Twenty
 recurring shapes are a review checklist.
 
 Each entry carries four things: what the pattern is, the occurrences that
@@ -36,8 +36,12 @@ but the first compiles cleanly under `-Wall -Werror` in all its occurrences.
 | 14 | An equality standing in for an inequality | 1 | no — it agrees with the original across the whole tested domain |
 | 15 | A wildcard standing in for the constructors it currently covers | 3 | no — the defect is the removal of the check that would report it |
 | 16 | A value test that spends a resource it never mentions | 1 | no — it passes 18 runs in 19, and the failure blames the implementation |
+| 17 | A pattern-matching lambda where the function takes more than one parameter | 1 | no — the re-tupling is free under strict parameters and fatal under a by-name one |
+| 18 | An invariant measured at the wrong node | 3 | no — not rotating preserves the in-order walk, so the content assertions stay green |
+| 19 | A step delegated to a primitive that does not maintain the invariant | 2 | no — the types are identical and the contents stay sorted |
+| 20 | An allocation budget met by escape analysis rather than by construction | 2 | no — it passes in isolation and fails after four other tests, with no source change |
 
-Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 to 16
+Patterns 1–6 were found in **Module 1**, 7 to 12 in **Module 2**, and 13 to 20
 in **Module 3**. The file was
 created at the close of Module 1, so those six were reconstructed afterwards;
 from Module 2 on it is maintained continuously, and each entry is written on the
@@ -1462,3 +1466,177 @@ this repository's main sources means one of the two legitimate shapes and the
 eye-check above stays cheap. The three that remain are named in the paragraph
 above. The suite is unchanged by the conversion: 101 passing before and after, on
 the same eleven `NotImplementedError`s from the two exercises still unwritten.
+
+---
+
+## 18. An invariant measured at the wrong node
+
+A guard reads the right quantity from the wrong place. `balanceFactor` is total
+and returns an `Int` for any tree, so every misplacement type-checks and most of
+them still compile to a plausible-looking condition.
+
+Three occurrences, all in `Avl.rebalance`, all within one sitting:
+
+| # | What was written | What was meant |
+| :-- | :--- | :--- |
+| 1 | `balanceFactor(l) == 2` as the left-left trigger | `balanceFactor(t) == 2 && balanceFactor(l) >= 0` |
+| 2 | `balanceFactor(t) == 2 && balanceFactor(r) == -1` for left-right | `... && balanceFactor(l) <= 0` |
+| 3 | `balanceFactor(t) >= 0` as the trigger | `balanceFactor(t) == 2` |
+
+Occurrence 1 is unreachable by construction. `rebalance` declares that both
+subtrees already satisfy AVL, so `balanceFactor(l)` is confined to
+`{-1, 0, +1}` and `== 2` can never hold. All four guards tested the child
+against plus or minus 2; the function was the identity:
+
+```text
+case   bf(t)   bf(l)   bf(r)   guard that fires   depth in   depth out
+LL       +2      +1       0        none               4          4
+LR       +2      -1       0        none               4          4
+RR       -2       0      -1        none               4          4
+RL       -2       0      +1        none               4          4
+```
+
+Occurrence 2 took the *side* of the child from the sign of the child's own
+balance factor. With `bf(t) == 2` the problem is entirely on the left, so `r` is
+a node that does not participate in the rotation. Occurrence 3 relaxed the
+*magnitude* at the root, where `>= 0` admits `0` and `+1` — healthy trees —
+after the relaxation had been correctly reasoned out for the child, where `0` is
+genuinely ambiguous under delete.
+
+**The rule, checkable by eye, one guard at a time:**
+
+```text
+  bf(t)       chooses WHETHER to rotate      == 2 / == -2 only, never a range
+  bf(child)   chooses SINGLE or DOUBLE       a direction, so >= 0 / <= 0
+  the side    comes from bf(t), always       LR reads l, RL reads r
+```
+
+The case name has two letters. The first comes from the root and picks the
+child; the second comes from that child and picks single against double. Every
+occurrence above used one letter to do the other's work.
+
+**Why the build does not catch it.** Four reasons, and the last is the expensive
+one:
+
+  - Guards are arbitrary boolean expressions. An unreachable guard is not an
+    unreachable *case*, so the exhaustivity checker has nothing to say and
+    `-Wall -Werror` is silent.
+  - `case other => other` makes the match total, so a tree that matches no
+    guard is returned unrotated rather than raising `MatchError`. The failure
+    mode is silence.
+  - **The order law survives every one of these.** Not rotating preserves the
+    in-order walk perfectly, so `preservesOrder` and any content assertion pass.
+    Occurrence 1 passed 2 of the spec's 5 tests; the two it passed were the ones
+    that check what the tree *holds*.
+  - Occurrence 3 passed **all four** rotation fixtures and failed only on the
+    tree that needed no rotation — the fixture an author is least likely to
+    write, because it looks like it is testing nothing.
+
+---
+
+## 19. A step delegated to a primitive that does not maintain the invariant
+
+A function exists to establish an invariant its building block does not have.
+It then calls that building block for the recursive step, and the invariant is
+established only at the single node the function touched itself.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Avl.insertBalanced` | `rebalance(t.insert(x))` | a descent that rebalances at every level |
+| 2 | `Avl.insertBalanced` | `case ... => rebalance(Branch(v, l.insert(x), r))` | `... insertBalanced(l, x) ...` |
+
+Occurrence 2 is the instructive one. It was written *as a correction of
+occurrence 1*, has the shape of a recursive function, and is the same function:
+`MyTree.insert` is defined as `Branch(v, l.insert(x), r)`, so the rewrite
+expanded the call by hand and changed nothing. The suite agreed to every digit:
+
+```text
+                                        occurrence 1   occurrence 2
+  ascending input, Avl depth                    2,049          2,049
+  descending input, Avl depth                   2,049          2,049
+  one insert into the AVL tree                 49,264         49,264
+  one insert into the degenerate tree          98,344         98,344
+  ratio                                         2.0 x          2.0 x
+```
+
+`2,049` is `n/2 + 1`: each insert adds a level and the single root rotation
+removes one, so the tree grows a level every second insert. Half a spine is
+still a spine.
+
+There is a second consequence that outranks the depth. `rebalance` documents a
+precondition — both subtrees already satisfy AVL — and `MyTree.insert` does not
+establish it. The call was outside its contract, which is why the result is not
+merely tall but invalid: the first ascending insert leaving a non-AVL tree is
+the **sixth**.
+
+**The rule.** When a function's purpose is to maintain an invariant that its
+primitive does not, the recursive call must be to *itself*. Grep the body for
+the function's own name; if it is absent, the invariant holds at one node.
+Correspondingly, read the primitive's precondition and ask which call
+establishes it — "rebalance on the way up" is not a style preference, it is what
+makes each call legal.
+
+**Why the build does not catch it.** The two spellings have identical types, and
+`MyTree[A] => MyTree[A]` says nothing about balance. The BST invariant, the
+in-order walk and `size` are all correct throughout — only depth and the
+per-node invariant differ, and both need an assertion someone chose to write.
+The spec here has one (`isAvl` at every node), which is the only reason the
+defect surfaced at all; a suite asserting sorted contents alone is green.
+
+---
+
+## 20. An allocation budget met by escape analysis rather than by construction
+
+The measured allocation matches the model, and the agreement is the JIT's doing.
+Nothing in the source guarantees it, so it lapses when the profile changes — on
+another machine, in another test order, in a longer-running process.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Avl.insertBalanced` | `x < v` under `infixOrderingOps` | `ord.lt(x, v)` |
+| 2 | `MyTree.insert`, `MyTree.contains` | `x < v`, `x > v` | `ord.lt`, `ord.gt` |
+
+`x < v` on a generic `A` is not an operator. It expands to
+`new ord.OrderingOps(x) < v`, and `OrderingOps` is an inner class of `Ordering`
+carrying an `$outer` reference: 24 bytes, one per comparison, one comparison per
+level. Escape analysis usually proves it does not leave the method and scalar
+replacement deletes it — usually.
+
+Measured both ways, with and without `-XX:-DoEscapeAnalysis`:
+
+```text
+                                      EA on      EA off     difference
+  degenerate (4,096 deep), x < v     98,344     294,952     4096 x 2 x 24
+  degenerate (4,096 deep), ord.lt    98,344      98,344     0
+  AVL (13 deep), x < v                  352         976       13 x 2 x 24
+  AVL (13 deep), ord.lt                 352         352     0
+```
+
+The deciding variable is the **size of the method containing the comparison**,
+not the depth of the structure. `insert` is small, inlines, and wins. Adding
+`rebalance` — which drags in `balanceFactor`, `depth` and four rotations —
+pushes `insertBalanced` past the inlining budget, and it sat exactly on the
+threshold:
+
+```text
+  insertBalanced, measured alone            400 bytes    (model ceiling 408)
+  insertBalanced, after four other tests    712 bytes    = 400 + 13 x 24
+```
+
+Same source, same JVM, same run. The 312 bytes appeared because four earlier
+tests changed what the JIT had profiled.
+
+**The rule.** An allocation budget is met only if it survives
+`-XX:-DoEscapeAnalysis`. Run the probe once with the flag: a number that moves
+is a number the optimiser is holding up. On a hot path, call the type class
+method directly rather than through a syntax wrapper — `ord.lt(x, v)` allocates
+nothing under any flag, and the implicit conversion import can then leave the
+file.
+
+**Why the build does not catch it.** It compiles cleanly, the model is correct,
+and the measurement agrees with it — in isolation. The test that fails is the
+same test that passed, with no source change between the two runs, which makes
+the first instinct "flaky test" rather than "unstated dependency". Occurrence 2
+is worse: it never failed at all. Module 2's measurements read 24 bytes per node
+and matched `Footprint` exactly, for four exercises, while depending on an
+optimisation that was never mentioned in the model.
