@@ -1,6 +1,8 @@
 package cs.se.block1.project1
 
 import cs.se.block1.module2.MyList
+import cs.se.block1.project1.LexError.*
+import cs.se.block1.project1.Token.*
 
 /** What a piece of the input string *is*, with its spelling discarded.
   *
@@ -34,6 +36,37 @@ enum LexError:
   * Guide, Part II (§6 to §10).
   */
 object Lexer:
+  private def spanFrom(s: String, i: Int)(p: Char => Boolean): Int =
+    @scala.annotation.tailrec
+    def loop(acc: Int = i): Int =
+      if acc == s.size || !p(s(acc)) then acc
+      else loop(acc + 1)
+    loop()
+  end spanFrom
+
+  private def isNumber(c: Char): Boolean =
+    c.isDigit || c == '.'
+
+  private def isIdentifier(s: String): Char => Boolean =
+    c => s.nonEmpty && (s(0).isLetter || s(0) == '_') && (c.isLetterOrDigit || c == '_')
+
+  private def symbolOf(c: Char): Option[Token] =
+    c match
+      case '+' => Some(Plus)
+      case '-' => Some(Minus)
+      case '*' => Some(Star)
+      case '/' => Some(Slash)
+      case '^' => Some(Caret)
+      case '(' => Some(LParen)
+      case ')' => Some(RParen)
+      case _ => None
+  end symbolOf
+
+  private def isSymbol(c: Char): Boolean =
+    symbolOf(c).isDefined
+
+  private def isInvalid(c: Char): Boolean =
+    !isNumber(c) && !isIdentifier(c.toString)(c) && !c.isWhitespace && !isSymbol(c)
 
   /** The token list for `input`, or the first lexical error in it.
     *
@@ -68,6 +101,39 @@ object Lexer:
     * `Num(1.0)` followed by `Ident("e3")`, and Stage 2 rejects the pair.
     * Guide §5's edge-case table.
     */
-  def tokenize(input: String): Either[LexError, MyList[Token]] = ???
+  def tokenize(input: String): Either[LexError, MyList[Token]] =
+    @scala.annotation.tailrec
+    def loop(
+        at: Int = 0,
+        acc: MyList[Token] = MyList()
+    ): Either[LexError, MyList[Token]] =
+      // discard separators
+      val endSep = spanFrom(input, at)(_.isWhitespace)
 
+      if endSep >= input.size then Right(acc.reverse)
+      else if isInvalid(input(endSep)) then Left(UnexpectedChar(input(endSep), endSep))
+      else
+        // check for numbers
+        val endNum = spanFrom(input, endSep)(isNumber)
+        val num = input.substring(endSep, endNum)
+
+        if endNum != endSep then
+          num.toDoubleOption match
+            case None => Left(MalformedNumber(num, endSep))
+            case Some(v) => loop(endNum, acc.prepended(Num(v)))
+        else
+          // check for identifiers
+          val endId = spanFrom(input, endNum)(isIdentifier(input(endNum).toString))
+          val id = input.substring(endNum, endId)
+
+          if endId != endNum then loop(endId, acc.prepended(Ident(id)))
+          else
+            // check for symbols
+            symbolOf(input(endId)) match
+              case None => Left(UnexpectedChar(input(endId), endId))
+              case Some(t) => loop(endId + 1, acc.prepended(t))
+      end if
+    end loop
+    loop()
+  end tokenize
 end Lexer
