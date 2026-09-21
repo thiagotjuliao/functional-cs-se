@@ -7,15 +7,20 @@ unperformed measurement.
 
 ---
 
-One file per module. Each is self-contained: sections A to G, every
-acceptance criterion, and the §E measurements with the conditions they were
-taken in.
+One file per module, and one for the capstone. Each is self-contained:
+sections A to G, every acceptance criterion, and the §E measurements with the
+conditions they were taken in.
+
+The capstone's §B is five **stages** rather than independent exercises: each
+consumes the type the one before it produced, so they are built in order and a
+stage is not committed until its spec is green.
 
 | Module | Contract | Boxes | Status |
 | :-: | :--- | :-: | :--- |
 | 1 | [JVM Semantics & Immutability Allocation Stress](checklist/b1-m1.md) | 32/32 | complete |
 | 2 | [Manual Persistent Data Structures](checklist/b1-m2.md) | 34/34 | complete |
 | 3 | [Stack Optimization & Control Flow Elimination](checklist/b1-m3.md) | 34/34 | complete |
+| P1 | [Algebraic Expression Engine & AST](checklist/b1-p1.md) | 0/38 | open |
 
 The per-module answers that close each §G live in
 [`challenge-log.md`](challenge-log.md), and the defects found along the way
