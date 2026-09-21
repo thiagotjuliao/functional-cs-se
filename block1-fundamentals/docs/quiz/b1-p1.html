@@ -1,0 +1,1112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B1-P1 — Expression Engine · Recall Set</title>
+<style>
+  :root {
+    --bg: #fbfaf8;      --panel: #ffffff;   --ink: #1b1a18;
+    --muted: #6b6862;   --line: #e3e0da;    --accent: #7a4b2a;
+    --ok-bg: #eef5ec;   --ok-line: #7fa86c; --ok-ink: #33552a;
+    --no-bg: #fbeeea;   --no-line: #c07a63; --no-ink: #7a3320;
+    --code-bg: #f4f2ee;
+    --easy: #5d7a8c;    --medium: #8a6d3b;  --hard: #8c4a4a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17161a;    --panel: #1f1e23;   --ink: #e8e4dd;
+      --muted: #9b958c; --line: #34323a;    --accent: #d5a37a;
+      --ok-bg: #1c2a1b;  --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+      --no-bg: #2c1c19;  --no-line: #9a5c48; --no-ink: #e0a08c;
+      --code-bg: #17161a;
+      --easy: #8fb0c4;  --medium: #c8a468;  --hard: #cc8080;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17161a;      --panel: #1f1e23;   --ink: #e8e4dd;
+    --muted: #9b958c;   --line: #34323a;    --accent: #d5a37a;
+    --ok-bg: #1c2a1b;   --ok-line: #5c7f4c; --ok-ink: #a9cf98;
+    --no-bg: #2c1c19;   --no-line: #9a5c48; --no-ink: #e0a08c;
+    --code-bg: #17161a;
+    --easy: #8fb0c4;    --medium: #c8a468;  --hard: #cc8080;
+  }
+
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    margin: 0; padding: 0 20px 80px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+
+  header { padding: 44px 0 28px; border-bottom: 1px solid var(--line); }
+  h1 { font-size: 25px; margin: 0 0 8px; letter-spacing: -0.01em; font-weight: 620; }
+  .sub { color: var(--muted); font-size: 14px; margin: 0; }
+  .sub code { font-size: 12.5px; }
+
+  .note {
+    margin: 22px 0 0; padding: 13px 16px; border-left: 2px solid var(--accent);
+    background: var(--panel); font-size: 13.5px; color: var(--muted);
+  }
+  .note strong { color: var(--ink); font-weight: 600; }
+
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 20px 0; border-bottom: 1px solid var(--line);
+    position: sticky; top: 0; background: var(--bg); z-index: 5;
+  }
+  .bar .grow { flex: 1 1 auto; }
+  .bar .sep { width: 1px; height: 20px; background: var(--line); margin: 0 3px; }
+  button.f {
+    font: inherit; font-size: 13px; padding: 5px 11px; cursor: pointer;
+    background: var(--panel); color: var(--muted);
+    border: 1px solid var(--line); border-radius: 999px;
+  }
+  button.f[aria-pressed="true"] { color: var(--ink); border-color: var(--accent); }
+  button.f:hover { color: var(--ink); }
+  #score { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #score b { color: var(--ink); font-weight: 620; }
+
+  .q {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 6px; padding: 20px 22px; margin: 20px 0;
+  }
+  .meta { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .tier {
+    font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+    font-weight: 680; padding: 2px 7px; border-radius: 3px; border: 1px solid;
+  }
+  .tier.easy   { color: var(--easy);   border-color: var(--easy); }
+  .tier.medium { color: var(--medium); border-color: var(--medium); }
+  .tier.hard   { color: var(--hard);   border-color: var(--hard); }
+  .src { font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .stem { margin: 0 0 15px; }
+  .stem p { margin: 0 0 10px; }
+
+  pre {
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 4px;
+    padding: 11px 13px; overflow-x: auto; margin: 11px 0;
+    font: 12.5px/1.55 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  code {
+    background: var(--code-bg); padding: 1px 4px; border-radius: 3px;
+    font: 0.9em/1 ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  .opt {
+    display: block; width: 100%; text-align: left; font: inherit;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); border-radius: 5px;
+    padding: 10px 13px; margin: 7px 0; cursor: pointer;
+  }
+  .opt:hover:not([disabled]) { border-color: var(--accent); }
+  .opt[disabled] { cursor: default; }
+  .opt .k { color: var(--muted); font-weight: 620; margin-right: 8px; }
+  .opt.correct { background: var(--ok-bg); border-color: var(--ok-line); }
+  .opt.wrong   { background: var(--no-bg); border-color: var(--no-line); }
+
+  .why {
+    margin: 9px 0 3px; padding: 11px 14px; border-radius: 5px; font-size: 13.5px;
+    border: 1px solid;
+  }
+  .why.correct { background: var(--ok-bg); border-color: var(--ok-line); color: var(--ok-ink); }
+  .why.wrong   { background: var(--no-bg); border-color: var(--no-line); color: var(--no-ink); }
+  .why pre { background: rgba(127,127,127,0.10); border-color: transparent; }
+  .why code { background: rgba(127,127,127,0.14); }
+  .why b { font-weight: 660; }
+
+  footer {
+    margin-top: 44px; padding-top: 22px; border-top: 1px solid var(--line);
+    font-size: 13px; color: var(--muted);
+  }
+  #empty { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>B1-P1 — Algebraic Expression Engine · Recall Set</h1>
+  <p class="sub">Anchored to <code>docs/theory/project1_expressions.md</code>. 59 questions over all 49 sections — coverage checked mechanically, by listing the guide's sections against the sections the questions cite. 10 easy, 24 medium, 25 hard. Every distractor is a wrong answer that section already documents.</p>
+  <div class="note">
+    <strong>Mechanism only — no stage is solved here.</strong> This set tests what the
+    guide teaches, so it is usable the moment you finish reading a Part, long before
+    the stages exist. Multiple choice measures recognition; the
+    <code>challenge-log.md</code> measures derivation, and it is the one that closes
+    the Oral Defence. Use this to sharpen discrimination between near-identical
+    alternatives — <code>x + 0.0</code> against <code>x + (-0.0)</code>, a left
+    fold against a recursion on the rest, <code>doubleToLongBits</code> against its
+    <code>Raw</code> variant, a rewrite that is sound against its mirror image that
+    is not — and never as a substitute for writing a derivation out.
+  </div>
+</header>
+
+<div class="bar">
+  <button class="f" data-tier="all"    aria-pressed="true">All</button>
+  <button class="f" data-tier="easy"   aria-pressed="false">Easy</button>
+  <button class="f" data-tier="medium" aria-pressed="false">Medium</button>
+  <button class="f" data-tier="hard"   aria-pressed="false">Hard</button>
+  <span class="sep"></span>
+  <button class="f" data-part="all"  aria-pressed="true">All parts</button>
+  <button class="f" data-part="I"    aria-pressed="false">I</button>
+  <button class="f" data-part="II"   aria-pressed="false">II</button>
+  <button class="f" data-part="III"  aria-pressed="false">III</button>
+  <button class="f" data-part="IV"   aria-pressed="false">IV</button>
+  <button class="f" data-part="V"    aria-pressed="false">V</button>
+  <button class="f" data-part="VI"   aria-pressed="false">VI</button>
+  <button class="f" data-part="VII"  aria-pressed="false">VII</button>
+  <button class="f" data-part="VIII" aria-pressed="false">VIII</button>
+  <button class="f" data-part="IX"   aria-pressed="false">IX</button>
+  <span class="grow"></span>
+  <span id="score">answered <b>0</b>/<b>0</b> · correct <b>0</b></span>
+  <button class="f" id="reset">Reset</button>
+</div>
+
+<main id="list"></main>
+<div id="empty" hidden>No questions match this filter.</div>
+
+<footer>
+  Extend as new Parts are written, keeping every distractor sourced from the
+  guide rather than invented — and keeping exercise solutions out.
+</footer>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    tier: "easy", part: "I", src: "Part I.1 — The question",
+    stem: "<p>Folding <code>2 + 3 * 4</code> left to right, one operator at a time, returns <code>20.0</code>. The engine returns <code>14.0</code>. What is wrong with the fold?</p>",
+    options: [
+      { t: "It combines <code>2</code> and <code>3</code> before it has looked at the <code>*</code>, and by then the addition cannot be taken back.", ok: true,
+        why: "§1. Neither program has a bug in its arithmetic — <code>2 + 3</code> really is <code>5</code> and <code>5 * 4</code> really is <code>20</code>. What the fold is missing is the <b>structure</b> saying that <code>3 * 4</code> is one thing." },
+      { t: "Its arithmetic is wrong: <code>5 * 4</code> is not <code>20</code>.", ok: false,
+        why: "§1 is explicit that every individual step is correct. The defect is in which steps get taken, not in how they are computed." },
+      { t: "It reads the characters in the wrong order.", ok: false,
+        why: "Left to right is the order they are written in. §2 — order is the one structure a string <em>does</em> have, and it is not enough." },
+      { t: "<code>Double</code> rounding, as in §4's <code>0.1 + 0.2</code>.", ok: false,
+        why: "Every value here is a small integer, exact in <code>Double</code>. The two answers differ by six, not by <code>10<sup>-17</sup></code>." }
+    ]
+  },
+  {
+    tier: "easy", part: "I", src: "Part I.2 — A string is not an expression",
+    stem: "<p>A <code>String</code> has exactly one structure. Which?</p>",
+    options: [
+      { t: "The order of its characters.", ok: true,
+        why: "§2. A sequence has one structure and it is the order — which is the structure we already have, and the one that is not enough." },
+      { t: "The precedence of the operators in it.", ok: false,
+        why: "§2: nothing in the character array says <code>*</code> binds tighter than <code>+</code>. Precedence is supplied by the grammar, not found in the string." },
+      { t: "A tree with <code>+</code> at the root.", ok: false,
+        why: "§3 — that is one of <em>two</em> trees the string admits, and choosing between them is the parser's whole job." },
+      { t: "Its five tokens.", ok: false,
+        why: "Those do not exist until §7's lexer has run. Before that there are nine characters, four of which are spaces." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.3 — Two trees for one string",
+    stem: "<p>The two trees for <code>2 + 3 * 4</code> evaluate to <code>14</code> and <code>20</code>. What follows about the string?</p>",
+    options: [
+      { t: "Nothing is wrong with it: it admits both trees, and the <b>grammar</b> is what chooses.", ok: true,
+        why: "§3. Both trees are well-formed and both evaluate without error. The string does not choose; the parser applies the grammar, which does." },
+      { t: "It is ambiguous and should be rejected.", ok: false,
+        why: "§3 — every arithmetic string admits more than one tree before a grammar is fixed. Rejecting them would reject all arithmetic." },
+      { t: "They agree; only the drawing differs.", ok: false,
+        why: "They differ by six. §3 has both values computed." },
+      { t: "The parentheses in <code>2 + (3 * 4)</code> are part of the tree.", ok: false,
+        why: "§3: they are a feature of the drawing. The tree has no parentheses and does not need them — the shape <em>is</em> the grouping." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.4 — Concrete and abstract syntax",
+    stem: "<p><code>\"2 + 3 * 4\"</code>, <code>\"2+(3*4)\"</code> and <code>\"  2  +  3  *  4  \"</code> all produce the same tree. What does that cost?</p>",
+    options: [
+      { t: "The collapse is lossy: given the tree you cannot say which of the three produced it, so a renderer has to <em>choose</em> a spelling.", ok: true,
+        why: "§4, and it is why §40's renderer is a design problem rather than a formatting exercise." },
+      { t: "Nothing — the map from strings to trees is a bijection.", ok: false,
+        why: "§4 shows three strings mapping to one tree. It is not injective, which is exactly the point." },
+      { t: "Rendering becomes impossible.", ok: false,
+        why: "§40 renders all fourteen test inputs and round-trips every one. Lossy is not the same as impossible." },
+      { t: "Nothing, because the tree stores the original spacing.", ok: false,
+        why: "§4: abstract syntax has neither spaces nor parentheses. That is what the word <em>abstract</em> is doing." }
+    ]
+  },
+  {
+    tier: "medium", part: "I", src: "Part I.5 — The grammar",
+    stem: "<p>In the five-line grammar, what encodes precedence?</p>",
+    options: [
+      { t: "The nesting depth of the rules: <code>expr</code> is defined in terms of <code>term</code>, which is defined in terms of <code>factor</code>.", ok: true,
+        why: "§5. The deeper a level sits the tighter it binds, because it is resolved before its enclosing level ever sees a result." },
+      { t: "The order the operators are listed in on each line.", ok: false,
+        why: "§5 — <code>'+' | '-'</code> on one line are the same precedence. Order within a line says nothing." },
+      { t: "The <code>*</code> repetition marker on the <code>expr</code> and <code>term</code> lines.", ok: false,
+        why: "§5: that marker is <b>associativity</b>, not precedence. Repetition means an accumulator loop, which is §13." },
+      { t: "A precedence table consulted at run time.", ok: false,
+        why: "That is §16's <em>alternative</em> formulation, where the levels become data. In the grammar of §5 the levels are the rules themselves." }
+    ]
+  },
+  {
+    tier: "hard", part: "I", src: "Part I.5 — The grammar's edges",
+    stem: "<p>Which of these does the grammar reject?</p>",
+    options: [
+      { t: "<code>\"1e3\"</code> — <code>TrailingInput(Ident(\"e3\"), 1)</code>.", ok: true,
+        why: "§5's edge-case table. Scientific notation is not in this grammar: the number munch stops at <code>e</code>, which lexes as an identifier, and §17's full-consumption check rejects the pair." },
+      { t: "<code>\".5\"</code>.", ok: false,
+        why: "Accepted, as <code>0.5</code>. §5 — a leading dot is a legal number." },
+      { t: "<code>\"1.\"</code>.", ok: false,
+        why: "Accepted, as <code>1</code>. <code>\"1.\".toDoubleOption</code> succeeds, so maximal munch keeps it." },
+      { t: "<code>\"_a\"</code>.", ok: false,
+        why: "Accepted as an identifier. §5 — an identifier may start with an underscore." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.6 — Why a separate pass",
+    stem: "<p>What does splitting the lexer from the parser actually buy?</p>",
+    options: [
+      { t: "Two different questions stay apart, and afterwards the parser matches on an <code>enum</code> whose cases the compiler can check exhaustively.", ok: true,
+        why: "§6. \"Is this one number?\" and \"does this bind tighter?\" are different questions. And a <code>match</code> on <code>Char</code> can never be checked for exhaustivity; one on <code>Token</code> always is." },
+      { t: "Speed: one pass over characters is faster than two.", ok: false,
+        why: "§6 gives no performance argument, and the lexer adds a pass rather than removing one. The payoff is structural." },
+      { t: "It is required by the JVM.", ok: false,
+        why: "Nothing in the JVM knows about lexers. §6 — this is a design decision, and §42 notes that every compiler makes the same one." },
+      { t: "It lets the parser see character positions.", ok: false,
+        why: "The opposite: §10 is about the positions being <em>lost</em> at this boundary, and about that being a debt the project takes on purpose." }
+    ]
+  },
+  {
+    tier: "easy", part: "II", src: "Part II.7 — Tokens as an ADT",
+    stem: "<p>Why does <code>Num</code> carry a <code>Double</code> while <code>Plus</code> carries nothing?</p>",
+    options: [
+      { t: "Cases that differ in content have content; cases that differ only in identity have none.", ok: true,
+        why: "§7. That is an ADT doing its job — and a consequence is that a <code>Plus</code> can never accidentally be compared against a number, because the compiler will not let the two meet." },
+      { t: "<code>Plus</code> is a singleton to save memory.", ok: false,
+        why: "It is a singleton as a consequence, not as a purpose. §7 — the reason is that there is nothing to store: every <code>+</code> is the same <code>+</code>." },
+      { t: "Because <code>+</code> has no value under IEEE-754.", ok: false,
+        why: "<code>+</code> is an operator, not a value. The distinction §7 draws is about what a <em>token</em> needs to remember." },
+      { t: "Because <code>Token</code> would not compile as an <code>enum</code> otherwise.", ok: false,
+        why: "Scala 3 <code>enum</code> cases may freely mix parameterised and bare cases; §7 shows exactly that." }
+    ]
+  },
+  {
+    tier: "medium", part: "II", src: "Part II.8 — Maximal munch",
+    stem: "<p>What does the lexer produce for <code>\"1.2.3\"</code>?</p>",
+    options: [
+      { t: "<code>MalformedNumber(\"1.2.3\", 0)</code> — it munches the whole run of digits and dots, <em>then</em> asks whether that run is a <code>Double</code>.", ok: true,
+        why: "§8. The check comes after the munch, which is what makes the failure loud." },
+      { t: "<code>Num(1.2)</code> followed by <code>Num(0.3)</code>.", ok: false,
+        why: "§8 — that is the lexer that stops at the second dot, and it is the defect the maximal-munch rule exists to prevent: two valid tokens from an invalid number, and no error anywhere." },
+      { t: "<code>Num(1.2)</code> then <code>UnexpectedChar('.')</code>.", ok: false,
+        why: "A dot is not an unrecognised character — it can legally begin or continue a number, as <code>\".5\"</code> shows. §5 and §8." },
+      { t: "<code>Num(1.0)</code>, with the rest discarded.", ok: false,
+        why: "Nothing in this lexer discards input. §17 is built on the guarantee that everything is either consumed or reported." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.9 — The scan",
+    stem: "<p>The accumulator is built in reverse and reversed once at the end. What happens if you append to it instead?</p>",
+    options: [
+      { t: "It stays correct and becomes quadratic: 10,000 tokens would cost about 50 million cell traversals.", ok: true,
+        why: "§9. Prepending is <code>O(1)</code> and appending to a cons list is <code>O(n)</code>. Module 2 §11 costs the append and §17 is the quadratic it hides." },
+      { t: "Nothing — append is <code>O(1)</code> on a cons list.", ok: false,
+        why: "Append has to walk to the end. Module 2 §11: it is prepend that is constant, which is why the cheap end of a cons list is the front." },
+      { t: "The tokens come out in reverse order.", ok: false,
+        why: "Appending gives the right order — that is its appeal. The cost is the whole objection, which is why this defect survives every correctness test." },
+      { t: "It overflows the stack.", ok: false,
+        why: "§9's stack concern is a scan that recurses per character. Appending is a cost problem, not a depth problem." }
+    ]
+  },
+  {
+    tier: "hard", part: "II", src: "Part II.10 — Where the position goes",
+    stem: "<p><code>\"1 $ 2\"</code> gives <code>UnexpectedChar($, 2)</code> and <code>\"1 + + 2\"</code> gives <code>UnexpectedToken(Plus, 2)</code>. Are the two <code>2</code>s the same number?</p>",
+    options: [
+      { t: "No. The first is a character index, the second a token index — token 2 of <code>\"1 + + 2\"</code> starts at character 4.", ok: true,
+        why: "§10. Once <code>tokenize</code> returns, the character offsets are gone, and a message printing the second as \"column 2\" would be lying." },
+      { t: "Yes — both are offsets into the input string.", ok: false,
+        why: "§10: the parser never sees the input string. It sees a <code>MyList[Token]</code>, and can report at best a position within it." },
+      { t: "Yes — both are token indices.", ok: false,
+        why: "The lexer has no tokens yet when it meets the <code>$</code>. Its index is the only character offset the whole pipeline ever has." },
+      { t: "No, and the fix is to make both character indices.", ok: false,
+        why: "§10 states the fix — a position on every token — and says why the project declines it: it puts a field into the one type the parser matches on thousands of times. §G asks you to defend the trade." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.11 — The wrong first attempt",
+    stem: "<p>The left fold over the tokens is short, tail recursive and allocation-free. Why can a parser not be one?</p>",
+    options: [
+      { t: "Because it has to be able to hold an operator without applying it yet, in case what follows binds tighter.", ok: true,
+        why: "§11. The fold commits to <code>2 + 3</code> before the <code>*</code> is in hand, and by then it cannot be taken back. Every technique in Part III is a way of deferring that decision." },
+      { t: "Because a fold is not tail recursive.", ok: false,
+        why: "This one is — §11 says so explicitly. Being tail recursive is not the property it lacks." },
+      { t: "Because the tokens are in a <code>MyList</code> rather than an <code>Array</code>.", ok: false,
+        why: "The container is irrelevant; the same fold over an array is wrong in the same way." },
+      { t: "Because a fold cannot build a tree.", ok: false,
+        why: "A fold can build a tree — §13's accumulator loop is one. The problem is <em>which</em> tree." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.12 — One function per level",
+    stem: "<p>Parsing <code>2 + 3 * 4</code> by recursive descent, why does the <code>*</code> end up deeper in the tree than the <code>+</code>?</p>",
+    options: [
+      { t: "Because <code>term</code> sits below <code>expr</code> and consumes the <code>*</code> before <code>expr</code> ever sees a result.", ok: true,
+        why: "§12. Precedence is nesting depth — the deeper level finishes first. Nothing else in the code is doing any work." },
+      { t: "Because <code>expr</code> compares precedence numbers at each step.", ok: false,
+        why: "That is §16's reformulation, where the levels become data. In §12 there are no numbers anywhere." },
+      { t: "Because <code>*</code> appears later in the string.", ok: false,
+        why: "<code>2 * 3 + 4</code> has the <code>*</code> first and still puts it deeper. §12 has both traces." },
+      { t: "Because <code>term</code> is tail recursive and <code>expr</code> is not.", ok: false,
+        why: "Both levels are accumulator loops. §13 — and that property is about associativity, not precedence." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.13 — Left associativity",
+    stem: "<p>Inside <code>expr</code>, what is the difference between recursing on the whole rest of the input and looping over one <code>term</code> at a time?</p>",
+    options: [
+      { t: "It is the difference between <code>10 - (3 - 2) = 9</code> and <code>(10 - 3) - 2 = 5</code>.", ok: true,
+        why: "§13. Recursing on the rest makes the right-hand side everything that follows, which is right-nesting. The accumulator loop wraps the tree so far one level deeper on the <b>left</b>, and that loop <em>is</em> left associativity." },
+      { t: "Both build the same tree; only the stack profile differs.", ok: false,
+        why: "§13 computes both: <code>5</code> and <code>9</code>. This is the one place in the project where Module 3's loop transformation changes the answer rather than the frame count." },
+      { t: "The loop version is merely faster.", ok: false,
+        why: "It is also the only correct one for <code>-</code> and <code>/</code>. Speed is not what is at stake." },
+      { t: "It matters for <code>^</code> and not for <code>-</code>.", ok: false,
+        why: "Exactly backwards. §14 — <code>^</code> is the operator that <em>wants</em> the recursion." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.13 — What the loop buys",
+    stem: "<p><code>1 + 1 + ... + 1</code> parses at two million terms. Why is there no ceiling?</p>",
+    options: [
+      { t: "The <code>expr</code> level never re-enters itself: the accumulator loop costs one frame however long the chain is.", ok: true,
+        why: "§13 and §18. That row of the ceiling table is the <em>absence</em> of a number, not a large one." },
+      { t: "Because the token list is lazy and is never fully materialised.", ok: false,
+        why: "It is fully materialised — §9 tokenises four million characters before the parser starts." },
+      { t: "Because <code>@tailrec</code> was applied to <code>atom</code>.", ok: false,
+        why: "<code>atom</code> is not tail recursive and cannot be; it is the level that re-enters for <code>( expr )</code>. §18." },
+      { t: "Because the JIT inlines the recursion away.", ok: false,
+        why: "The JIT does not remove recursion depth. §18's other three rows are the same parser with ceilings in the thousands." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.14 — Right associativity",
+    stem: "<p>What is the shortest input that distinguishes the two readings of chained <code>^</code>?</p>",
+    options: [
+      { t: "Three <em>distinct</em> operands — <code>2 ^ 3 ^ 2</code> gives <code>512</code> against <code>64</code>, while <code>2 ^ 2 ^ 2</code> is <code>16</code> under both.", ok: true,
+        why: "§14. A suite that stops at <code>2 ^ 2</code>, or that uses the same operand three times, proves nothing about associativity at all." },
+      { t: "<code>2 ^ 2</code> — the two readings already differ there.", ok: false,
+        why: "With two operands there is nothing to associate. §14 — one operator admits only one tree." },
+      { t: "None: <code>pow</code> is associative, so the readings always agree.", ok: false,
+        why: "§14 computes <code>512</code> and <code>64</code>. Exponentiation is famously not associative, which is why it needs a direction at all." },
+      { t: "Any input at all, since <code>^</code> is left associative like the others.", ok: false,
+        why: "§14 — <code>^</code> is right associative, and its grammar line is different from the other two for exactly that reason." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.15 — Unary minus",
+    stem: "<p><code>-2 ^ 2</code> evaluates to what, under this grammar?</p>",
+    options: [
+      { t: "<code>-4</code>. The tree is <code>Neg(Bin(Pow, 2, 2))</code>.", ok: true,
+        why: "§15. Unary minus binds looser than <code>^</code> and tighter than <code>*</code> — which is what mathematical notation means, and what Python means (<code>-2**2 == -4</code>)." },
+      { t: "<code>4</code>, because unary minus binds tighter than <code>^</code>.", ok: false,
+        why: "That is the spreadsheet convention, and §39 has it as a documented divergence — Excel returns <code>4</code> for this. It is not what this grammar does." },
+      { t: "<code>-4</code>, and <code>(-2) ^ 2</code> is also <code>-4</code>.", ok: false,
+        why: "<code>(-2) ^ 2</code> is <code>4</code>, computed in §15. Four characters separate the two spellings and they differ in sign." },
+      { t: "It is a parse error: <code>-</code> cannot follow nothing.", ok: false,
+        why: "<code>unary ::= '-' unary | atom</code> — §5. A <code>-</code> in operand position is exactly what that rule is for." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.15 — Two roles, one symbol",
+    stem: "<p>The lexer emits one <code>Token.Minus</code> for both roles of <code>-</code>. How does the parser tell them apart?</p>",
+    options: [
+      { t: "By position: a <code>-</code> where an <em>operand</em> was expected is prefix; one where an <em>operator</em> was expected is infix.", ok: true,
+        why: "§15. That is why <code>unary</code> sits between <code>factor</code> and <code>atom</code> — <code>atom</code> is the operand position, and <code>unary</code> is the only rule that reads a <code>-</code> there." },
+      { t: "The lexer emits a different token for each.", ok: false,
+        why: "§15 — there is one <code>Token.Minus</code>, and §7's token type has no case for a prefix minus. The lexer cannot know: it has no grammar." },
+      { t: "By the whitespace around it.", ok: false,
+        why: "<code>\"- -3\"</code> and <code>\"-2*3\"</code> both work, with opposite spacing. §15 and §3 — whitespace was discarded before the parser ran." },
+      { t: "By looking at the type of the previous AST node.", ok: false,
+        why: "There may be no previous node — <code>\"-3\"</code> starts with it. Position in the grammar is what decides, not history." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.16 — Precedence climbing",
+    stem: "<p>In <code>val nextMin = if rightAssoc(t) then prec(t) else prec(t) + 1</code>, what does the <code>+ 1</code> do?</p>",
+    options: [
+      { t: "It is the entire associativity mechanism: with it, a second operator of the same precedence stops the inner parse and the outer loop takes it; without it, the inner parse takes it.", ok: true,
+        why: "§16's table. <code>prec(+) = 1 < 2</code> so the inner parse stops — left associative. <code>prec(^) = 3 >= 3</code> so it continues — right associative. One integer decides which of §13 and §14 you get." },
+      { t: "It skips past the operator token.", ok: false,
+        why: "The token is consumed by <code>rest</code>. <code>nextMin</code> is a precedence floor, not an index." },
+      { t: "It is an off-by-one guard on the token index.", ok: false,
+        why: "The token index is the separate <code>at</code> parameter. Confusing the two is the kind of defect <code>error-patterns.md</code> pattern 3 collects." },
+      { t: "It is what makes <code>climb</code> tail recursive.", ok: false,
+        why: "<code>climb</code>'s own recursive call is in tail position regardless. The <code>+ 1</code> changes the tree, not the frame." }
+    ]
+  },
+  {
+    tier: "medium", part: "III", src: "Part III.17 — What must be rejected",
+    stem: "<p>Why does the recursive descent not notice anything wrong with <code>\"1 + 2)\"</code>?</p>",
+    options: [
+      { t: "Because <code>expr</code> parses <code>1 + 2</code> perfectly, returns, and leaves the <code>)</code> unconsumed. The error exists only at the top level.", ok: true,
+        why: "§17. The contract that the token list must be <em>fully</em> consumed is what separates a parser from a prefix-matcher — and <code>\"1 2\"</code> is the same defect with no stray bracket to notice." },
+      { t: "It is caught by <code>atom</code>'s <code>RParen</code> case.", ok: false,
+        why: "That case fires for <code>\"()\"</code>, where a <code>)</code> appears in operand position. Here the <code>)</code> appears after a complete expression, which no rule is looking at." },
+      { t: "The lexer rejects it.", ok: false,
+        why: "<code>)</code> is a perfectly good token. §10 — the lexer has no grammar and cannot know it is unbalanced." },
+      { t: "It is accepted, by design, as a prefix parse.", ok: false,
+        why: "§17 requires <code>TrailingInput(RParen, 3)</code>. A parser that returns the tree for a prefix has accepted <code>\"1 + 2 rubbish\"</code> too." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.18 — The parser's ceiling",
+    stem: "<p>The ceiling table's first row reads \"no ceiling below 2,000,000\". What kind of entry is that?</p>",
+    options: [
+      { t: "It is the absence of a number rather than a large one: the search never found a failure.", ok: true,
+        why: "§18. Left-associated addition never re-enters its own level (§13), so two million terms cost one frame. The other three rows are genuine ceilings in the thousands." },
+      { t: "It is the measured ceiling, which happens to be two million.", ok: false,
+        why: "§18 — the search limit was two million and nothing failed below it. Reporting a search limit as a ceiling is how an untested bound becomes a claimed one." },
+      { t: "It means addition frames are smaller than the others.", ok: false,
+        why: "Frame size would move the ceiling, not remove it. §13 — the mechanism is that there is only ever <em>one</em> frame." },
+      { t: "It means the JIT eliminated the recursion.", ok: false,
+        why: "There is no recursion at that level to eliminate. §13's accumulator loop is a loop in the source." }
+    ]
+  },
+  {
+    tier: "hard", part: "III", src: "Part III.18 — Which nesting is dearest",
+    stem: "<p>In the reference implementation, nested parentheses reach about 12,330 and chained unary minus about 8,810. Is parentheses-are-cheapest a fact about the grammar?</p>",
+    options: [
+      { t: "No — it is a fact about that implementation. A five-function recursive descent pays five frames for a <code>(</code> where <code>climb</code> pays two, which moves parentheses to the dearest row.", ok: true,
+        why: "§18. The ranking follows how many frames each rule costs per level, and two correct parsers for one grammar can have the ceilings in opposite orders. Which is why the spec asserts a floor and reports the numbers." },
+      { t: "Yes — <code>( expr )</code> re-enters at the outermost level, so it is always the dearest.", ok: false,
+        why: "That is true of §12's five-function descent and false of §16's <code>climb</code>, where <code>( expr )</code> costs <code>atom → expr</code>, two frames. §18's second table." },
+      { t: "Yes — chained <code>^</code> is always cheapest because <code>climb</code> is <code>@tailrec</code>.", ok: false,
+        why: "<code>climb</code>'s recursive call is tail; its call to <code>expr</code> is not, and that is the one that nests. Measured, <code>^</code> sits between the other two." },
+      { t: "It does not matter, because all three are within 40% of each other.", ok: false,
+        why: "The spread being small is true and is not the point — §E asks which is smallest, because the system's real ceiling is the minimum. §41." }
+    ]
+  },
+  {
+    tier: "easy", part: "IV", src: "Part IV.19 — Why size",
+    stem: "<p>Why is <code>size</code> the right place to learn the explicit-stack technique?</p>",
+    options: [
+      { t: "It cannot be wrong about arithmetic, and it has exactly the same fatal property as the evaluator.", ok: true,
+        why: "§19. Learn the repair where the only thing that can break is a count, and §26 becomes a transcription." },
+      { t: "Because <code>eval</code> calls <code>size</code> internally.", ok: false,
+        why: "It does not. The stages are independent implementations of one technique." },
+      { t: "Because <code>size</code> has no ceiling to begin with.", ok: false,
+        why: "§19 measures <code>sizeNaive</code> at about 30,843 nodes of depth. Having the ceiling is what makes it a teaching case." },
+      { t: "Because <code>@tailrec</code> works on <code>size</code> and not on <code>eval</code>.", ok: false,
+        why: "§20 — <code>@tailrec</code> is rejected on <code>sizeNaive</code> for the same reason it is rejected on <code>evalNaive</code>: two calls with work pending after both." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.20 — Why @tailrec does not apply",
+    stem: "<p>The compiler rejects <code>@tailrec</code> on <code>1 + sizeNaive(l) + sizeNaive(r)</code>. Why?</p>",
+    options: [
+      { t: "There are two recursive calls, and the additions are pending after both.", ok: true,
+        why: "§20. A tail call hands its value straight back (Module 3 §5). Even one of these could not qualify, because the other still has to run afterwards. This is the structure of a tree, not a limitation of the annotation." },
+      { t: "Because the method is public and could be overridden.", ok: false,
+        why: "A separate condition, and it does not bite here — members of an <code>object</code> are final by construction. Module 3 §7 and §26." },
+      { t: "Because <code>Expr</code> is an <code>enum</code> rather than a sealed trait.", ok: false,
+        why: "The annotation knows nothing about the scrutinee's type. §20." },
+      { t: "Because it returns <code>Int</code> rather than <code>Either</code>.", ok: false,
+        why: "The return type is irrelevant; <code>evalNaive</code> returns <code>Either</code> and is rejected for the same reason." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.21 — The explicit stack",
+    stem: "<p>After the repair, what is on the heap that was not before?</p>",
+    options: [
+      { t: "The pending work — the subtrees still to visit. The JVM frame stack stays one deep for the whole traversal.", ok: true,
+        why: "§21. That is the trade in one sentence: a recursion that cannot be a loop becomes one by moving its frames onto the heap." },
+      { t: "The results, with the pending work staying on the stack.", ok: false,
+        why: "Backwards. §21's trace shows the stack of subtrees growing while the accumulator is a single <code>Int</code>." },
+      { t: "Nothing — the loop allocates no more than the recursion did.", ok: false,
+        why: "§29 measures the cost of exactly this for the evaluator: 108 bytes per node against 40. The technique is not free." },
+      { t: "A copy of the whole tree.", ok: false,
+        why: "The stack holds <em>references</em> to subtrees. Module 2 §9 — structural sharing means no node is ever copied." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.22 — When a traversal must come back",
+    stem: "<p><code>size</code> works with a flat <code>MyList[Expr]</code> of pending subtrees. <code>depth</code> does not. What is the difference?</p>",
+    options: [
+      { t: "<code>+</code> does not care what order the nodes are visited in; <code>max</code> needs both children's answers at once, and a flat stack loses which node a result belongs to.", ok: true,
+        why: "§22. And §22's repair for <code>depth</code> is the cheaper of the two: depth is a property of where a node <em>sits</em>, not of what its children return, so carrying the depth alongside the node removes the combining step entirely." },
+      { t: "<code>depth</code> is not associative on <code>Int</code>, and <code>size</code> is.", ok: false,
+        why: "<code>max</code> is associative and commutative too. The problem is not the operator's algebra — it is that <code>max</code> needs two values simultaneously." },
+      { t: "<code>depth</code> must visit the right child before the left.", ok: false,
+        why: "Nothing about <code>depth</code> fixes an order. §22 — the issue is simultaneity, not sequence." },
+      { t: "There is no difference: <code>depth</code> is the easy case too.", ok: false,
+        why: "§22 opens by saying <code>size</code> \"got away with\" the flat stack and <code>depth</code> does not. Finding out why is the exercise." }
+    ]
+  },
+  {
+    tier: "medium", part: "IV", src: "Part IV.23 — Instructions",
+    stem: "<p>What is <code>Combine(op)</code>, in one phrase?</p>",
+    options: [
+      { t: "The JVM frame, written down as a value.", ok: true,
+        why: "§23. It is the thing that used to remember \"when you come back, apply this operator to the two results\". Block 3 rebuilds this at scale and calls it a trampoline." },
+      { t: "An optimisation that fuses two nodes into one.", ok: false,
+        why: "It fuses nothing — it is a scheduling record. Node fusion is §30's constant folding, a different pass." },
+      { t: "A marker telling the collector the subtree is dead.", ok: false,
+        why: "Nothing in this project talks to the collector. Module 1 §6 — young objects die without being told to." },
+      { t: "The operator's precedence, carried for the renderer.", ok: false,
+        why: "Precedence belongs to §40's renderer and never enters the evaluator. By the time a tree exists, precedence has done its job." }
+    ]
+  },
+  {
+    tier: "hard", part: "IV", src: "Part IV.24 — Reading a measurement",
+    stem: "<p>Three searches for <code>render</code>'s ceiling, in order, gave <code>2,047 / 12,339 / 12,339</code> — reproducibly. Which number do you distrust?</p>",
+    options: [
+      { t: "The first. The harness warms at depth 128, which never reaches the string building a search half a million levels deep exercises.", ok: true,
+        why: "§24. It is in the table rather than quietly dropped because that is what Module 3's Pattern 13 looks like when you catch it: the subject was still changing while it was being measured." },
+      { t: "The last — the method got slower as the heap filled.", ok: false,
+        why: "A slower method does not survive <em>more</em> depth. The third search agrees with the second to four digits." },
+      { t: "None: it is random noise, so average the three.", ok: false,
+        why: "It reproduces in that order across JVM launches. §24 — an average of a warm-up artefact and two good measurements is neither." },
+      { t: "The second and third — the tree was being shared, so less was allocated.", ok: false,
+        why: "The tree is rebuilt per probe by the harness's <code>leftChain</code>, and sharing would not change a frame count anyway." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.25 — The naive control",
+    stem: "<p><code>evalNaive</code> on a left-leaning chain and on a right-leaning chain of the same depth. Which survives deeper?</p>",
+    options: [
+      { t: "Neither: they agree to four digits — 24,673 against 24,675.", ok: true,
+        why: "§25. The <code>flatMap</code>/<code>map</code> chain makes the two sides look asymmetric in the source and they are not: both recurse to full depth before anything combines." },
+      { t: "The left chain, by a wide margin, because <code>flatMap</code> holds a closure over the right branch.", ok: false,
+        why: "This is the plausible prediction and it is wrong. §25 measured both, and §E asks you to write the prediction down before measuring so that being wrong is recorded." },
+      { t: "The right chain, by a wide margin.", ok: false,
+        why: "Same answer with the sides swapped, and the same measurement refutes it." },
+      { t: "The right chain has no ceiling at all.", ok: false,
+        why: "Both have one. §41 — only the four repaired traversals reach a million." }
+    ]
+  },
+  {
+    tier: "easy", part: "V", src: "Part V.25 — Why keep it",
+    stem: "<p>Why does <code>evalNaive</code> stay in the codebase after <code>eval</code> works?</p>",
+    options: [
+      { t: "It is the experimental control: <code>eval</code> is only <em>demonstrably</em> equivalent because there is something to compare it against.", ok: true,
+        why: "§25. Every correctness property in the spec is asserted on both, on every input small enough for the control." },
+      { t: "It is faster on small inputs, and the engine dispatches on depth.", ok: false,
+        why: "The engine does not dispatch on depth — §29 notes that, and §G asks why not. The control is kept for evidence, not for speed." },
+      { t: "It is the only one that handles <code>Var</code>.", ok: false,
+        why: "Both handle <code>Var</code> identically, returning <code>Left(Unbound)</code> for a free name. §28." },
+      { t: "It is dead code kept for reference.", ok: false,
+        why: "It is executed by the spec on every run, against every input <code>eval</code> is checked on. Dead code would not be." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.26 — The machine",
+    stem: "<p>At step 5 of §26's trace the work list is <code>[Combine(Mul), Combine(Add)]</code> and the value stack is <code>[4, 3, 2]</code>. What happens next?</p>",
+    options: [
+      { t: "<code>Combine(Mul)</code> pops <code>4</code> and <code>3</code> and pushes <code>12</code>, leaving <code>[12, 2]</code>.", ok: true,
+        why: "§26. And <code>2</code> is still underneath, untouched since step 2, waiting for the <code>Combine(Add)</code> that follows." },
+      { t: "<code>Combine(Add)</code> runs first, because it was pushed first.", ok: false,
+        why: "It was pushed first and is therefore <em>deeper</em>. §26 — the work list is a stack, so the most recently pushed instruction runs next." },
+      { t: "<code>Push(2)</code> — the <code>2</code> has not been evaluated yet.", ok: false,
+        why: "It was pushed at step 2 and is the bottom of the value stack. §26's trace has it there from then on." },
+      { t: "The loop ends and returns <code>vals.head</code>, which is <code>4</code>.", ok: false,
+        why: "The loop ends when <em>work</em> is empty, not when values are available. §26 — two instructions remain." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.27 — Operand order",
+    stem: "<p>You reverse the two pops in <code>Combine</code>. Which tests fail?</p>",
+    options: [
+      { t: "Only those using a non-commutative operator: <code>10 - 3</code> returns <code>-7</code>, while <code>2 + 3</code> and <code>2 * 3</code> still pass.", ok: true,
+        why: "§27. The defect survives every test whose operators are commutative, which is why the spec asserts on <code>-</code>, <code>/</code> and <code>^</code> — and why <code>error-patterns.md</code> pattern 11 is about fixtures that cannot exhibit the property under test." },
+      { t: "All of them, immediately, starting with <code>2 + 3</code>.", ok: false,
+        why: "<code>3 + 2</code> is also <code>5</code>. A suite built on <code>+</code> and <code>*</code> would go green on this defect." },
+      { t: "None — the loop stops being tail recursive and fails to compile first.", ok: false,
+        why: "Swapping two pops changes neither the call's position nor its target. It compiles cleanly." },
+      { t: "Only <code>^</code>, since <code>math.pow</code> takes its arguments in a fixed order.", ok: false,
+        why: "<code>-</code> and <code>/</code> are equally sensitive. §27 lists all three." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.27 — Two defects that cancel",
+    stem: "<p>You reverse the pops <em>and</em> the pushes. What happens?</p>",
+    options: [
+      { t: "The suite goes green, and evaluation order is silently right-to-left.", ok: true,
+        why: "§27, and it is worse than either defect alone: a green suite is evidence in the wrong direction. Nothing observes the order until Block 3 makes evaluation effectful." },
+      { t: "Two defects are worse than one, so more assertions fail.", ok: false,
+        why: "They compose to the identity on <em>values</em>. §27 — which is exactly why it is the more dangerous of the two." },
+      { t: "It is simply the correct implementation, written the other way round.", ok: false,
+        why: "It is correct on values and wrong on order. Those are the same thing only while evaluation is pure, which is a property Block 3 removes." },
+      { t: "The value stack underflows.", ok: false,
+        why: "The same number of pushes and pops happen; only their pairing changes." }
+    ]
+  },
+  {
+    tier: "medium", part: "V", src: "Part V.28 — Errors inside a loop",
+    stem: "<p>Does returning <code>Left(Unbound(n))</code> from inside the machine loop break <code>@tailrec</code>?</p>",
+    options: [
+      { t: "No — a return is not a call.", ok: true,
+        why: "§28. The short-circuit costs nothing structurally: whatever is still on the work list is simply abandoned, and the method still satisfies the annotation." },
+      { t: "Yes — the <code>Left</code> must be threaded into an accumulator instead.", ok: false,
+        why: "§28 returns it directly, and the spec proves the pending work is abandoned by putting a million nodes behind an unbound variable and asserting the call returns." },
+      { t: "Yes, because <code>Either.flatMap</code> is involved.", ok: false,
+        why: "The machine loop uses no <code>flatMap</code> — that is <code>evalNaive</code>'s shape. §25 against §26." },
+      { t: "No, because <code>@tailrec</code> is advisory and does not fail compilation.", ok: false,
+        why: "It does fail compilation, and that is its entire purpose. §48 and Module 3 §7." }
+    ]
+  },
+  {
+    tier: "hard", part: "V", src: "Part V.29 — What the machine costs",
+    stem: "<p>Measured: 24 bytes per AST node, 40 per node for <code>evalNaive</code>, 108 per node for the machine. What is the honest summary?</p>",
+    options: [
+      { t: "The machine trades heap for stack. It costs more on every input the control survives, and makes possible the inputs the control cannot reach at all.", ok: true,
+        why: "§29. It does not make evaluation cheaper — choosing it for a three-node expression is a pessimisation, and §G asks why the engine does not dispatch on depth." },
+      { t: "The machine is cheaper overall, because it avoids allocating frames.", ok: false,
+        why: "Frames are not heap allocations and cost nothing to measure with <code>AllocationProbe</code>. §29 — the machine's 108 bytes are cons cells, instructions and boxed <code>Double</code>s that the recursion did not need." },
+      { t: "24 is the machine's cost per node and 108 the tree's.", ok: false,
+        why: "Reversed. §29 — the tree is 24 bytes per node, and evaluating it allocates 4.5x the tree, transiently, every time." },
+      { t: "<code>evalNaive</code> allocates nothing, so 40 must be measurement overhead.", ok: false,
+        why: "Its 40 bytes per node are the <code>Right</code> wrapper <code>Either</code> allocates at every level. §29 — a version returning a bare <code>Double</code> would allocate nothing and could not report an unbound variable." }
+    ]
+  },
+  {
+    tier: "easy", part: "VI", src: "Part VI.30 — Constant folding",
+    stem: "<p><code>2 * 3 + 4 * 5</code> has seven nodes. How many after folding?</p>",
+    options: [
+      { t: "One: <code>Lit(26)</code>.", ok: true,
+        why: "§30. The oldest optimisation in compilers — and §42 shows <code>javac</code> had already done it before the class file existed." },
+      { t: "Three — the operators go, the literals stay.", ok: false,
+        why: "Folding replaces a whole subtree by its <em>value</em>, so the literals go too. §30." },
+      { t: "Seven: folding removes no nodes, it only marks them.", ok: false,
+        why: "§30 measures the size at 1 afterwards. The nodes are gone." },
+      { t: "It cannot fold, because <code>*</code> and <code>+</code> are different operators.", ok: false,
+        why: "Folding is bottom-up and per node: each <code>*</code> folds first, and their results make the <code>+</code> foldable in turn. §33." }
+    ]
+  },
+  {
+    tier: "hard", part: "VI", src: "Part VI.31 — Why folding is not simplification",
+    stem: "<p>Why does the project put <code>Var</code> in the AST at all, given that it carries no arithmetic and adds a case to every traversal?</p>",
+    options: [
+      { t: "Because over a closed term the simplifier is just the evaluator with a different return type, and every identity rule is unreachable code.", ok: true,
+        why: "§31. Simplification only means something around an <em>unknown</em> — which is why the worked example reduces 16 nodes to 5 without ever touching the <code>x</code>." },
+      { t: "Because the grammar needs identifiers to be a real programming language.", ok: false,
+        why: "No part of the grammar needs them; §5's omissions are all deliberate. The reason is Part VI, not Part I." },
+      { t: "Because constant folding is unsound over <code>Double</code>.", ok: false,
+        why: "Constant folding is one of the ten <em>sound</em> rules. §32 and §34 — it is <code>x * 0 -> 0</code> that fails." },
+      { t: "Because the evaluator needs an environment to be worth writing.", ok: false,
+        why: "The evaluator's difficulty is depth (§26), not binding. It would be exactly as hard with no variables at all." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.32 — The rule set",
+    stem: "<p>Nine of the ten sound rules are the ones you would write from memory. Which is the tenth?</p>",
+    options: [
+      { t: "<code>x + (-0.0) -> x</code> — spelled with a <em>negative</em> zero.", ok: true,
+        why: "§32, and §36 is the proof: <code>x + 0.0 -> x</code> is unsound at <code>x = -0.0</code>, while the negative-zero version is sound everywhere. The right rule looks like a typo." },
+      { t: "<code>x ^ 0 -> 1</code>.", ok: false,
+        why: "Unremarkable to write and, unusually, sound — <code>Math.pow(x, ±0.0)</code> is <code>1.0</code> for every <code>x</code>, <code>NaN</code> included. §37." },
+      { t: "<code>Neg(Neg(e)) -> e</code>.", ok: false,
+        why: "Sound and obvious: negation is an exact sign flip, with no rounding to go wrong. §36's table." },
+      { t: "<code>x / 1 -> x</code>.", ok: false,
+        why: "Sound and obvious. §36 checks it at all seven probe values and it passes." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.33 — The fixed point",
+    stem: "<p>Why does one bottom-up pass reach a fixed point, with no iteration?</p>",
+    options: [
+      { t: "Because a node's children are already normal when it is rewritten, and every rule's output is either a child or a fresh <code>Lit</code> — both already normal.", ok: true,
+        why: "§33. A top-down rewriter has to iterate and then argue that the loop terminates; bottom-up avoids the question entirely." },
+      { t: "Because the rule set is confluent, which is proved elsewhere.", ok: false,
+        why: "§33 makes no confluence argument — and does not need one, because it never applies a rule to a node twice. The formal treatment is Baader & Nipkow, in the references." },
+      { t: "Because the traversal is <code>@tailrec</code>.", ok: false,
+        why: "Stack safety and fixed points are unrelated. §33's argument would hold for a recursive rewriter too." },
+      { t: "It does not: §33 runs the pass repeatedly until nothing changes.", ok: false,
+        why: "One traversal, no iteration. The spec asserts <code>simplify(simplify(e)) == simplify(e)</code> precisely to catch a rule whose output re-enables itself." }
+    ]
+  },
+  {
+    tier: "hard", part: "VI", src: "Part VI.34 — What makes a rewrite legal",
+    stem: "<p>How do you check that a rewrite preserves the value?</p>",
+    options: [
+      { t: "Compare the two sides <em>bitwise</em> over a set that includes both zeros, both infinities and <code>NaN</code>.", ok: true,
+        why: "§34. Those are exactly where IEEE-754 stops behaving like the reals. Run that check over §32's ten rules and all pass; run it over the four that are not there and none does." },
+      { t: "Compare with <code>==</code> over a large random sample of <code>Double</code>s.", ok: false,
+        why: "A random sample essentially never generates <code>-0.0</code>, <code>±Infinity</code> or <code>NaN</code> — and §38 shows <code>==</code> could not see the divergence even if it did." },
+      { t: "Prove it algebraically over the reals.", ok: false,
+        why: "Every one of the four rejected rules is true over the reals. That is why they are tempting. §37." },
+      { t: "Compare with <code>==</code> at <code>0.0</code>, <code>1.0</code> and <code>2.0</code>.", ok: false,
+        why: "Validated on the inputs that cannot fail. §34 — and the zero in that list is the <em>positive</em> one, which is the one that does not expose §36." }
+    ]
+  },
+  {
+    tier: "medium", part: "VI", src: "Part VI.35 — The two rule sets",
+    stem: "<p>What does the sound simplifier do with <code>x + 0.0</code>?</p>",
+    options: [
+      { t: "Leaves it alone — it renders back as <code>x + 0</code>.", ok: true,
+        why: "§35. That looks like a failure and is the correct behaviour: removing the <code>+ 0</code> would turn a <code>-0.0</code> into a <code>+0.0</code>. §36." },
+      { t: "Rewrites it to <code>x</code>, which is the whole point of an identity rule.", ok: false,
+        why: "That is <code>simplifyFast</code>, and §35 keeps the two named and separate for exactly this reason. It is what <code>gcc -ffast-math</code> does." },
+      { t: "Rewrites it to <code>Lit(0)</code>.", ok: false,
+        why: "That is the <code>x * 0 -> 0</code> rule, also unsound, and also only in the fast set. §37." },
+      { t: "Rejects it as an input the rule set cannot handle.", ok: false,
+        why: "Simplification is total: any tree it cannot improve it returns unchanged. §32's rule function ends with a fall-through for that reason." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.36 — The additive identity",
+    stem: "<p>What is the additive identity of <code>Double</code>?</p>",
+    options: [
+      { t: "<code>-0.0</code>. Adding it preserves every value; adding <code>+0.0</code> turns <code>-0.0</code> into <code>+0.0</code>.", ok: true,
+        why: "§36's table, computed bitwise over seven values. IEEE-754 round-to-nearest makes a sum of two zeros of opposite sign <code>+0.0</code>, which is the whole finding." },
+      { t: "<code>+0.0</code>, as in the reals.", ok: false,
+        why: "<code>(-0.0) + 0.0</code> is <code>+0.0</code>, not <code>-0.0</code>. §36 — the rule you would write from memory is the wrong one of the pair." },
+      { t: "There is none, because <code>+</code> is not associative on <code>Double</code>.", ok: false,
+        why: "Non-associativity (§44) is a separate defect and does not prevent an identity element. §36 exhibits one." },
+      { t: "<code>NaN</code>, since it absorbs everything.", ok: false,
+        why: "An absorbing element is the opposite of an identity, and <code>NaN + x</code> is <code>NaN</code> for every <code>x</code>. §36's last row." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.36 — The mirror rule",
+    stem: "<p><code>x - 0.0 -> x</code> is sound. Is <code>x - (-0.0) -> x</code>?</p>",
+    options: [
+      { t: "No — it is unsound at <code>x = -0.0</code>, because <code>(-0.0) - (-0.0)</code> is <code>+0.0</code>.", ok: true,
+        why: "§36's verdict list. The signs go the opposite way from addition: <code>+</code> needs the negative zero and <code>-</code> needs the positive one. Neither is guessable, which is why §34 says to compute rather than reason." },
+      { t: "Yes — it is the mirror of <code>x + (-0.0) -> x</code>, which is sound.", ok: false,
+        why: "The mirror image is exactly what fails. §36 tabulates all four combinations and two of them are unsound." },
+      { t: "No, but only at <code>NaN</code>.", ok: false,
+        why: "<code>NaN - (-0.0)</code> is <code>NaN</code>, so that value is fine. The failure is at <code>-0.0</code>. §36." },
+      { t: "Yes — subtracting a zero of either sign never changes a value.", ok: false,
+        why: "That is the intuition §36 exists to break, with the table that shows it failing." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.37 — Two rules that look alike",
+    stem: "<p><code>x * 0 -> 0</code> and <code>x ^ 0 -> 1</code>. Which is sound?</p>",
+    options: [
+      { t: "Only the second. <code>x * 0</code> fails at five of the seven probe values; <code>Math.pow</code> specifies <code>pow(x, ±0.0) == 1.0</code> for every <code>x</code>, <code>NaN</code> included.", ok: true,
+        why: "§37. Two rules that look equally suspicious and exactly one is safe — which is why guessing is not a method." },
+      { t: "Both, since anything times zero is zero and anything to the zero is one.", ok: false,
+        why: "<code>Infinity * 0.0</code> is <code>NaN</code>, measured in §37. A rewrite that turns <code>NaN</code> into <code>0.0</code> is a change of answer." },
+      { t: "Neither.", ok: false,
+        why: "<code>x ^ 0 -> 1</code> is in §32's sound set, and it is there by <em>specification</em> — the <code>Math.pow</code> Javadoc, not an experiment." },
+      { t: "Only the first: <code>pow(NaN, 0)</code> is <code>NaN</code>.", ok: false,
+        why: "Verified in §37: <code>pow(NaN, 0.0)</code> is <code>1.0</code>. It is one of the few places where <code>NaN</code> does not propagate." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.38 — The blind instrument",
+    stem: "<p>The unsound rewrite changes <code>+0.0</code> into <code>-0.0</code>, and the suite goes green. Why?</p>",
+    options: [
+      { t: "Because <code>-0.0 == 0.0</code> is <code>true</code>, so an equality assertion cannot see the divergence. <code>1 / x</code> can — it gives <code>Infinity</code> against <code>-Infinity</code>.", ok: true,
+        why: "§38. Passing for the wrong reason is worse than failing, because it is evidence in the wrong direction." },
+      { t: "Because the rewrite is in fact sound and §36 is about something else.", ok: false,
+        why: "§36 measured it: <code>(-0.0) + 0.0</code> is <code>+0.0</code>, so removing the <code>+ 0.0</code> changes the result at that input." },
+      { t: "Because the suite has no test covering that input.", ok: false,
+        why: "It has one — §38 runs it and shows the two results comparing equal. The gap is in the <em>instrument</em>, not the coverage." },
+      { t: "Because <code>NaN == NaN</code> is <code>false</code>, which masks the comparison.", ok: false,
+        why: "That is the other half of §38's trap, and it works the opposite way: it makes correct code <em>fail</em>. No <code>NaN</code> is involved here." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.38 — The instrument that overshoots",
+    stem: "<p><code>assertSameBits(Infinity * 0.0, Double.NaN)</code> failed with \"expected NaN, got NaN\". Why?</p>",
+    options: [
+      { t: "Because <code>doubleToRawLongBits</code> distinguishes the literal <code>Double.NaN</code> (<code>0x7ff8…</code>) from every <code>NaN</code> the hardware produces (<code>0xfff8…</code>).", ok: true,
+        why: "§38's table. IEEE-754 leaves a generated <code>NaN</code>'s payload to the implementation, and x86's invalid-operation result is the <em>real indefinite</em>, with the sign bit set. <code>doubleToLongBits</code> canonicalises them and still separates <code>±0.0</code>, which is the discrimination this project needs and no more." },
+      { t: "They are the same method: <code>Double</code> has only one bit representation.", ok: false,
+        why: "§38 prints both columns for seven values, and the <code>NaN</code> rows differ between them." },
+      { t: "Because <code>doubleToLongBits</code> cannot see the sign of a zero, so the harness used the raw variant.", ok: false,
+        why: "It can — §38's table has <code>-0.0</code> as <code>0x8000…</code> in both columns. Only the <code>NaN</code> payload is canonicalised." },
+      { t: "Because the evaluator really was returning a wrong value.", ok: false,
+        why: "<code>Infinity * 0.0</code> is <code>NaN</code> and that is what it returned. §38 — an equality that is too strict fails as silently as one that is too loose." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.39 — Where unary minus binds",
+    stem: "<p>§39 tabulates three placements of unary minus in the grammar. Which column separates them?</p>",
+    options: [
+      { t: "The tree column — two of the three agree on every <em>value</em> in the row.", ok: true,
+        why: "§39, and it is why the parser spec asserts structurally. A suite that only checks numbers cannot distinguish two of the three grammars at all." },
+      { t: "The <code>-2 ^ 2</code> column alone.", ok: false,
+        why: "It separates one placement from the other two and leaves those two identical. §39's table." },
+      { t: "The <code>-2 * 3</code> column alone.", ok: false,
+        why: "All three give <code>-6</code> there. That row is exactly the trap: same number, different tree." },
+      { t: "None — all three placements are equivalent.", ok: false,
+        why: "§39 gives <code>-4</code> against <code>4</code> for <code>-2 ^ 2</code>, on an expression a user can type in four characters." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.40 — The renderer's law",
+    stem: "<p><code>-(2 ^ 2)</code> renders as <code>-2 ^ 2</code>, without its parentheses. Is the round trip broken?</p>",
+    options: [
+      { t: "No. The law is about <em>trees</em>: the string changed and the tree did not, because §15 already makes those two spellings the same tree.", ok: true,
+        why: "§40. <code>render</code> is not required to be the identity on strings — it is required to be the identity on trees, and the parentheses it dropped were redundant." },
+      { t: "Yes — a round trip must recover the source string.", ok: false,
+        why: "§4: three strings collapse onto one tree, so no renderer can recover which one. Requiring it would be requiring the impossible." },
+      { t: "Yes, because dropping parentheses can change grouping.", ok: false,
+        why: "It can, which is why the renderer knows the grammar. Here it does not: §40 re-parses all fourteen cases and every tree comes back identical." },
+      { t: "No, because the two are different trees that happen to evaluate alike.", ok: false,
+        why: "They are the <em>same</em> tree, which is why the round trip closes. §15." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.40 — The one case that does not close",
+    stem: "<p><code>Lit(-0.0)</code> renders as <code>\"-0.0\"</code>. What does that string parse back to?</p>",
+    options: [
+      { t: "<code>Neg(Lit(0.0))</code> — so the law has to be stated modulo <code>simplify</code>.", ok: true,
+        why: "§40. The parser cannot produce a negative literal: there is no such token, only a <code>Neg</code> applied to <code>0.0</code>. And <code>simplify</code> folds it straight back, which is how the law is rescued." },
+      { t: "<code>Lit(-0.0)</code> — the law holds exactly.", ok: false,
+        why: "§40 measured it: equal as ASTs is <code>false</code>, equal after <code>simplify</code> is <code>true</code>. The distinction is the whole point of the row." },
+      { t: "Nothing — the renderer prints <code>\"0\"</code> and the sign is lost.", ok: false,
+        why: "That is the <em>defect</em> §40 warns against: <code>v.toLong</code> erases the sign. The renderer is required to print it." },
+      { t: "It is a parse error, since <code>-0.0</code> has two leading symbols.", ok: false,
+        why: "<code>-</code> in operand position is unary minus (§15), and <code>0.0</code> is a number. The string parses fine." }
+    ]
+  },
+  {
+    tier: "medium", part: "VII", src: "Part VII.41 — The system's ceiling",
+    stem: "<p>What is the expression engine's real stack ceiling?</p>",
+    options: [
+      { t: "The minimum over every stage — the parser's, on chained unary minus — and a claim of \"zero stack overflow risk\" that omits it is false.", ok: true,
+        why: "§41. Two of the six traversals are not stack-safe, both deliberately, and the difference between a deliberate limit and a forgotten one is whether the number is written down." },
+      { t: "<code>eval</code>'s, since <code>eval</code> is the last stage and the one that produces the answer.", ok: false,
+        why: "<code>eval</code> is the stage with <em>no</em> ceiling, tested to ten million. §41 — the limit is upstream of it, in the stage that builds the tree." },
+      { t: "There is none: <code>eval</code> survives ten million nodes.", ok: false,
+        why: "That is the claim §41 exists to refute. Nothing reaches <code>eval</code> that the parser could not build." },
+      { t: "<code>render</code>'s, since it is the smallest number in §24's table.", ok: false,
+        why: "§41's table puts the parser's worst nesting below it — and <code>render</code> is optional to the pipeline while parsing is not." }
+    ]
+  },
+  {
+    tier: "hard", part: "VII", src: "Part VII.41 — A number that moves",
+    stem: "<p>The same <code>evalNaive</code> ceiling measured 24,673 alone and 3,871 during a full <code>sbt test</code>, with no code change. What happened?</p>",
+    options: [
+      { t: "sbt runs test classes in parallel inside one JVM, so the second search shared its machine with four other suites. It measured the contention.", ok: true,
+        why: "§41, and it is why §E asks for the <em>conditions</em> beside every number. Module 3's Pattern 13, with a second cause added." },
+      { t: "The code changed between the two runs.", ok: false,
+        why: "§41 states it did not, and the isolated figure reproduces across JVM launches to four digits." },
+      { t: "The JIT deoptimised because the full run exercised more branches.", ok: false,
+        why: "Deoptimisation would change frame size by a factor of about 2.5 (Module 3 §23), not by 6.4 — and would not explain the isolated run being stable." },
+      { t: "The heap filled, so the collector triggered the overflow earlier.", ok: false,
+        why: "A full heap raises <code>OutOfMemoryError</code>, not <code>StackOverflowError</code>. Module 1 §4 — the two memories are separate and the flags that size them are different." }
+    ]
+  },
+  {
+    tier: "medium", part: "VIII", src: "Part VIII.42 — scalac does this",
+    stem: "<p><code>javap -c</code> on <code>a + b * c</code> over three <code>Int</code> parameters. What comes out?</p>",
+    options: [
+      { t: "<code>iload_1 iload_2 iload_3 imul iadd ireturn</code> — §26's trace, with <code>iload</code> for <code>Push</code> and <code>imul</code>/<code>iadd</code> for <code>Combine</code>.", ok: true,
+        why: "§42. The correspondence is not an analogy: JVM bytecode <em>is</em> a stack machine program, and the evaluator you write is an interpreter for a five-operator language." },
+      { t: "<code>bipush 14 / ireturn</code>.", ok: false,
+        why: "That is the same method written with <em>literals</em> — <code>2 + 3 * 4</code> — where the compiler had already run §30's constant folding. §42 shows both." },
+      { t: "A sequence of register moves, since the JVM is a register machine.", ok: false,
+        why: "It is a stack machine. JVM Specification §2.6.2, and §42." },
+      { t: "A call to <code>Math.multiplyExact</code>.", ok: false,
+        why: "That is an explicit library call with overflow checking. Plain <code>*</code> on <code>Int</code> compiles to <code>imul</code>, which wraps." }
+    ]
+  },
+  {
+    tier: "easy", part: "VIII", src: "Part VIII.43 — Query planners",
+    stem: "<p>Spark's Catalyst optimiser has a rule called <code>ConstantFolding</code>. What is its relationship to §30?</p>",
+    options: [
+      { t: "The same bottom-up rewrite on a bigger tree, with <code>NULL</code> playing the part <code>NaN</code> plays here.", ok: true,
+        why: "§43. Same traversal, same fixed-point argument, same requirement that each rewrite be provably value-preserving — and the same failure mode when a rule is wrong at the bottom value." },
+      { t: "A run-time cache of subexpressions already computed.", ok: false,
+        why: "Folding happens before execution and removes nodes from the plan. Caching is a different mechanism with a different failure mode." },
+      { t: "Unrelated: SQL planners work on relations rather than trees.", ok: false,
+        why: "A query plan <em>is</em> a tree, and §43 names three Catalyst rules that are §32's rules in another vocabulary." },
+      { t: "The same thing as <code>-ffast-math</code>.", ok: false,
+        why: "That is §44 and §35 — the opt-in set of rewrites that are <em>not</em> value-preserving. Constant folding is in the sound set." }
+    ]
+  },
+  {
+    tier: "hard", part: "VIII", src: "Part VIII.44 — -ffast-math",
+    stem: "<p><code>(0.1 + 0.2) + 0.3</code> and <code>0.1 + (0.2 + 0.3)</code>. What do they give?</p>",
+    options: [
+      { t: "<code>0.6000000000000001</code> and <code>0.6</code> — floating-point addition is not associative, which is why re-associating a reduction changes the total.", ok: true,
+        why: "§44. Compilers vectorise reductions by re-associating them, so a summation loop compiled with <code>-ffast-math</code> gives a different total — and neither total is \"wrong\"; they are sums in different orders." },
+      { t: "Both <code>0.6</code>; the difference is only in how they print.", ok: false,
+        why: "§44 has both values. <code>0.6000000000000001</code> and <code>0.6</code> are different <code>Double</code>s, seventeen digits apart at the last bit." },
+      { t: "Both <code>0.6000000000000001</code>.", ok: false,
+        why: "The right-grouped one is exactly <code>0.6</code>. Which grouping loses the bit depends on the operands, which is the problem." },
+      { t: "They differ, and Java's JIT is free to re-associate them anyway.", ok: false,
+        why: "§44 — Java specifies floating-point evaluation order and the JIT may <em>not</em> re-associate it. That is why <code>strictfp</code> became redundant in Java 17." }
+    ]
+  },
+  {
+    tier: "easy", part: "VIII", src: "Part VIII.45 — Explicit stacks in production",
+    stem: "<p>Why does CPython evaluate expressions with a stack machine over bytecode?</p>",
+    options: [
+      { t: "The same reason §26 does: its recursion limit is about a thousand frames and expressions nest deeper than that in generated code.", ok: true,
+        why: "§45. V8, the CLR and the BEAM all make the same choice, and <code>scala.concurrent.Future</code>'s callback chain is §23's technique applied to asynchronous work." },
+      { t: "Because Python has no call stack.", ok: false,
+        why: "It has one — the recursion limit is a limit <em>on</em> it. §45." },
+      { t: "Because a stack machine is faster than recursion.", ok: false,
+        why: "§45 gives a depth argument, not a speed one, and §29 measures the machine costing more rather than less." },
+      { t: "Because Python is dynamically typed.", ok: false,
+        why: "Unrelated: the CLR and the JVM are statically typed and use stack machines too. §42." }
+    ]
+  },
+  {
+    tier: "medium", part: "IX", src: "Part IX.46 — enum and exhaustivity",
+    stem: "<p>You add a fifth case to <code>Expr</code>. What happens to the existing <code>match</code>es?</p>",
+    options: [
+      { t: "Every one that does not handle it becomes a warning — and under this repository's <code>-Wall -Werror</code>, a compile error.", ok: true,
+        why: "§46. Which is why <code>case _ =></code> is a defect in this codebase rather than a style preference: a catch-all silences the checker on the one edit where it was about to earn its keep." },
+      { t: "Nothing — Scala 3 <code>enum</code>s are open for extension.", ok: false,
+        why: "They are closed sums, and closing them is what makes the compiler a participant. §46." },
+      { t: "They fail at run time with a <code>MatchError</code> and nothing earlier.", ok: false,
+        why: "That is what happens with a <code>Char</code> or an open hierarchy. §6 and §46 — the whole reason tokens are an <code>enum</code> is to move this to compile time." },
+      { t: "Only binary compatibility breaks.", ok: false,
+        why: "Binary compatibility is a separate concern and is not what §46 is about." }
+    ]
+  },
+  {
+    tier: "medium", part: "IX", src: "Part IX.47 — Either as the error channel",
+    stem: "<p>In <code>tokenize(input).left.map(Lexical.apply).flatMap(...)</code>, what is <code>left.map</code> doing?</p>",
+    options: [
+      { t: "Translating each pass's error vocabulary at the boundary, so the three types do not leak into one another.", ok: true,
+        why: "§47. <code>flatMap</code> gives the short-circuit for free; <code>left.map</code> is what makes the composition type-check without the error becoming a union of three unrelated enums." },
+      { t: "Mapping the success value.", ok: false,
+        why: "That is plain <code>map</code>. <code>left.map</code> touches only the failure side." },
+      { t: "Nothing semantically — it is required for <code>flatMap</code> to compile and could be a cast.", ok: false,
+        why: "It is a real conversion into <code>EngineError</code>, and the alternative is an inferred union type. The test harness's <code>ast</code> helper is written as nested matches specifically to avoid one." },
+      { t: "Discarding the error so the pipeline can continue.", ok: false,
+        why: "Nothing is discarded: the first <code>Left</code> is returned and no later pass runs. §28 and §47." }
+    ]
+  },
+  {
+    tier: "easy", part: "IX", src: "Part IX.48 — What @tailrec is for",
+    stem: "<p>What does <code>@tailrec</code> actually do?</p>",
+    options: [
+      { t: "Nothing to the code — it makes the compiler <b>reject</b> a method that is not tail recursive.", ok: true,
+        why: "§48 and Module 3 §7. A machine loop that accidentally grows a non-tail call fails to compile instead of failing at a million nodes in production." },
+      { t: "It rewrites the method into a loop, which the compiler would not otherwise do.", ok: false,
+        why: "The compiler performs the rewrite whether or not the annotation is present. The annotation is a check, not a request." },
+      { t: "It is advisory, and compilation proceeds either way.", ok: false,
+        why: "It is an error, and that is its entire value. An advisory annotation would provide no guarantee at all." },
+      { t: "It increases the stack size available to that method.", ok: false,
+        why: "Stack size is per thread and fixed at creation. Module 3 §3 — no annotation can change it." }
+    ]
+  },
+  {
+    tier: "hard", part: "IX", src: "Part IX.49 — The pattern that looks right",
+    stem: "<p><code>case Bin(Op.Add, x, Lit(0.0)) => x</code>. What is wrong with it?</p>",
+    options: [
+      { t: "It also matches a node holding <code>-0.0</code>, because pattern matching on a literal uses <code>==</code> and <code>-0.0 == 0.0</code> is <code>true</code>.", ok: true,
+        why: "§49. The rule intended for the unsound case fires on the sound one and vice versa, and §36's whole argument evaporates in one line of pattern syntax. The guard has to read the sign bit." },
+      { t: "It matches only <code>+0.0</code>, because Scala compares literal patterns by identity.", ok: false,
+        why: "Literal patterns compare with <code>==</code>. §49 — which is exactly the operator §38 showed to be blind here." },
+      { t: "It does not compile: <code>Double</code> literals are not valid patterns.", ok: false,
+        why: "They are perfectly valid, which is what makes this silent rather than loud." },
+      { t: "It matches neither zero, so a guard is needed for both.", ok: false,
+        why: "It matches both, which is the problem. One guard, reading <code>doubleToLongBits</code>, is what distinguishes them." }
+    ]
+  },
+];
+
+// Every question must offer exactly one correct option. A violation is an
+// authoring error, and it is louder as a console failure than as a silently
+// repaired quiz that then teaches the wrong thing.
+QUESTIONS.forEach((q, i) => {
+  const n = q.options.filter(o => o.ok).length;
+  if (n !== 1) console.error(`question ${i + 1} (${q.src}) has ${n} correct options`);
+});
+
+const list  = document.getElementById("list");
+const empty = document.getElementById("empty");
+const score = document.getElementById("score");
+let tier = "all", part = "all";
+let answered = 0, correct = 0;
+
+const shown = () => QUESTIONS.filter(q =>
+  (tier === "all" || q.tier === tier) && (part === "all" || q.part === part));
+
+function render() {
+  list.textContent = "";
+  const qs = shown();
+  empty.hidden = qs.length > 0;
+
+  qs.forEach((q, idx) => {
+    const card = document.createElement("article");
+    card.className = "q";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.innerHTML = `<span class="tier ${q.tier}">${q.tier}</span><span class="src">${q.src}</span>`;
+    card.appendChild(meta);
+
+    const stem = document.createElement("div");
+    stem.className = "stem";
+    stem.innerHTML = `<p><b>${idx + 1}.</b></p>` + q.stem;
+    card.appendChild(stem);
+
+    const letters = ["A", "B", "C", "D"];
+    const order = q.options.map((_, i) => i);
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = (idx * 7 + i * 13 + q.stem.length) % (i + 1);
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+
+    let done = false;
+    const buttons = [];
+    order.forEach((oi, pos) => {
+      const o = q.options[oi];
+      const b = document.createElement("button");
+      b.className = "opt";
+      b.type = "button";
+      b.innerHTML = `<span class="k">${letters[pos]}</span>${o.t}`;
+      buttons.push({ b, o });
+      b.addEventListener("click", () => {
+        if (done) return;
+        done = true;
+        answered++;
+        if (o.ok) correct++;
+        updateScore();
+        buttons.forEach(x => { x.b.disabled = true; });
+        b.classList.add(o.ok ? "correct" : "wrong");
+        const why = document.createElement("div");
+        why.className = "why " + (o.ok ? "correct" : "wrong");
+        why.innerHTML = (o.ok ? "<b>Correct.</b> " : "<b>No.</b> ") + o.why;
+        b.insertAdjacentElement("afterend", why);
+        if (!o.ok) {
+          const right = buttons.find(x => x.o.ok);
+          right.b.classList.add("correct");
+          const rw = document.createElement("div");
+          rw.className = "why correct";
+          rw.innerHTML = "<b>The answer.</b> " + right.o.why;
+          right.b.insertAdjacentElement("afterend", rw);
+        }
+      });
+      card.appendChild(b);
+    });
+
+    list.appendChild(card);
+  });
+  updateScore();
+}
+
+function updateScore() {
+  score.innerHTML = `answered <b>${answered}</b>/<b>${shown().length}</b> · correct <b>${correct}</b>`;
+}
+
+function wire(attr, set) {
+  document.querySelectorAll(`button.f[data-${attr}]`).forEach(b => {
+    b.addEventListener("click", () => {
+      document.querySelectorAll(`button.f[data-${attr}]`).forEach(x =>
+        x.setAttribute("aria-pressed", String(x === b)));
+      set(b.dataset[attr]);
+      answered = 0; correct = 0;
+      render();
+    });
+  });
+}
+wire("tier", v => { tier = v; });
+wire("part", v => { part = v; });
+
+document.getElementById("reset").addEventListener("click", () => {
+  answered = 0; correct = 0; render();
+});
+
+render();
+</script>
+</body>
+</html>

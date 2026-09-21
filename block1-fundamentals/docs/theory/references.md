@@ -198,3 +198,83 @@ Search these exact phrases; the speakers matter more than the venue:
   the arithmetic of §25
 - *continuation passing style* — the generalisation of the accumulator, and
   where Block 3 goes next
+
+---
+
+## Mini-Project 1 — Algebraic Expression Engine & AST
+
+The capstone reads across two literatures that rarely sit on the same shelf:
+compiler front ends, and floating-point arithmetic. The second is the one that
+produces the finding — guide §36 — and it is the one you are most likely to skip.
+
+### Primary Specifications
+
+- **[core]** *IEEE 754-2019*, or Goldberg's paper below if you cannot get it.
+  §6.3 is signed zero: two pages, and they are the ground truth for why the
+  additive identity of `Double` is `-0.0`.
+- **[core]** Lindholm et al. — *The Java Virtual Machine Specification, Java SE
+  21 Edition*, **§2.6.2 (Operand Stacks)** and **§3.2**. Three pages. The
+  machine in the guide's §26 is a re-derivation of this one, and §42 has the
+  `javap` output that shows the correspondence instruction by instruction.
+- **`java.lang.Math.pow`'s Javadoc.** Read the full list of special cases — it
+  is about thirty lines and it settles, by specification rather than by
+  experiment, why `x ^ 0 -> 1` is sound where `x * 0 -> 0` is not (§37).
+- **`java.lang.Double.doubleToLongBits` against `doubleToRawLongBits`.** Two
+  paragraphs, one distinction, and guide §38 is what happens when you pick the
+  wrong one.
+
+### Books
+
+- **[core]** Nystrom, Bob — *Crafting Interpreters* (free, online). **Ch. 6
+  "Parsing Expressions"** is this project's §12 and §13 done at length, and
+  **Ch. 17 "Compiling Expressions"** is §16. The clearest treatment of
+  recursive descent in print, and it is free.
+- Aho, Lam, Sethi, Ullman — *Compilers: Principles, Techniques and Tools*
+  ("the Dragon Book"), 2nd ed. **Ch. 2** for the whole pipeline in miniature and
+  **§4.2–4.4** for the grammar formalism the guide's §5 uses informally. Not a
+  cover-to-cover read.
+- Baader, Nipkow — *Term Rewriting and All That*. **Ch. 1–2**: normal forms,
+  termination and confluence. Guide §33 argues informally that one bottom-up
+  pass reaches a fixed point; this is that argument made properly, and it is
+  what you would need to state the claim for a rule set you had not hand-checked.
+- Muchnick — *Advanced Compiler Design and Implementation*, **Ch. 12** on
+  algebraic simplification. Where the industrial rule sets live, including the
+  ones guarded by a floating-point flag.
+
+### Papers
+
+- **[core]** Goldberg, David — *What Every Computer Scientist Should Know About
+  Floating-Point Arithmetic* (1991). **§1 and §2.** If you read one thing from
+  this list, this. The signed-zero section is the direct source of §36.
+- **[core]** Pratt, Vaughan — *Top Down Operator Precedence* (1973). Nine pages,
+  and the technique of guide §16 in its original form. Still the standard answer
+  for hand-written expression parsers fifty years later.
+- Kahan, William — *How Java's Floating-Point Hurts Everyone Everywhere* (1998).
+  The case against the language's floating-point decisions, from the man who
+  designed IEEE-754. Read it for the argument about what a compiler may and may
+  not reassociate — it is §44 from the other side.
+- Monniaux, David — *The Pitfalls of Verifying Floating-Point Computations*
+  (2008). What goes wrong when a rewrite is assumed sound. Longer than you need;
+  §3 alone is worth it.
+
+### Source To Read
+
+- **`dotty.tools.dotc.parsing.Parsers`.** `scalac`'s own expression parser, with
+  the same shape as §12's and a grammar two orders of magnitude larger. Search
+  for `infixOps` — that is `climb`.
+- **`scala.collection.immutable.List.foldRight`.** Already read in Module 3, and
+  worth re-reading here: it is the same "explicit structure instead of frames"
+  move that §21 and §26 make, at its smallest.
+- **Spark's `org.apache.spark.sql.catalyst.optimizer` — `ConstantFolding` and
+  `NullPropagation`.** Guide §43. The rule set of §32 in production, with `NULL`
+  playing the part `NaN` plays here.
+
+### Terms Worth A Video Rather Than A Chapter
+
+- *recursive descent parser* — for watching the call stack descend and return,
+  which is the one thing prose cannot show
+- *Pratt parser* / *precedence climbing* — for the `+ 1` of §16 being the whole
+  associativity mechanism
+- *abstract syntax tree* — for the collapse of §4, three strings onto one tree
+- *signed zero IEEE 754* — short, and it makes §36 stop feeling like a trick
+- *stack machine bytecode* — for §26 and §42 being the same picture
