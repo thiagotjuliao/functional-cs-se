@@ -1529,11 +1529,17 @@ the same eleven `NotImplementedError`s from the two exercises still unwritten.
 
 ---
 
-## 18. An invariant measured at the wrong node
+## 18. An invariant measured at the wrong position
 
 A guard reads the right quantity from the wrong place. `balanceFactor` is total
 and returns an `Int` for any tree, so every misplacement type-checks and most of
 them still compile to a plausible-looking condition.
+
+> Originally titled *"at the wrong node"* and written against `Avl.rebalance`.
+> Mini-Project 1 produced four occurrences of the same shape with no tree
+> anywhere, so the title was widened: a node is one kind of position, and an
+> index into a string is another. See **18, continued** at the foot of this
+> file for occurrences 4 to 7.
 
 Three occurrences, all in `Avl.rebalance`, all within one sitting:
 
@@ -1700,3 +1706,161 @@ the first instinct "flaky test" rather than "unstated dependency". Occurrence 2
 is worse: it never failed at all. Module 2's measurements read 24 bytes per node
 and matched `Footprint` exactly, for four exercises, while depending on an
 optimisation that was never mentioned in the model.
+
+---
+
+## Mini-Project 1 — Algebraic Expression Engine & AST
+
+The capstone's first stage produced three patterns, one of which is an
+occurrence of 18 seen outside a tree. They are grouped here only so the reading
+order matches the curriculum; the entries themselves stay organised by pattern,
+as the file requires.
+
+---
+
+## 21. Two enumerations of one set, neither derived from the other
+
+The same finite set is written down twice, in two shapes, because the two uses
+want different types: once as a predicate (`Char => Boolean`, for a guard) and
+once as a converter (a `match`, to build a value). Both are correct on the day
+they are written. Nothing makes them stay correct together, and nothing reports
+it when they stop.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Lexer`, S1 | `isSymbol` with seven `\|\|` comparisons, beside a `match` with seven `case`s | one enumeration, with the other derived from it |
+
+Applied to that one occurrence, the repair is two lines:
+
+```scala
+private def symbolOf(c: Char): Option[Token]      // the only enumeration
+private def isSymbol(c: Char): Boolean = symbolOf(c).isDefined
+```
+
+**The rule.** When a set appears in two shapes, one of them is the definition
+and the other is a projection of it. Write the projection as a call, never as a
+second list. Checkable by eye: count how many places name the elements. More
+than one, and the second is a copy waiting to drift.
+
+**Why the compiler and the test suite do not catch it.** Three reasons, and the
+third is why this entry exists rather than pattern 15:
+
+  - The scrutinee is `Char`, not a closed ADT, so a `match` over it **must**
+    carry a default. There is no exhaustivity check to lose, which is what
+    separates this from pattern 15 — there the wildcard *switches off* a check
+    that existed; here no check ever existed.
+  - The two lists live in different syntactic shapes. `c == '+' || c == '-'` and
+    `case '+' => ...` do not look like duplication, and no linter pairs them.
+  - **The divergence produces a well-formed wrong answer, one stage
+    downstream.** Adding `%` to `isSymbol` alone makes `"1 % 2"` lex to
+    `Num(1.0) :: Num(2.0)` — a `Right`, not a `Left` — and the failure first
+    appears in the *parser*, as `TrailingInput(Num(2.0), 1)`. Challenge 46
+    carries the trace. A lexer test would have to assert the exact token list
+    for that exact character to see it at all.
+
+---
+
+## 22. A recursive call that does not advance
+
+A branch recurses with the same position it was given. Under `@tailrec` that
+compiles to a `goto` back to the top with unchanged arguments — a `while(true)`
+with no loop keyword in sight.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 1 | `Lexer`, S1, symbol branch | `case '+' => loop(endSep, acc.prepended(Plus))` and six siblings | `loop(endSep + 1, ...)` — `endSep` is the index **of** the symbol |
+| 2 | `Lexer`, S1, symbol default | `case _ => loop(endSep, acc)` | a `Left`, since a character reaching it is one no branch can classify |
+| 3 | `Lexer`, S1, an earlier draft | `else loop(s4, at, acc)` after four failed spans | same |
+
+Occurrence 1 hung the suite on the first character of the first test.
+
+**The rule.** Every recursive call in a scanning loop must pass a position
+strictly greater than the one it received. Read the call sites as a column and
+check that each one contains an increment or a scan result; a bare parameter
+name repeated from the signature is the defect. Where a branch genuinely has
+nothing to advance past, it is not a loop iteration — it is a result, and it
+should return one.
+
+**Why the compiler and the test suite do not catch it.** The first reason is the
+transferable one:
+
+  - **`@tailrec` removes the cheapest symptom.** A non-progressing recursion
+    *without* the annotation raises `StackOverflowError` in milliseconds, with a
+    stack trace naming the line. With it, the same defect runs forever, prints
+    nothing, names nothing, and costs a full test timeout on every run:
+
+    ```text
+                          without @tailrec             with @tailrec
+    non-progressing   StackOverflowError in ms,    runs forever, no output,
+    recursive call    stack trace names the line   no location, timeout per run
+    ```
+
+    The annotation that protects the stack is the one that makes this class of
+    defect harder to locate. Both properties are worth having; only one of them
+    is advertised.
+  - The call type-checks, satisfies `@tailrec`, and passes `-Wall -Werror`. The
+    compiler has no notion of "progress".
+  - The repair that *does* terminate can be worse. Occurrence 2 was first fixed
+    to `loop(endSep + 1, acc)`, which drops the character and continues: the
+    suite then goes **green** on an input the lexer silently mangled. Challenge
+    45 is the argument that a hang is more discoverable than a silent discard,
+    and that both are the wrong answer.
+
+---
+
+## 18, continued — the pattern outside a tree
+
+Pattern 18 was written against `Avl.rebalance` and titled *"An invariant
+measured at the wrong node"*. S1 produced four occurrences of the same shape
+with no tree anywhere, so the title now understates it: the invariant is read
+from the wrong **position**, and a node is only one kind of position.
+
+The mechanism is identical. `balanceFactor` is total and returns an `Int` for
+any tree; `spanFrom` is total and returns an `Int` for any index. Both make
+every misplacement type-check and compile to a plausible-looking condition.
+
+| # | Where | What was written | What was meant |
+| :-- | :--- | :--- | :--- |
+| 4 | `Lexer`, S1 | `if isInvalid(input(at))` | `input(endSep)` — `at` may be a separator; the token starts at `endSep` |
+| 5 | `Lexer`, S1 | `if at == input.size` before the separator skip | after it, against `endSep`, which is the position the skip leaves |
+| 6 | `Lexer`, S1 | `if endNum != endSep`, where `endNum = spanFrom(input, endInv)(...)` | compare against `endInv`, the index the scan started from |
+| 7 | `Lexer`, S1 | `MalformedNumber(num, endSep)` | `endInv` — the run started there, not at `endSep` |
+
+Occurrences 4 to 7 share one cause, and it is worth naming because it survived
+three rewrites of the same function: **one iteration of the loop did two jobs**
+— skip separators, then lex a token — so the loop carried up to five names for
+one cursor (`at`, `endSep`, `endInv`, `endNum`, `endId`), and every guard that
+belongs at *the token start* was written against whichever of them was nearest.
+Occurrence 5 is the sharpest: it reads a position the operation two lines below
+has already moved past.
+
+Occurrence 6 was reachable and measured. With a character skipped between
+`endSep` and `endInv`, the comparison is true even though no number was found:
+
+```text
+"1 $ 2", at = 1
+  endSep = 2        the separator skip
+  endInv = 3        the invalid-character skip
+  endNum = 3        no number at 3
+  endNum != endSep  ->  3 != 2  ->  true, with no number found
+  num = input.substring(3, 3) = ""
+
+obtained    Left(MalformedNumber("", 2))
+expected    Left(UnexpectedChar('$', 2))
+```
+
+The error type is wrong, the text is empty, and only the index is right — by
+accident.
+
+**The rule, restated to cover both halves.** A guard must read its quantity from
+the position the operation it guards will actually use. Checkable by eye: for
+every `spanFrom(_, X)`, the comparison that consumes its result must mention
+`X`. Where scan and comparison name different positions, one of them is wrong.
+
+**Why the build does not catch these.** The same four reasons as the AVL
+occurrences, with one addition specific to indices: every position in the loop
+has the same type, `Int`, so nothing distinguishes "index into the input",
+"index where a run began" and "index where a run ended". Pattern 7 — *a unit
+declared in the name and nowhere the machine reads* — is the neighbouring
+entry, and these are units of a different kind. Occurrence 6 compiled, ran, and
+returned a `Left` of the wrong constructor.

@@ -14,7 +14,7 @@ this table is how a bare number is resolved to a file.
 | 1 | [JVM Semantics & Immutability Allocation Stress](challenge-log/b1-m1.md) | 1–15 | 15 |
 | 2 | [Manual Persistent Data Structures](challenge-log/b1-m2.md) | 16–28 | 13 |
 | 3 | [Stack Optimization & Control Flow Elimination](challenge-log/b1-m3.md) | 29–44 | 16 |
-| P1 | [Algebraic Expression Engine & AST](challenge-log/b1-p1.md) | 45– | *pending* |
+| P1 | [Algebraic Expression Engine & AST](challenge-log/b1-p1.md) | 45–47 | 3, S1 only |
 
 Every number in them was executed and verified before being written —
 bytecode read with `javap -c -p`, allocation taken from the `AllocationProbe`
