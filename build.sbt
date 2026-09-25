@@ -5,14 +5,9 @@ val munit = "org.scalameta" %% "munit" % "1.3.6" % Test
 // Compiler contract for the whole curriculum.
 // The compiler is the first line of proof: every latent bug it can reject
 // statically is a bug that never reaches a test, a benchmark or production.
-val strictWarnings = Seq(
-  "-source:future", // opt into the next-generation Scala 3 semantics
-  "-explain", // print the full inference/derivation trace on error
-  "-deprecation",
-  "-feature",
-  "-unchecked",
-  "-Wall" // every warning category the compiler knows about
-)
+// Names and descriptions of every flag: project/CompilerFlags.scala.
+val strictWarnings =
+  CompilerFlags.base ++ Seq(CompilerFlags.sourceFuture, CompilerFlags.explain, CompilerFlags.all)
 
 // Warnings are errors in production code only. Test sources stay permissive so
 // that exploratory spikes and deliberate antipattern demonstrations compile.
@@ -24,7 +19,7 @@ val strictWarnings = Seq(
 // looks correct, is silently ignored, and leaks -Werror into the test sources.
 lazy val commonSettings = Seq(
   libraryDependencies += munit,
-  Compile / scalacOptions := strictWarnings :+ "-Werror",
+  Compile / scalacOptions := strictWarnings :+ CompilerFlags.fatalWarnings,
   Test / scalacOptions := strictWarnings
 )
 
