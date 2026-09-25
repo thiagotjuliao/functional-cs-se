@@ -44,7 +44,12 @@ lazy val fundamentals = (project in file("block1-fundamentals"))
     // Allocation and JIT experiments must not observe sbt's own JVM: fork so
     // that the measurements describe the code under test and nothing else.
     Test / fork := true,
-    Test / javaOptions ++= Seq("-Xmx2g", "-XX:+UseG1GC")
+    Test / javaOptions ++= Seq("-Xmx2g", "-XX:+UseG1GC"),
+    // ...and run the suites one at a time inside that JVM. sbt 2 runs them in
+    // parallel by default, and concurrent suites compete for the JIT: warm-up
+    // stops being enough, and Exercise5EscapeSpec measures an allocation that
+    // escape analysis would have removed.
+    Test / testForkedParallel := false
   )
 
 lazy val categoryTypes = (project in file("block2-category-types"))
@@ -72,5 +77,6 @@ lazy val annex = (project in file("annex-foundations"))
     // intrinsics that replace them. That comparison is only meaningful on a JVM
     // whose flags the suite controls, so fork as Block 1 does.
     Test / fork := true,
-    Test / javaOptions ++= Seq("-Xmx2g", "-XX:+UseG1GC")
+    Test / javaOptions ++= Seq("-Xmx2g", "-XX:+UseG1GC"),
+    Test / testForkedParallel := false
   )

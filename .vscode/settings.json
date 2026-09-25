@@ -1,140 +1,133 @@
 {
-  // ---------------------------------------------------------------------------
-  // Build noise
-  // ---------------------------------------------------------------------------
-  "files.watcherExclude": {
-    "**/target/**": true
-  },
+  // ===========================================================================
+  // Common — the same in every project, whatever the language
+  // ===========================================================================
 
-  // ---------------------------------------------------------------------------
-  // Build import
-  //
-  // Metals answers nothing about a file until it has imported the build and
-  // connected to a build server. At the default ("off") it asks permission
-  // first, through a prompt that is easy to dismiss or miss entirely. A
-  // workspace left in that state does not import at all: every open file only
-  // logs `no build target found ... using scala-library version: 3.3.8` — the
-  // compiler embedded in Metals, not the version this build declares — and the
-  // editor sits waiting on an answer that never arrives. From the outside that
-  // is indistinguishable from an import that never finishes.
-  //
-  // "all" takes the prompt out of the loop. The cost is an `sbt bloopInstall`
-  // whenever build.sbt or plugins.sbt changes, which is work the workspace owes
-  // anyway before it can type-check a single line.
-  // ---------------------------------------------------------------------------
-  "metals.autoImportBuilds": "all",
+  // Mirrors the formatters' column limit (scalafmt maxColumn, fourmolu
+  // column-limit), so the ruler and the formatter agree on where a line ends.
+  "editor.rulers": [100],
 
-  // ---------------------------------------------------------------------------
-  // Documentation rendering
-  //
-  // VS Code cannot render a doc comment in place the way IntelliJ's
-  // "Render Documentation Comments" does — the editor buffer is always plain
-  // text. The two settings below buy back most of what that feature gives:
-  //
-  //   * a sticky hover, so the Metals-rendered Scaladoc stays open long enough
-  //     to read and scroll instead of vanishing on mouse-out (Ctrl+K Ctrl+I
-  //     opens it from the keyboard, without the mouse);
-  //   * the Docs View panel (see extensions.json), which keeps that same
-  //     rendered Markdown permanently visible in the sidebar and follows the
-  //     cursor. That is the closest structural analogue to IntelliJ.
-  // ---------------------------------------------------------------------------
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  "editor.showFoldingControls": "always",
+  "editor.foldingHighlight": true,
+
+  // A sticky hover keeps rendered documentation open long enough to read
+  // instead of vanishing on mouse-out (Ctrl+K Ctrl+I opens it from the
+  // keyboard), and the Docs View panel keeps the same text permanently in the
+  // sidebar, following the cursor.
   "editor.hover.sticky": true,
   "editor.hover.delay": 250,
   "docsView.documentationView.updateMode": "live",
 
-  // ---------------------------------------------------------------------------
-  // Comments as a distinct visual layer
-  //
-  // Italic separates prose from code at a glance without relying on colour
-  // alone, which is what makes a long Scaladoc block readable inside a file of
-  // dense type signatures.
-  // ---------------------------------------------------------------------------
-  "editor.tokenColorCustomizations": {
-    "comments": {
-      "fontStyle": "italic"
-    }
-  },
-
-  // Folding controls stay visible so a `/** ... */` block can be collapsed when
-  // the file is being read for its signatures rather than its prose.
-  "editor.showFoldingControls": "always",
-  "editor.foldingHighlight": true,
-
-  // ---------------------------------------------------------------------------
-  // Layout — mirrors .scalafmt.conf (maxColumn = 100)
-  // ---------------------------------------------------------------------------
-  "editor.rulers": [100],
-
-  // ---------------------------------------------------------------------------
-  // Formatting — scoped to Scala on purpose
-  //
-  // Metals formats through the workspace's own .scalafmt.conf, so save-time
-  // formatting produces exactly the normal form `sbt scalafmtAll` produces.
-  // No drift between what the editor writes and what the checklist's
-  // `scalafmtCheckAll` gate verifies.
-  //
-  // Deliberately NOT global. The theory guides under docs/theory are laid out
-  // by hand — aligned ```text blocks, tables, fixed line widths — and a
-  // Markdown formatter would reflow all of it.
-  // ---------------------------------------------------------------------------
-  "[scala]": {
-    "editor.defaultFormatter": "scalameta.metals",
-    "editor.formatOnSave": true
-  },
-
-  // Trailing whitespace is invisible while writing and turns into noise in
-  // every later diff. Markdown is exempt below: two trailing spaces are a hard
-  // line break there, so trimming them changes the rendered document.
-  "files.trimTrailingWhitespace": true,
-  "files.insertFinalNewline": true,
-
-  // ---------------------------------------------------------------------------
-  // Tabs — a click opens a file, it does not audition it
-  //
-  // By default a single click opens the file in a *preview tab*: italic title,
-  // one slot reused by the next thing clicked, so opening a second file closes
-  // the first. Keeping a file meant double-clicking it, or editing it, before
-  // the tab would stay.
-  //
-  // That default assumes browsing. The work here is cross-referencing — a
-  // theory guide beside the exercise it unlocks beside the spec that proves it
-  // — and under that default the third file evicts the first. Off, every click
-  // is an ordinary tab.
-  // ---------------------------------------------------------------------------
+  // A click opens a file, it does not audition it. Under the preview-tab
+  // default, opening a third file to cross-reference evicts the first.
   "workbench.editor.enablePreview": false,
 
   // ---------------------------------------------------------------------------
-  // Markdown opens rendered
+  // Comments
   //
-  // Note the collision: VS Code calls the *tab* behaviour above "preview" and
-  // the *rendered Markdown* below "preview" too. They are unrelated settings,
-  // and this file wants them in opposite directions — no italic tabs, yes
-  // rendered Markdown.
+  // Italic separates prose from code at a glance without relying on colour
+  // alone. Under Atom One Dark the theme's comment grey is also too dark on a
+  // dark background, so comments are green there — on *both* colouring layers:
+  // the TextMate grammar, and the semantic tokens a language server sends,
+  // which win over TextMate when both apply. Other themes keep their own
+  // colour and get only the italic.
+  // ---------------------------------------------------------------------------
+  "editor.tokenColorCustomizations": {
+    "comments": { "fontStyle": "italic" },
+    "[Atom One Dark]": { "comments": "#98C379" }
+  },
+  "editor.semanticTokenColorCustomizations": {
+    "[Atom One Dark]": {
+      "rules": { "comment": { "foreground": "#98C379", "italic": true } }
+    }
+  },
+
+  // Better Comments categories. `//` marks a comment whose text is itself a
+  // commented-out line — in these repositories usually a compiler message
+  // being quoted — so it is shown readable, not struck through.
+  "better-comments.tags": [
+    { "tag": "!", "color": "#FF2D00", "strikethrough": false, "underline": false, "backgroundColor": "transparent", "bold": false, "italic": false },
+    { "tag": "?", "color": "#3498DB", "strikethrough": false, "underline": false, "backgroundColor": "transparent", "bold": false, "italic": false },
+    { "tag": "//", "color": "#98C379", "strikethrough": false, "underline": false, "backgroundColor": "transparent", "bold": false, "italic": true },
+    { "tag": "todo", "color": "#FF8C00", "strikethrough": false, "underline": false, "backgroundColor": "transparent", "bold": false, "italic": false },
+    { "tag": "*", "color": "#98C379", "strikethrough": false, "underline": false, "backgroundColor": "transparent", "bold": false, "italic": false }
+  ],
+
+  // ---------------------------------------------------------------------------
+  // Diagnostics, shown inline (Error Lens)
   //
-  // Every Markdown file here is written to be read rendered: tables, aligned
-  // ```text blocks, checkbox lists, cross-document links. The editor
-  // association makes that the default for `.md` instead of something reached
-  // with Ctrl+K V after the fact.
+  // VS Code has no native way to print a diagnostic's text on its line — the
+  // built-in rendering is a squiggle plus a hover. Error Lens fills that gap.
+  // The delay keeps errors from a half-finished compile out of the margin:
+  // language servers that compile on save report per compile, not per
+  // keystroke. removeLinebreaks keeps multi-line messages ("Found: ...
+  // Required: ...") whole instead of cutting them at the first line.
+  // ---------------------------------------------------------------------------
+  "errorLens.enabledDiagnosticLevels": ["error", "warning"],
+  "errorLens.delay": 300,
+  "errorLens.removeLinebreaks": true,
+  "errorLens.messageMaxChars": 200,
+
+  // Tint only the message text, not the whole line: a full-width highlight
+  // competes with syntax colouring on the code actually being read.
+  "errorLens.messageBackgroundMode": "message",
+  "errorLens.fontStyleItalic": true,
+
+  // Error Lens contributes theme colour IDs rather than plain settings, so its
+  // palette goes here. The trailing "1a" is alpha: near-transparent
+  // backgrounds, since a solid block behind a message outshouts the code.
+  // editorError.foreground is VS Code's own squiggle, restated so the native
+  // underline and the inline text agree on one red.
+  "workbench.colorCustomizations": {
+    "errorLens.errorForeground": "#ff5370",
+    "errorLens.errorMessageBackground": "#ff53701a",
+    "errorLens.warningForeground": "#ffb62c",
+    "errorLens.warningMessageBackground": "#ffb62c1a",
+    "editorError.foreground": "#ff5370"
+  },
+
+  // ---------------------------------------------------------------------------
+  // Markdown
   //
-  // To edit one, reopen it as text: `Ctrl+Shift+P` → "Reopen Editor With..." →
-  // "Text Editor" (or right-click the file → "Open With..."). The `[markdown]`
-  // block below still governs that text view; it is not overridden, only
-  // bypassed while the rendered view is open.
+  // Every Markdown file is written to be read rendered. To edit one, reopen it
+  // as text: Ctrl+Shift+P → "Reopen Editor With..." → "Text Editor". It is laid
+  // out by hand, so no formatter touches it, and no suggestions pop up in prose.
   // ---------------------------------------------------------------------------
   "workbench.editorAssociations": {
     "*.md": "vscode.markdown.preview.editor"
   },
-
-  // ---------------------------------------------------------------------------
-  // Markdown as text, once reopened that way
-  // ---------------------------------------------------------------------------
   "[markdown]": {
     "files.trimTrailingWhitespace": false,
     "editor.wordWrap": "on",
-    "editor.quickSuggestions": {
-      "comments": "off",
-      "strings": "off",
-      "other": "off"
-    }
-  }
+    "editor.quickSuggestions": { "comments": "off", "strings": "off", "other": "off" }
+  },
+
+  // ===========================================================================
+  // Scala / sbt
+  // ===========================================================================
+
+  // Build output churns on every compile; watching it costs CPU for nothing.
+  "files.watcherExclude": {
+    "**/target/**": true,
+    "**/.bloop/**": true
+  },
+
+  // At the default ("off") Metals asks permission before importing the build,
+  // through a prompt that is easy to miss. A workspace left in that state never
+  // imports at all: every open file only logs `no build target found`, which
+  // from the outside looks exactly like an import that never finishes. "all"
+  // takes the prompt out of the loop.
+  "metals.autoImportBuilds": "all",
+
+  // Metals formats through the workspace's own .scalafmt.conf, so save-time
+  // formatting produces exactly what `sbt scalafmtAll` produces and what
+  // `scalafmtCheckAll` verifies. Scoped to Scala on purpose: Markdown here is
+  // laid out by hand.
+  "[scala]": {
+    "editor.defaultFormatter": "scalameta.metals",
+    "editor.formatOnSave": true
+  },
 }

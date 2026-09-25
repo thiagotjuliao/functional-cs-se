@@ -1,12 +1,3 @@
-# --- sbt / Scala build output ---
-target/
-project/target/
-project/project/
-.bloop/
-.bsp/
-.metals/
-metals.sbt
-
 # --- IDE ---
 .idea/
 *.iml
@@ -14,7 +5,8 @@ metals.sbt
 # `.vscode/` is mostly per-user state, but `settings.json` and
 # `extensions.json` are an environment contract — the editor configuration the
 # repository's conventions assume. They travel with the repository; everything
-# else in the directory does not.
+# else in the directory (launch.json with absolute paths, in particular) does
+# not.
 #
 # The pattern must be `.vscode/*`, not `.vscode/`: git does not descend into an
 # excluded directory, so a trailing-slash exclusion makes the negations below
@@ -23,34 +15,47 @@ metals.sbt
 !.vscode/settings.json
 !.vscode/extensions.json
 
-# --- Metals worksheets ---
+# --- Secrets ---
+# `.env.example` documents the variables; `.env` holds the values.
+.env
+!.env.example
 
-# A `*.worksheet.sc` is a scratchpad: Metals evaluates it on save and prints the
-# results as inline decorations. It has to live inside a source directory to
-# inherit that build target's classpath, which puts it in the middle of tracked
-# sources — but sbt does not compile it (`unmanagedSources` takes `.scala` and
-# `.java` only), so nothing in it is covered by the correctness gates.
-# Untracked is the honest state for a file the gates do not see.
-#
-# Put worksheets under `src/test/scala`, never `src/main/scala`. Metals hands
-# mdoc the scalacOptions of whichever build target owns the directory, and mdoc
-# wraps every statement in a `$doc.binder(...)` call that discards a value. Under
-# `Compile`'s `-Werror` that generated line is an error and the worksheet
-# evaluates to nothing at all — silently, with the reason visible only in
-# `.metals/metals.log`:
-#
-#     error: No warnings can be incurred under -Werror
-#     warning: test.worksheet.sc:12 (mdoc generated code)
-#      unused value of type Int
-#
-# `Test / scalacOptions` carries `-Wall` without `-Werror`, which is the same
-# exemption build.sbt already grants exploratory spikes. A worksheet is one.
-#
-# Delete this rule if a worksheet ever becomes a teaching artifact rather than a
-# scratchpad; then it belongs under docs/ with the rest of them.
+# --- OS noise ---
+.DS_Store
+Thumbs.db
+
+# --- sbt / Scala build output ---
+target/
+project/target/
+project/project/
+.bloop/
+.bsp/
+.metals/
+metals.sbt
+*.class
+
+# --- Metals worksheets ---
+# Scratch by default. A project that keeps some adds a negation below, e.g.
+# `!modules/playground/**/*.worksheet.sc`.
 *.worksheet.sc
 
-# --- Playground mains ---
+# --- JVM crash / profiling artifacts ---
+hs_err_pid*.log
+replay_pid*.log
+*.hprof
+*.jfr
+
+# --- Misplaced tool output ---
+
+# Coursier builds its Windows cache path from %LOCALAPPDATA%. A process that
+# cannot see that variable resolves it to the literal string "null" and writes
+# the cache to ./null in the working directory — tens of megabytes of jars,
+# untracked, one careless `git add .` away from the history.
+null/
+
+# ==============================================================================
+# This project — additions to the template (project-templates/scala-sbt)
+# ==============================================================================
 
 # The `.scala` counterpart of a worksheet, for when a spike needs a real `@main`
 # rather than inline decorations: the same throwaway experiment, run with
@@ -62,21 +67,3 @@ metals.sbt
 # exactly the kind of file that rots unnoticed. A result worth keeping goes into
 # a spec assertion or into `docs/`, not into a playground.
 playground.scala
-
-# --- Misplaced tool output ---
-
-# Coursier builds its Windows cache path from %LOCALAPPDATA%. A process that
-# cannot see that variable resolves it to the literal string "null" and writes
-# the cache to ./null in the working directory — tens of megabytes of jars,
-# untracked, one careless `git add .` away from the history.
-null/
-
-# --- JVM crash / profiling artifacts ---
-hs_err_pid*.log
-replay_pid*.log
-*.hprof
-*.jfr
-
-# --- OS noise ---
-.DS_Store
-Thumbs.db
