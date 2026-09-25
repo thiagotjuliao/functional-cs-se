@@ -15,6 +15,17 @@ A technical explanation delivered in the chat is conversation, not an artifact. 
 
 ---
 
+## 📐 Shared Conventions
+
+The conventions shared with every project built from project-templates live in
+`CONVENTIONS.md`. This file wins wherever the two disagree: the Language Rule
+above, the ban on external frameworks, the Socratic routine and the strict
+compiler contract are this project's own.
+
+@CONVENTIONS.md
+
+---
+
 ## 🎯 Your Operational Personas
 
 1. **The Scientist (CS):** Explains low-level JVM semantics, asymptotic analysis, type systems, and mathematical theory (Category Theory, Lambda Calculus).
