@@ -1,14 +1,19 @@
 {
   "recommendations": [
-    // Scala 3 language server: type inference, Scaladoc hovers, code lenses.
-    "scalameta.metals",
+    // Renders a diagnostic's message inline, at the end of the offending line,
+    // instead of behind a hover or in the Problems panel. It produces no
+    // diagnostics of its own — everything it draws comes from the language
+    // server.
+    "usernamehw.errorlens",
 
     // Sidebar panel rendering the documentation of the symbol under the cursor.
-    // The nearest equivalent VS Code has to IntelliJ's rendered doc comments.
     "bierner.docs-view",
 
-    // Colour-codes comment categories (`// !`, `// ?`, `// TODO`, `// *`) so a
-    // warning in an exercise does not read like an ordinary note.
-    "aaron-bond.better-comments"
+    // Colour-codes comment categories (`// !`, `// ?`, `// TODO`, `// *`), so a
+    // TODO does not read like an ordinary note.
+    "aaron-bond.better-comments",
+
+    // Scala 3 language server: type inference, Scaladoc hovers, code lenses.
+    "scalameta.metals",
   ]
 }
